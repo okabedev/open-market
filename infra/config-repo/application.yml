@@ -1,0 +1,57 @@
+# 모든 서비스의 공통 설정. config 서버가 <service>.yml과 함께 내려주고, 같은 키는 <service>.yml이 이긴다.
+# - 비밀 값을 쓰지 않는다. ${...} 자리 표시자는 config 서버가 풀지 않고 그대로 내려주며, 서비스가 자기 환경 변수(.env)로 푼다.
+# - 스키마와 DB 계정은 서비스 이름에서 정해진다(docs/architecture/data.md). DB를 쓰지 않는 서비스에서는 이 키들이 무시된다.
+# - 호스트 기본값은 IDE·bootRun으로 띄운 경우다. 컨테이너로 띄우면 compose가 환경 변수로 컨테이너 이름을 넣는다.
+spring:
+  threads:
+    virtual:
+      enabled: true
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:5432/openmarket
+    username: ${spring.application.name}_app
+    hikari:
+      # 공통 라이브러리의 JDBC 쿼리는 스키마 이름을 쓰지 않으므로 연결의 search_path를 서비스 스키마로 둔다.
+      schema: ${spring.application.name}
+  flyway:
+    schemas: ${spring.application.name}
+    default-schema: ${spring.application.name}
+    # 공통 테이블 마이그레이션(V0_<n>)을 이미 V1 이상이 적용된 서비스에도 넣는다.
+    out-of-order: true
+  cloud:
+    inetutils:
+      # WSL은 lo에 10.255.255.254(DNS 터널링)를 붙인다. 이 주소로 등록되면 컨테이너가 접속하지 못하므로 lo를 후보에서 뺀다.
+      ignored-interfaces:
+        - lo
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: ${spring.application.name}
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka/}
+    registry-fetch-interval-seconds: 5
+  instance:
+    # IDE로 띄운 서비스는 WSL IP로 등록돼야 컨테이너(Prometheus 등)가 찾아온 주소로 접속할 수 있다.
+    prefer-ip-address: true
+    lease-renewal-interval-in-seconds: 10
+    lease-expiration-duration-in-seconds: 30
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  # 지표는 Prometheus가 스크레이프한다. OTLP로는 트레이스와 로그만 보낸다(docs/architecture/observability.md).
+  otlp:
+    metrics:
+      export:
+        enabled: false

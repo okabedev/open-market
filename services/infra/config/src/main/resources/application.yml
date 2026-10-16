@@ -1,0 +1,28 @@
+# Config 서버. 자기 설정은 저장소에서 받지 않고 여기에 둔다.
+# 저장소 위치 기본값은 bootRun 작업 디렉터리(services/infra/config) 기준이다. 컨테이너는 CONFIG_REPO_LOCATION으로 마운트 경로를 넣는다.
+server:
+  port: 8888
+spring:
+  application:
+    name: config
+  profiles:
+    active: native
+  threads:
+    virtual:
+      enabled: true
+  cloud:
+    config:
+      server:
+        native:
+          search-locations: ${CONFIG_REPO_LOCATION:file:../../../infra/config-repo/}
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka/}
+  instance:
+    prefer-ip-address: true
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus

@@ -1,5 +1,6 @@
 # 로컬 인프라. profile 구성은 docs/architecture/overview.md의 "로컬 실행 구성"을 따른다.
 # 이 파일은 기본 profile(profile 없음)이다. search는 search.yaml, obs는 obs.yaml에 있다. apps profile은 M0-c 마지막 PR에서 더한다.
+# discovery와 config는 IDE로 띄우는 서비스도 항상 쓰므로 기본 profile에 둔다. 처음 up할 때 services/Dockerfile로 이미지를 빌드한다.
 # 이미지 태그는 버전을 고정한다. 메모리 상한은 R6 실측 후 정한다(docs/architecture/risks.md).
 services:
   postgres:
@@ -141,6 +142,43 @@ services:
       interval: 10s
       timeout: 5s
       retries: 20
+
+  discovery:
+    build:
+      context: ../../services
+      args:
+        MODULE: infra/discovery
+    image: openmarket/discovery:local
+    ports:
+      - "8761:8761"
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:8761/actuator/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  config:
+    build:
+      context: ../../services
+      args:
+        MODULE: infra/config
+    image: openmarket/config:local
+    depends_on:
+      discovery:
+        condition: service_healthy
+    environment:
+      CONFIG_REPO_LOCATION: file:/config-repo/
+      EUREKA_URL: http://discovery:8761/eureka/
+    ports:
+      - "8888:8888"
+    volumes:
+      # 저장소를 마운트하므로 config-repo를 고친 뒤 이미지를 다시 빌드할 필요가 없다. 서비스는 재시작하면 새 설정을 받는다.
+      - ../config-repo:/config-repo:ro
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:8888/actuator/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
 
 volumes:
   postgres-data:

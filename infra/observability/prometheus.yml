@@ -1,5 +1,5 @@
-# Prometheus 스크레이프 대상. 지금은 관측성 스택 자신만 수집한다.
-# Spring 서비스(/actuator/prometheus)는 Eureka 서비스 디스커버리로 찾는다. discovery를 추가하는 PR에서 더한다.
+# Prometheus 스크레이프 대상: 관측성 스택, discovery, 그리고 Eureka에 등록된 Spring 서비스 전체.
+# IDE로 띄운 서비스는 WSL IP로 등록되므로(config-repo의 prefer-ip-address) 컨테이너에서 그 주소로 접속한다.
 global:
   scrape_interval: 15s
   evaluation_interval: 15s
@@ -17,3 +17,18 @@ scrape_configs:
   - job_name: loki
     static_configs:
       - targets: ["loki:3100"]
+  - job_name: discovery
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["discovery:8761"]
+  # Eureka 레지스트리에서 인스턴스를 찾는다. 서비스를 추가해도 이 파일은 고치지 않는다.
+  - job_name: services
+    metrics_path: /actuator/prometheus
+    eureka_sd_configs:
+      - server: http://discovery:8761/eureka
+        refresh_interval: 15s
+    relabel_configs:
+      # Eureka 앱 이름은 대문자(MEMBER)다. 서비스 이름과 같게 소문자로 application 라벨에 둔다.
+      - source_labels: [__meta_eureka_app_name]
+        target_label: application
+        action: lowercase

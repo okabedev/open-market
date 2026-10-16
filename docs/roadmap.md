@@ -28,7 +28,8 @@
 - [ ] **M0-c 로컬 인프라**
   - [x] Compose 기본 profile(Postgres, Kafka, Debezium Connect, Redis, Mailpit, Kafka UI), `search`, `obs`
   - [x] Postgres 초기화(스키마·계정·복제 계정·publication)
-  - [ ] discovery, config(+ `infra/config-repo`), gateway(R4)
+  - [x] discovery, config(+ `infra/config-repo`), Prometheus Eureka 서비스 디스커버리
+  - [ ] gateway(R4)
   - [ ] 메모리 실측(R6)
 - [ ] **M0-d 이벤트 파이프라인**
   - [ ] Debezium 커넥터 등록 스크립트, 토픽 선언
