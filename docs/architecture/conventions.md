@@ -104,4 +104,8 @@ com.openmarket.<service>
 프론트 규칙은 `clients/CLAUDE.md`에 둔다. 요약: App Router, 서버 컴포넌트 기본, 데이터 변경은 Server Action 또는 Route Handler(BFF)를 거친다. 브라우저 코드는 Gateway를 직접 부르지 않는다.
 
 ## 코드 스타일
-포매터와 정적 분석 도구는 M0-b에서 정한다. 정한 뒤 이 절에 적고, 빌드에서 강제한다.
+빌드가 강제한다. 도구 선택 근거는 [ADR 0010](../adr/0010-code-style-tools.md)에 있다.
+- 포맷: google-java-format AOSP 스타일(4칸). `./gradlew spotlessApply`로 고친다. 포맷이 틀리면 `check`가 실패한다.
+- null: `com.openmarket` 아래는 null 아님이 기본이다. null이 될 수 있는 필드, 파라미터, 반환값에는 `org.jspecify.annotations.Nullable`을 붙인다. NullAway가 컴파일 때 검사한다.
+- 컬렉션은 null 대신 빈 컬렉션을, 없을 수 있는 단건 조회는 `Optional`을 반환한다. `Optional`을 필드나 파라미터로 쓰지 않는다.
+- Error Prone 경고를 `@SuppressWarnings`로 끌 때는 이유를 주석으로 남긴다.

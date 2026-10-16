@@ -1,0 +1,40 @@
+# 버전 근거: docs/adr/0009-version-matrix.md
+# Spring Boot·Spring Cloud BOM이 관리하는 라이브러리는 여기서 버전을 적지 않는다.
+
+[versions]
+java = "25"
+spring-boot = "4.1.1"
+spring-cloud = "2025.1.3"
+querydsl = "7.7"
+springdoc = "3.1.1"
+archunit = "1.5.1"
+shedlock = "7.10.1"
+uuid-creator = "6.1.1"
+spotless = "8.10.4"
+google-java-format = "1.36.1"
+errorprone = "2.50.0"
+errorprone-plugin = "5.1.1"
+nullaway = "0.14.2"
+
+[libraries]
+# BOM
+spring-boot-dependencies = { module = "org.springframework.boot:spring-boot-dependencies", version.ref = "spring-boot" }
+spring-cloud-dependencies = { module = "org.springframework.cloud:spring-cloud-dependencies", version.ref = "spring-cloud" }
+
+# 직접 고정
+querydsl-jpa = { module = "io.github.openfeign.querydsl:querydsl-jpa", version.ref = "querydsl" }
+querydsl-apt = { module = "io.github.openfeign.querydsl:querydsl-apt", version.ref = "querydsl" }
+springdoc-webmvc-ui = { module = "org.springdoc:springdoc-openapi-starter-webmvc-ui", version.ref = "springdoc" }
+archunit-junit5 = { module = "com.tngtech.archunit:archunit-junit5", version.ref = "archunit" }
+shedlock-spring = { module = "net.javacrumbs.shedlock:shedlock-spring", version.ref = "shedlock" }
+shedlock-jdbc = { module = "net.javacrumbs.shedlock:shedlock-provider-jdbc-template", version.ref = "shedlock" }
+uuid-creator = { module = "com.github.f4b6a3:uuid-creator", version.ref = "uuid-creator" }
+
+# 정적 분석 (convention 플러그인이 사용)
+errorprone-core = { module = "com.google.errorprone:error_prone_core", version.ref = "errorprone" }
+nullaway = { module = "com.uber.nullaway:nullaway", version.ref = "nullaway" }
+
+# build-logic이 쓰는 Gradle 플러그인 아티팩트
+gradle-plugin-spring-boot = { module = "org.springframework.boot:spring-boot-gradle-plugin", version.ref = "spring-boot" }
+gradle-plugin-spotless = { module = "com.diffplug.spotless:spotless-plugin-gradle", version.ref = "spotless" }
+gradle-plugin-errorprone = { module = "net.ltgt.gradle:gradle-errorprone-plugin", version.ref = "errorprone-plugin" }

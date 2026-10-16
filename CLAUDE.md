@@ -57,4 +57,5 @@ infra/       compose/, config-repo/, postgres/, debezium/, kafka/, elasticsearch
 - 기술 리스크는 [risks.md](docs/architecture/risks.md)에서 상태를 갱신한다. 결정이 생기면 ADR을 쓴다.
 
 ## 명령
-M0-b(빌드), M0-c(로컬 인프라), M0-e(프론트)에서 확정해 여기에 적는다.
+- 백엔드: `services/`에서 `./gradlew build` (포맷 고치기 `./gradlew spotlessApply`). 자세한 것은 [services/CLAUDE.md](services/CLAUDE.md).
+- 로컬 인프라(M0-c), 프론트(M0-e)는 확정되면 여기에 적는다.

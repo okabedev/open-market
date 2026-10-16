@@ -30,12 +30,12 @@ Spring Authorization Server는 Spring Security 7.x에 포함되어 Boot BOM이 �
 | ShedLock | 7.10.1 | 스케줄 작업 단일 실행 |
 | uuid-creator | 6.1.1 | UUID v7 생성(`common-core`). JDK 표준에는 v7 생성기가 없다 |
 
-### 코드 스타일 도구 후보 (선택은 PR 2에서 빌드로 확인 후 ADR 0010)
+### 코드 스타일 도구 후보 (선택과 빌드 확인 결과는 [ADR 0010](0010-code-style-tools.md))
 | 항목 | 버전 | Java 25 근거 |
 |---|---|---|
 | Spotless Gradle 플러그인 | 8.10.4 | 포매터 실행기 |
-| google-java-format | 1.37.0 | 1.34.0부터 Java 25 문법(인스턴스 main 메서드) 지원 |
-| palantir-java-format | 2.102.0 | 2.71.0에서 JDK 25 EA 실행 오류 수정 |
+| google-java-format | 1.36.1 (선택) | 1.34.0부터 Java 25 문법 지원. 1.37.0은 Spotless 8.10.4와 호환되지 않음(ADR 0010) |
+| palantir-java-format | 2.102.0 (제외) | Java 25 모듈 import를 파싱하지 못함(ADR 0010) |
 | Error Prone / Gradle 플러그인 `net.ltgt.errorprone` | 2.50.0 / 5.1.1 | 2.45.0에서 JDK 26 EA 호환 개선 |
 | NullAway | 0.14.2 | 0.13.0부터 JDK 25로 CI 빌드 |
 
@@ -44,7 +44,7 @@ Spring Authorization Server는 Spring Security 7.x에 포함되어 Boot BOM이 �
 ## 결과
 - 좋아지는 점: 지원 기간이 가장 긴 GA 조합이다. 대부분의 버전을 BOM에 맡겨 충돌이 적다.
 - 감수하는 점: Boot 4.1.x OSS 지원이 끝나기 전에(2027-07) 4.2 이상으로 올려야 한다. QueryDSL 포크는 커뮤니티 유지보수에 기댄다.
-- 확인 상태: R1은 메타데이터로 확인했다. R2(Q-타입 생성)와 R3(도구 동작)는 PR 2의 실제 빌드로 확정하고 risks.md를 갱신한다.
+- 확인 상태: R1은 메타데이터로, R2(Q-타입 생성)와 R3(도구 동작)는 `services/build-logic`의 `ConventionPluginsTest` 빌드로 확인했다.
 
 ## 검토한 대안
 - Spring Boot 4.0.x: OSS 지원이 2026-12-31에 끝난다.
