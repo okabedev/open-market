@@ -15,7 +15,7 @@ services/
 │  ├─ common-messaging outbox 기록, 멱등 소비, EventEnvelope, 트레이스 전파, ShedLock·정리 작업 (자동설정)
 │  └─ common-test      Testcontainers 설정, ArchUnit 규칙, 픽스처
 ├─ core/<service>
-└─ infra/<service>     discovery(Eureka), config(Config 서버) …
+└─ infra/<service>     discovery(Eureka), config(Config 서버), gateway(WebFlux, ADR 0011) …
 ```
 
 ## 꼭 지킬 것
@@ -36,7 +36,7 @@ services/
 - 저장소, QueryDSL, 메시징은 Testcontainers로 검증한다.
 - 발행하는 이벤트마다 JSON 예시(`src/test/resources/events/<type>.json`)를 둔다. 소비자 테스트는 발행자의 예시를 읽어 역직렬화를 확인한다.
 - 테스트 이름은 한국어 `@DisplayName`, 메서드 이름은 영어로 쓴다.
-- DB 통합 테스트는 `common-test`의 `PostgresContainerConfiguration`을 `@Import`한다.
+- DB 통합 테스트는 `common-test`의 `PostgresContainerConfiguration`을, Redis가 필요하면 `RedisContainerConfiguration`을 `@Import`한다.
 - 서비스 테스트 설정은 `src/test/resources/config/application.yml`에 둔다(main `application.yml`을 가리지 않게). 예: `core/member`.
 
 ## 명령

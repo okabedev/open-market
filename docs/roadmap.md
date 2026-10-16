@@ -29,7 +29,7 @@
   - [x] Compose 기본 profile(Postgres, Kafka, Debezium Connect, Redis, Mailpit, Kafka UI), `search`, `obs`
   - [x] Postgres 초기화(스키마·계정·복제 계정·publication)
   - [x] discovery, config(+ `infra/config-repo`), Prometheus Eureka 서비스 디스커버리
-  - [ ] gateway(R4)
+  - [x] gateway(R4, ADR 0011): 라우팅, JWT·역할 검사, Redis 레이트 리밋, member 샘플 API
   - [ ] 메모리 실측(R6)
 - [ ] **M0-d 이벤트 파이프라인**
   - [ ] Debezium 커넥터 등록 스크립트, 토픽 선언
@@ -47,7 +47,7 @@
 - [ ] member: 프로필, 배송지, 입점 신청·심사, 판매자 정지, 탈퇴
 - [ ] notification: 이메일 발송 기반, 중복 방지
 - [ ] BFF 로그인·로그아웃·토큰 갱신(R8), 앱 3개 로그인 화면
-- [ ] gateway 경로별 역할 검사, 레이트 리밋(NFR-5)
+- [ ] gateway 공개 경로 등록, 로그인·가입의 엄격한 레이트 리밋(NFR-5). member 샘플 API(`/v1/ping`) 제거
 - 관련 요구사항: ACC-1~4, SEL-1~3, NTF-1(가입), NFR-5, NFR-6
 
 **완료 기준 E2E**: 가입 → 인증 메일(Mailpit) → 로그인 → 입점 신청 → 관리자 승인 → 토큰 갱신 후 판매자 앱 진입. 승인 전에는 판매자 API가 403이다.

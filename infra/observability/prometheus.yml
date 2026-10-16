@@ -32,3 +32,8 @@ scrape_configs:
       - source_labels: [__meta_eureka_app_name]
         target_label: application
         action: lowercase
+      # 관리 포트를 따로 둔 서비스(gateway)는 Eureka 메타데이터 management.port로 actuator 주소를 바꾼다.
+      - source_labels: [__meta_eureka_app_instance_ip_addr, __meta_eureka_app_instance_metadata_management_port]
+        regex: (.+);(\d+)
+        replacement: $1:$2
+        target_label: __address__

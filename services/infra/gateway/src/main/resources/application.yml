@@ -1,0 +1,10 @@
+# jar 안에는 앱 이름과 config 서버 주소만 둔다. 포트, 라우트, 토큰 검증, 레이트 리밋은 infra/config-repo/gateway.yml에 있다.
+spring:
+  application:
+    name: gateway
+  config:
+    import: "optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}"
+  cloud:
+    config:
+      # config 서버에 닿지 못하면 라우트와 토큰 검증 설정 없이 뜨지 않고 바로 실패한다. 테스트는 spring.cloud.config.enabled=false로 끈다.
+      fail-fast: true

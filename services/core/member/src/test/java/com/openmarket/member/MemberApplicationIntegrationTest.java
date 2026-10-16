@@ -77,6 +77,14 @@ class MemberApplicationIntegrationTest {
     }
 
     @Test
+    @DisplayName("샘플 API가 서비스 이름을 돌려준다")
+    void pingReturnsServiceName() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.get("/v1/ping"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.service").value("member"));
+    }
+
+    @Test
     @DisplayName("OpenAPI 문서를 제공한다")
     void exposesOpenApi() throws Exception {
         mockMvc.perform(MockMvcRequestBuilders.get("/v3/api-docs"))

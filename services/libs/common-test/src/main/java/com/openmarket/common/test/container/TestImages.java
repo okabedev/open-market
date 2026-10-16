@@ -7,5 +7,7 @@ public final class TestImages {
 
     public static final DockerImageName POSTGRES = DockerImageName.parse("postgres:18.6-alpine");
 
+    public static final DockerImageName REDIS = DockerImageName.parse("redis:8.10.2-alpine");
+
     private TestImages() {}
 }
