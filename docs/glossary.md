@@ -33,7 +33,7 @@
 | 하위 주문 | `SellerOrder` | order | 주문을 판매자별로 나눈 단위. 배송, 클레임, 정산의 기준이다 |
 | 주문 항목 | `OrderLine` | order | SKU 하나와 수량, 주문 당시 가격 스냅샷 |
 | 주문 만료 | `Order.expire()` | order | 결제 대기 15분 초과. 취소 사유 `PAYMENT_TIMEOUT`으로 `CANCELLED`가 된다 |
-| 결제 | `Payment` | payment | 주문 하나당 하나. 상태: `READY` → `APPROVED` → `PARTIALLY_CANCELLED` 또는 `CANCELLED`. 승인 실패 시 `FAILED` |
+| 결제 | `Payment` | payment | 주문 하나당 하나. 상태: `READY` → `IN_PROGRESS`(토스 승인 요청 중) → `APPROVED` → `PARTIALLY_CANCELLED` 또는 `CANCELLED`. 승인 실패 시 `FAILED`, 결제 전 주문 취소 시 `READY` → `CANCELLED` |
 | 결제 키 | `paymentKey` | payment | 토스페이먼츠가 발급한 결제 식별자 |
 | 결제 원장 | `PaymentLedgerEntry` | payment | 승인, 취소 요청과 PG 응답의 추가 전용 기록 |
 | 환불 | `Refund` | payment | 하위 주문 단위 부분취소. 클레임 ID로 멱등 처리한다 |
@@ -42,7 +42,7 @@
 ## 배송·클레임
 | 용어 | 코드 이름 | 담당 | 설명 |
 |---|---|---|---|
-| 배송 | `Shipment` | fulfillment | 하위 주문 하나당 하나(교환 재발송은 새 배송). 상태: `READY` → `ACCEPTED`(발주 확인) → `SHIPPED` → `IN_TRANSIT` → `DELIVERED` |
+| 배송 | `Shipment` | fulfillment | 하위 주문 하나당 하나(교환 재발송은 새 배송). 상태: `READY` → `ACCEPTED`(발주 확인) → `SHIPPED` → `IN_TRANSIT` → `DELIVERED`. 발송 전 취소 클레임이면 `CANCELLED` |
 | 송장 | `TrackingInfo` | fulfillment | 택배사 코드와 송장 번호 |
 | 구매확정 | `PurchaseConfirmation` | fulfillment | 구매자 확정, 또는 배송 완료 7일 뒤 자동 확정. 이후에는 클레임을 신청할 수 없다 |
 | 클레임 | `Claim` | fulfillment | 유형: `CANCEL`, `RETURN`, `EXCHANGE`. 상태: `REQUESTED` → `APPROVED` → `COMPLETED`, 또는 `REJECTED`. 중재 중이면 `MEDIATING` |

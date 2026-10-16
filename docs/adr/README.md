@@ -11,7 +11,7 @@
 | [0005](0005-own-authorization-server.md) | 자체 OAuth2/OIDC 인가 서버 | 승인 |
 | [0006](0006-nextjs-bff.md) | Next.js BFF와 앱 3개 | 승인 |
 | [0007](0007-ddd-cqrs-packages.md) | DDD + CQRS 패키지 구조 | 승인 |
-| [0008](0008-local-file-service.md) | 로컬 file 서비스 | 승인 |
+| [0008](0008-local-file-storage.md) | 로컬 file 서비스 | 승인 |
 
 버전 조합(Java, Spring Boot, Spring Cloud, 주요 라이브러리) ADR은 M0-b에서 0009로 쓴다.
 

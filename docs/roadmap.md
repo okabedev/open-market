@@ -17,7 +17,7 @@
 ---
 
 ## M0 — 기반
-- [ ] **M0-a 문서화**: PRD, 용어집, 아키텍처 문서, ADR 0001~0008, 로드맵, CLAUDE.md, skill, README
+- [x] **M0-a 문서화**: PRD, 용어집, 아키텍처 문서, ADR 0001~0008, 로드맵, CLAUDE.md, skill, README
 - [ ] **M0-b 빌드 기반**
   - [ ] 버전 조합 확정(R1~R3), ADR 0009
   - [ ] Gradle 래퍼, `build-logic` convention 플러그인, 버전 카탈로그
