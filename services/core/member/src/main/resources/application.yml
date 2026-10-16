@@ -1,0 +1,9 @@
+# jar 안에는 앱 이름, config 서버 주소, 클래스패스에 묶인 설정만 둔다.
+# 포트, 데이터 소스, 스키마 같은 실행 설정은 infra/config-repo/member.yml에 있다(M0-c).
+spring:
+  application:
+    name: member
+  config:
+    import: "optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}"
+  flyway:
+    locations: classpath:db/migration,classpath:db/common/web,classpath:db/common/messaging

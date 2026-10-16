@@ -69,6 +69,8 @@ flowchart LR
 
 ## 런타임 공통 설정
 - Java 25, 가상 스레드 사용(`spring.threads.virtual.enabled=true`).
+- `spring.jpa.open-in-view=false`. 지연 로딩은 트랜잭션 안에서만 한다.
+- 지표는 Prometheus가 스크레이프한다. OpenTelemetry 스타터의 OTLP 지표 내보내기는 끈다(`management.otlp.metrics.export.enabled=false`). 트레이스와 로그만 OTLP로 보낸다.
 - 설정은 config 서버에서 받는다. 공통 설정은 `infra/config-repo/application.yml`, 서비스별 설정은 `<service>.yml`에 둔다. 비밀 값은 환경 변수로 넣는다.
 - 모든 서비스는 Eureka에 등록되고, Actuator(`health`, `prometheus`)와 OpenAPI(`/v3/api-docs`)를 노출한다.
 - 공통 라이브러리(`services/libs`)

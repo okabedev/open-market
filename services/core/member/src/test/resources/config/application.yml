@@ -1,0 +1,27 @@
+# 테스트 설정. config 서버와 Eureka 없이 뜨게 하고, config-repo가 줄 데이터 설정을 대신한다.
+# classpath:config/ 아래에 두어 main의 application.yml을 가리지 않고 그 위에 덮는다.
+spring:
+  cloud:
+    config:
+      enabled: false
+  datasource:
+    hikari:
+      # 공통 라이브러리의 JDBC 쿼리는 스키마 이름을 쓰지 않으므로 연결의 search_path를 서비스 스키마로 둔다.
+      schema: member
+  flyway:
+    schemas: member
+    default-schema: member
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: member
+management:
+  otlp:
+    metrics:
+      export:
+        enabled: false
+eureka:
+  client:
+    enabled: false
