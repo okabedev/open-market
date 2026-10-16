@@ -65,8 +65,9 @@
 ## 기술 용어
 | 용어 | 코드 이름 | 설명 |
 |---|---|---|
-| 아웃박스 | `outbox_event` 테이블 | 도메인 변경과 같은 트랜잭션에 쌓는 발행 대기 이벤트. Debezium이 읽어 Kafka로 보낸다 |
+| 아웃박스 | `outbox_event` 테이블, `Outbox` | 도메인 변경과 같은 트랜잭션에 쌓는 발행 대기 이벤트. Debezium이 읽어 Kafka로 보낸다 |
 | 처리한 이벤트 | `processed_event` 테이블 | 소비자가 처리한 이벤트 ID. 중복 소비를 막는다 |
+| 멱등 소비자 | `IdempotentEventProcessor` | `processed_event` 기록과 리스너 처리를 한 트랜잭션으로 묶는다 |
 | 멱등성 키 | `Idempotency-Key` 헤더, `idempotency_record` 테이블 | 상태 변경 API의 중복 요청을 막는다 |
 | 이벤트 봉투 | `EventEnvelope` | 이벤트 공통 필드. [messaging.md](architecture/messaging.md) 참고 |
 | DLT | `<topic>.DLT` | 재시도 후에도 실패한 메시지가 가는 토픽 |

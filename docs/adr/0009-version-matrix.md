@@ -27,7 +27,7 @@ Spring Authorization Server는 Spring Security 7.x에 포함되어 Boot BOM이 �
 | QueryDSL (OpenFeign 포크, `io.github.openfeign.querydsl`) | 7.7 | 7.0부터 JPA 3.2·Hibernate 7 지원. JDK 23+에서는 annotation processor 경로를 명시해야 Q-타입이 생성된다(7.6 문서). Gradle `annotationProcessor` 구성으로 명시한다 |
 | springdoc-openapi | 3.1.1 | Boot 4용 3.x 라인. 3.1.0에서 Boot 4.1.0 기준으로 올라감 |
 | ArchUnit | 1.5.1 | 패키지 규약 검사 |
-| ShedLock | 7.10.1 | 스케줄 작업 단일 실행 |
+| ShedLock | 7.10.1 | 스케줄 작업 단일 실행. `shedlock-core`와 `shedlock-provider-jdbc-template`만 쓴다(애노테이션 AOP 대신 `LockingTaskExecutor`를 직접 호출) |
 | uuid-creator | 6.1.1 | UUID v7 생성(`common-core`). JDK 표준에는 v7 생성기가 없다 |
 
 ### 코드 스타일 도구 후보 (선택과 빌드 확인 결과는 [ADR 0010](0010-code-style-tools.md))
