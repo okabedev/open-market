@@ -1,0 +1,43 @@
+package com.openmarket.common.core.error;
+
+import java.util.regex.Pattern;
+
+/**
+ * 모든 비즈니스 예외의 베이스. 오류 분류와 오류 코드를 가진다.
+ *
+ * <p>오류 코드는 {@code <SERVICE>_<설명>} 형식의 대문자 snake case다. 예: {@code ORDER_PRICE_CHANGED}.
+ */
+public class BusinessException extends RuntimeException {
+
+    private static final Pattern CODE_PATTERN = Pattern.compile("[A-Z][A-Z0-9]*(_[A-Z0-9]+)+");
+
+    private final ErrorType type;
+    private final String code;
+
+    public BusinessException(ErrorType type, String code, String message) {
+        super(message);
+        this.type = type;
+        this.code = validate(code);
+    }
+
+    public BusinessException(ErrorType type, String code, String message, Throwable cause) {
+        super(message, cause);
+        this.type = type;
+        this.code = validate(code);
+    }
+
+    public ErrorType getType() {
+        return type;
+    }
+
+    public String getCode() {
+        return code;
+    }
+
+    private static String validate(String code) {
+        if (!CODE_PATTERN.matcher(code).matches()) {
+            throw new IllegalArgumentException("오류 코드는 <SERVICE>_<설명> 형식이어야 한다: " + code);
+        }
+        return code;
+    }
+}
