@@ -12,8 +12,9 @@
 | [0006](0006-nextjs-bff.md) | Next.js BFF와 앱 3개 | 승인 |
 | [0007](0007-ddd-cqrs-packages.md) | DDD + CQRS 패키지 구조 | 승인 |
 | [0008](0008-local-file-storage.md) | 로컬 file 서비스 | 승인 |
+| [0009](0009-version-matrix.md) | 버전 조합 | 승인 |
 
-버전 조합(Java, Spring Boot, Spring Cloud, 주요 라이브러리) ADR은 M0-b에서 0009로 쓴다.
+코드 스타일 도구 ADR은 M0-b PR 2에서 0010으로 쓴다.
 
 ## 템플릿
 ```markdown

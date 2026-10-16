@@ -76,7 +76,7 @@ flowchart LR
   - `common-web`: 오류 응답 변환, 멱등성 키 필터, 요청 로깅, 마스킹
   - `common-messaging`: Outbox 기록기, 멱등 소비자, 이벤트 봉투
   - `common-test`: Testcontainers 설정, ArchUnit 규칙, 테스트 픽스처
-- 버전 조합은 M0-b에서 확정해 ADR로 남긴다. 그 전까지 문서에 버전 숫자를 적지 않는다.
+- 버전 조합과 근거는 [ADR 0009](../adr/0009-version-matrix.md)에 있다. 실제 값의 원본은 빌드 파일이다. 다른 문서에는 버전 숫자를 적지 않는다.
 
 ## 로컬 실행 구성 (Docker Compose)
 `infra/compose`에 profile별로 나눈다. 개발할 때는 인프라만 Compose로 띄우고, 작업 중인 서비스는 IDE나 `bootRun`으로 실행한다. 전체 E2E는 `apps` profile로 모두 띄운다.
