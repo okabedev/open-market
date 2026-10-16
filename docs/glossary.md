@@ -1,0 +1,72 @@
+# 용어집 (유비쿼터스 언어)
+
+문서, 코드, 대화에서 같은 이름을 쓴다. 새 용어는 코드에 넣기 전에 여기에 먼저 추가한다.
+코드 이름은 클래스·이벤트·enum 이름 기준이다. 담당은 그 개념을 소유하는 서비스다.
+
+## 계정·회원
+| 용어 | 코드 이름 | 담당 | 설명 |
+|---|---|---|---|
+| 계정 | `Account` | auth | 로그인 수단(이메일, 비밀번호 해시, 소셜 연결)과 역할. 개인정보 프로필은 갖지 않는다 |
+| 역할 | `Role` (`BUYER`, `SELLER`, `ADMIN`) | auth | 토큰의 `roles` 클레임으로 나간다 |
+| 회원 | `Member` | member | 계정에 딸린 프로필(이름, 연락처). `memberId`는 `accountId`와 같은 값을 쓴다 |
+| 배송지 | `Address` | member | 회원당 최대 10개, 기본 배송지 1개 |
+| 판매자 | `Seller` | member | 승인된 입점 판매자. 상호, 사업자 번호, 정산 계좌를 가진다 |
+| 입점 신청 | `SellerApplication` | member | 상태: `SUBMITTED` → `APPROVED` 또는 `REJECTED` |
+| 판매자 정지 | `Seller.suspend()` | member | 상태: `ACTIVE` ↔ `SUSPENDED` |
+
+## 상품·재고
+| 용어 | 코드 이름 | 담당 | 설명 |
+|---|---|---|---|
+| 카테고리 | `Category` | catalog | 트리 구조. 수수료율은 정산이 카테고리 ID로 따로 관리한다 |
+| 상품 | `Product` | catalog | 상태: `DRAFT` → `ON_SALE` ↔ `STOPPED`, 관리자 제재 시 `BANNED` |
+| 옵션 조합 | `Sku` | catalog | 주문과 재고의 단위. 가격을 가진다 |
+| 재고 | `Stock` | catalog | SKU별 `onHand`(실재고)와 `reserved`(예약 수량). 판매 가능 수량 = `onHand - reserved` |
+| 재고 예약 | `StockReservation` | catalog | 주문 하나에 대한 예약 묶음. 상태: `RESERVED` → `COMMITTED` 또는 `RELEASED` |
+| 재고 조정 | `StockAdjustment` | catalog | 판매자의 입고·차감 이력 |
+| 파일 | `StoredFile` | file | 업로드 파일 메타데이터. 상태: `TEMP` → `ATTACHED` → `DETACHED`(소유자에서 빠짐). 24시간 지난 `TEMP`와 7일 지난 `DETACHED`는 삭제 |
+
+## 주문·결제
+| 용어 | 코드 이름 | 담당 | 설명 |
+|---|---|---|---|
+| 장바구니 | `Cart`, `CartItem` | order | 회원당 하나 |
+| 주문 | `Order` | order | 구매자의 결제 단위. 상태: `PENDING`(예약 중) → `AWAITING_PAYMENT` → `PAID`, 또는 `CANCELLED` |
+| 하위 주문 | `SellerOrder` | order | 주문을 판매자별로 나눈 단위. 배송, 클레임, 정산의 기준이다 |
+| 주문 항목 | `OrderLine` | order | SKU 하나와 수량, 주문 당시 가격 스냅샷 |
+| 주문 만료 | `Order.expire()` | order | 결제 대기 15분 초과. 취소 사유 `PAYMENT_TIMEOUT`으로 `CANCELLED`가 된다 |
+| 결제 | `Payment` | payment | 주문 하나당 하나. 상태: `READY` → `APPROVED` → `PARTIALLY_CANCELLED` 또는 `CANCELLED`. 승인 실패 시 `FAILED` |
+| 결제 키 | `paymentKey` | payment | 토스페이먼츠가 발급한 결제 식별자 |
+| 결제 원장 | `PaymentLedgerEntry` | payment | 승인, 취소 요청과 PG 응답의 추가 전용 기록 |
+| 환불 | `Refund` | payment | 하위 주문 단위 부분취소. 클레임 ID로 멱등 처리한다 |
+| 금액 | `Money` | 공통 | 원(KRW) 단위 `long`. 소수점은 쓰지 않는다 |
+
+## 배송·클레임
+| 용어 | 코드 이름 | 담당 | 설명 |
+|---|---|---|---|
+| 배송 | `Shipment` | fulfillment | 하위 주문 하나당 하나(교환 재발송은 새 배송). 상태: `READY` → `ACCEPTED`(발주 확인) → `SHIPPED` → `IN_TRANSIT` → `DELIVERED` |
+| 송장 | `TrackingInfo` | fulfillment | 택배사 코드와 송장 번호 |
+| 구매확정 | `PurchaseConfirmation` | fulfillment | 구매자 확정, 또는 배송 완료 7일 뒤 자동 확정. 이후에는 클레임을 신청할 수 없다 |
+| 클레임 | `Claim` | fulfillment | 유형: `CANCEL`, `RETURN`, `EXCHANGE`. 상태: `REQUESTED` → `APPROVED` → `COMPLETED`, 또는 `REJECTED`. 중재 중이면 `MEDIATING` |
+| 귀책 | `Fault` (`BUYER`, `SELLER`) | fulfillment | 반품 배송비 차감 여부를 정한다 |
+
+## 쿠폰·리뷰·정산·알림
+| 용어 | 코드 이름 | 담당 | 설명 |
+|---|---|---|---|
+| 쿠폰 정책 | `Coupon` | promotion | 할인 방식(`FIXED`, `RATE`), 조건, 발급 수량, 유효기간. 발행 주체는 관리자 또는 판매자 |
+| 발급 쿠폰 | `IssuedCoupon` | promotion | 회원이 내려받은 쿠폰 한 장. 상태: `AVAILABLE` → `RESERVED` → `USED`, 복원 시 `AVAILABLE` |
+| 선착순 발급 | `Coupon.issue()` + Redis 카운터 | promotion | 수량과 1인 1매를 Redis에서 원자적으로 확인한다 |
+| 리뷰 | `Review` | review | 주문 항목(`OrderLine`)당 하나. 상태: `VISIBLE` ↔ `HIDDEN` |
+| 리뷰 작성 자격 | `ReviewEligibility` | review | 구매확정 이벤트로 생긴다 |
+| 별점 요약 | `RatingSummary` | review | 상품별 평균 별점과 리뷰 수 |
+| 정산 대상 | `SettlementItem` | settlement | 구매확정된 하위 주문 하나. 판매가, 수수료, 판매자 쿠폰 부담분을 가진다 |
+| 정산 | `Settlement` | settlement | 판매자별 주 단위 묶음. 상태: `PENDING` → `CONFIRMED` → `PAID_OUT` |
+| 수수료율 | `CommissionRate` | settlement | 카테고리별 요율(정산이 소유) |
+| 알림 | `Notification` | notification | 채널: `EMAIL`, `IN_APP`. 원인 이벤트 ID로 중복을 막는다 |
+
+## 기술 용어
+| 용어 | 코드 이름 | 설명 |
+|---|---|---|
+| 아웃박스 | `outbox_event` 테이블 | 도메인 변경과 같은 트랜잭션에 쌓는 발행 대기 이벤트. Debezium이 읽어 Kafka로 보낸다 |
+| 처리한 이벤트 | `processed_event` 테이블 | 소비자가 처리한 이벤트 ID. 중복 소비를 막는다 |
+| 멱등성 키 | `Idempotency-Key` 헤더, `idempotency_record` 테이블 | 상태 변경 API의 중복 요청을 막는다 |
+| 이벤트 봉투 | `EventEnvelope` | 이벤트 공통 필드. [messaging.md](architecture/messaging.md) 참고 |
+| DLT | `<topic>.DLT` | 재시도 후에도 실패한 메시지가 가는 토픽 |
