@@ -1,0 +1,14 @@
+# 스키마를 가진 서비스. 한 줄에 하나. 01-service-schemas.sh와 02-debezium.sh가 읽는다.
+# 서비스를 추가하면 여기와 .env.example, infra/compose/compose.yaml의 postgres 환경 변수에 더한다(add-service skill).
+member
+catalog
+order
+payment
+fulfillment
+promotion
+review
+settlement
+search
+auth
+file
+notification

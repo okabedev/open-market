@@ -20,8 +20,8 @@ description: 오픈 마켓에 새 백엔드 서비스(core 또는 infra)를 추�
 - [ ] 테스트 설정은 `src/test/resources/config/application.yml`에 둔다. 같은 이름(`application.yml`)을 테스트 리소스 루트에 두면 main 설정을 가린다
 - [ ] Flyway 위치에 공통 테이블 추가: `spring.flyway.locations=classpath:db/migration,classpath:db/common/web,classpath:db/common/messaging` ([data.md](../../../docs/architecture/data.md)). 서비스 마이그레이션은 `V1`부터
 - [ ] ArchUnit 테스트: `common-test`의 `ArchitectureRules`를 이 서비스 패키지에 적용 (사용 예는 그 클래스의 Javadoc)
-- [ ] `infra/postgres/init`: 스키마, `<name>_app` 계정, 권한
-- [ ] `infra/postgres/init`: `debezium` 계정에 `<name>.outbox_event` SELECT 권한, publication에 테이블 추가
+- [ ] 스키마와 계정: `infra/postgres/init/services.txt`에 이름 추가, `.env.example`과 `infra/compose/compose.yaml`의 postgres 환경 변수에 `<NAME>_DB_PASSWORD` 추가. 이미 뜬 DB에는 `docker compose down -v` 후 다시 띄워 적용한다
+- [ ] `infra/debezium` 등록 스크립트: `debezium` 계정에 `<name>.outbox_event` SELECT 권한, publication `openmarket_outbox`에 테이블 추가
 - [ ] `infra/debezium`: 커넥터 `table.include.list`에 `<name>.outbox_event` 추가
 - [ ] `infra/kafka/topics`: 이 서비스가 발행하는 토픽과 `.DLT` 토픽 선언
 - [ ] `infra/config-repo/<name>.yml`: 포트, 데이터 소스(스키마·계정), Kafka 소비자 그룹 `<name>`
