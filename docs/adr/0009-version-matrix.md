@@ -48,10 +48,16 @@ Spring Authorization Server는 Spring Security 7.x에 포함되어 Boot BOM이 �
 | redis | 8.10.2-alpine | |
 | axllent/mailpit | v1.31.6 | |
 | kafbat/kafka-ui | v1.5.0 | provectuslabs/kafka-ui는 유지보수가 멈춰 후속 포크를 쓴다 |
+| elasticsearch | 9.4.6 | `search` profile. Boot BOM의 Elasticsearch 클라이언트(9.4.x)와 같은 라인. nori 커스텀 이미지(M2)도 이 태그를 기반으로 한다 |
+| otel/opentelemetry-collector-contrib | 0.161.0 | `obs` profile |
+| prom/prometheus | v3.13.4 | `obs` profile |
+| grafana/tempo | 3.1.0 | `obs` profile. 3.x 단일 바이너리 모드는 Kafka 없이 동작한다 |
+| grafana/loki | 3.7.8 | `obs` profile |
+| grafana/grafana | 13.2.3 | `obs` profile |
 
-Compose 이미지 태그의 원본은 `infra/compose/compose.yaml`이다. 태그를 올리면 그 파일과 이 표를 같이 고친다.
+Compose 이미지 태그의 원본은 `infra/compose`의 compose 파일이다. 태그를 올리면 그 파일과 이 표를 같이 고친다.
 
-이후 마일스톤에서 쓸 컨테이너 이미지와 라이브러리(Elasticsearch, 관측성 스택, Resilience4j 설정, 프론트 패키지)는 해당 마일스톤에서 이 표에 추가한다.
+이후 마일스톤에서 쓸 컨테이너 이미지와 라이브러리(Resilience4j 설정, 프론트 패키지 등)는 해당 마일스톤에서 이 표에 추가한다.
 
 ## 결과
 - 좋아지는 점: 지원 기간이 가장 긴 GA 조합이다. 대부분의 버전을 BOM에 맡겨 충돌이 적다.

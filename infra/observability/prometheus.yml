@@ -1,0 +1,19 @@
+# Prometheus 스크레이프 대상. 지금은 관측성 스택 자신만 수집한다.
+# Spring 서비스(/actuator/prometheus)는 Eureka 서비스 디스커버리로 찾는다. discovery를 추가하는 PR에서 더한다.
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]
+  - job_name: otel-collector
+    static_configs:
+      - targets: ["otel-collector:8888"]
+  - job_name: tempo
+    static_configs:
+      - targets: ["tempo:3200"]
+  - job_name: loki
+    static_configs:
+      - targets: ["loki:3100"]

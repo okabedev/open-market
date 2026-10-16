@@ -86,7 +86,7 @@ flowchart LR
 | profile | 구성 요소 |
 |---|---|
 | (기본) | PostgreSQL(`wal_level=logical`), Kafka(KRaft 단일 노드), Debezium Connect, Redis, Mailpit, Kafka UI |
-| `search` | Elasticsearch(+ nori 플러그인) |
+| `search` | Elasticsearch(+ nori 플러그인, M2) |
 | `obs` | OpenTelemetry Collector, Prometheus, Tempo, Loki, Grafana |
 | `apps` | Spring 서비스 전체(빌드 이미지) |
 

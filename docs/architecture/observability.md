@@ -17,6 +17,16 @@ flowchart LR
 - 로그: JSON 구조화 로그(Spring Boot 구조화 로깅). 표준 출력과 OTLP 양쪽으로 낸다. 필드에 `traceId`, `spanId`, `service`가 들어간다.
 - Next.js 서버도 OTel을 붙여 BFF → gateway 구간을 같은 트레이스로 잇는다(M1).
 
+## 설정 위치
+| 파일 | 내용 |
+|---|---|
+| `infra/compose/obs.yaml` | 컨테이너 정의. 포트는 [dev-setup.md](../dev-setup.md) |
+| `infra/observability/otel-collector.yaml` | OTLP 수신(4317, 4318) → 트레이스는 Tempo, 로그는 Loki(`/otlp`). 지표 파이프라인은 없다 |
+| `infra/observability/tempo.yaml` | 단일 바이너리 모드, 로컬 디스크 저장, 보존 7일 |
+| `infra/observability/loki.yaml` | 단일 바이너리 모드, 로컬 디스크 저장, 보존 7일. OTLP 로그의 `trace_id`는 구조화 메타데이터로 들어간다 |
+| `infra/observability/prometheus.yml` | 스크레이프 대상. 보존 7일, exemplar 저장 켬. 지금은 관측성 스택만 수집하고, 서비스는 discovery를 추가할 때 Eureka 서비스 디스커버리로 더한다 |
+| `infra/grafana/provisioning/datasources` | Prometheus, Tempo, Loki. uid를 이름과 같게 고정한다. 지표 exemplar → 트레이스, 트레이스 → 로그, 로그 → 트레이스 링크를 건다 |
+
 ## Kafka 구간 트레이스
 - 발행: outbox에 이벤트를 넣을 때 현재 트레이스 컨텍스트를 `traceparent` 컬럼에 담는다. Debezium이 헤더로 옮긴다.
 - 소비: Spring Kafka 리스너 관측(`spring.kafka.listener.observation-enabled=true`)이 `traceparent` 헤더로 자식 스팬을 연다. `common-messaging`은 같은 값을 `EventEnvelope.traceparent`로도 넘긴다. 설정과 확인은 M0-d에서 한다.

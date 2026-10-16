@@ -1,5 +1,5 @@
 # 로컬 인프라. profile 구성은 docs/architecture/overview.md의 "로컬 실행 구성"을 따른다.
-# 이 파일은 기본 profile(profile 없음)이다. search, obs, apps profile은 M0-c 이후 PR에서 더한다.
+# 이 파일은 기본 profile(profile 없음)이다. search는 search.yaml, obs는 obs.yaml에 있다. apps profile은 M0-c 마지막 PR에서 더한다.
 # 이미지 태그는 버전을 고정한다. 메모리 상한은 R6 실측 후 정한다(docs/architecture/risks.md).
 services:
   postgres:

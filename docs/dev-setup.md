@@ -43,6 +43,11 @@ cp .env.example .env
 cp .env.example .env          # 처음 한 번
 docker compose up -d --wait   # 기본 profile. 모두 healthy가 되면 끝난다
 docker compose ps
+
+# 필요할 때 profile을 더한다. 멈출 때도 같은 --profile을 붙여야 그 컨테이너까지 내려간다.
+docker compose --profile search up -d --wait               # Elasticsearch
+docker compose --profile obs up -d --wait                  # 관측성 스택
+docker compose --profile search --profile obs down
 ```
 
 | 구성 요소 | 호스트 주소 | 비고 |
@@ -53,6 +58,10 @@ docker compose ps
 | Redis | `localhost:6379` | |
 | Mailpit | SMTP `localhost:1025`, 화면 http://localhost:8025 | |
 | Kafka UI | http://localhost:8089 | |
+| Elasticsearch (`search`) | http://localhost:9200 | 인증 없음. nori 플러그인은 M2 |
+| OTel Collector (`obs`) | OTLP gRPC `localhost:4317`, HTTP `localhost:4318` | 서비스가 트레이스와 로그를 보낸다 |
+| Prometheus (`obs`) | http://localhost:9090 | |
+| Grafana (`obs`) | http://localhost:3003 | 로그인 없음. 데이터 소스 Prometheus, Tempo, Loki가 미리 등록된다 |
 
 - 멈춤: `docker compose down`. 데이터는 볼륨에 남는다.
 - 초기화: `docker compose down -v`. Postgres 초기화 스크립트(`infra/postgres/init`)는 빈 볼륨에서만 실행되므로, 스크립트나 `.env` 비밀번호를 바꾸면 볼륨을 지우고 다시 띄운다.

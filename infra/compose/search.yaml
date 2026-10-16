@@ -1,0 +1,31 @@
+# search profile: Elasticsearch. `docker compose --profile search up -d --wait`로 띄운다.
+# 지금은 공식 이미지다. nori 플러그인을 넣은 커스텀 이미지는 M2(R10)에서 infra/elasticsearch로 바꾼다.
+services:
+  elasticsearch:
+    image: elasticsearch:9.4.6
+    profiles: [search]
+    environment:
+      cluster.name: openmarket
+      discovery.type: single-node
+      # 로컬 전용이라 인증과 TLS를 끈다. 호스트에만 포트를 연다.
+      xpack.security.enabled: "false"
+      xpack.ml.enabled: "false"
+      # 개발 PC 디스크가 차 있어도 인덱스가 읽기 전용으로 바뀌지 않게 한다.
+      cluster.routing.allocation.disk.threshold_enabled: "false"
+      ES_JAVA_OPTS: -Xms1g -Xmx1g
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs 'http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=2s' > /dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+
+volumes:
+  elasticsearch-data:
