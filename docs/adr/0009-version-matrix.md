@@ -39,6 +39,11 @@ Spring Authorization Server는 Spring Security 7.x에 포함되어 Boot BOM이 �
 | Error Prone / Gradle 플러그인 `net.ltgt.errorprone` | 2.50.0 / 5.1.1 | 2.45.0에서 JDK 26 EA 호환 개선 |
 | NullAway | 0.14.2 | 0.13.0부터 JDK 25로 CI 빌드 |
 
+### 컨테이너 이미지
+| 이미지 | 태그 | 비고 |
+|---|---|---|
+| postgres | 18.6-alpine | Testcontainers(`common-test` `TestImages`)와 M0-c Compose가 같은 태그를 쓴다 |
+
 이후 마일스톤에서 쓸 컨테이너 이미지와 라이브러리(Debezium, Kafka 이미지, Elasticsearch, Resilience4j 설정, 프론트 패키지)는 해당 마일스톤에서 이 표에 추가한다.
 
 ## 결과

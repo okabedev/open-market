@@ -33,11 +33,11 @@ com.openmarket.<service>
 
 | 패키지 | 의존할 수 있는 것 |
 |---|---|
-| `command.domain` | `libs/common-core`, JDK, Jakarta Persistence 애노테이션 |
+| `command.domain` | `libs/common-core`, JDK, Jakarta Persistence 애노테이션, JSpecify |
 | `command.application` | `command.domain`, `common-core`, `common-messaging`(outbox 기록 인터페이스), Spring 트랜잭션 |
 | `query.application` | `query.dao`, `query.dto` |
 | `query.dao` | `query.dto`, QueryDSL, `command.domain`의 Q-타입(`Q*` 클래스)만 |
-| `query.dto` | JDK |
+| `query.dto` | JDK, JSpecify, Jackson·OpenAPI 애노테이션 |
 | `infra` | `command.domain`, `command.application`(포트 구현), 외부 라이브러리 |
 | `ui` | `command.application`, `query.application`, `query.dto`, `common-web` |
 
@@ -97,7 +97,7 @@ com.openmarket.<service>
 | E2E | 마일스톤 완료 시나리오 | Compose 전체 스택 + Playwright(화면)·HTTP 스크립트 |
 
 - 기능은 테스트 먼저 작성한다(add-usecase skill).
-- 테스트 이름은 한국어 `@DisplayName`으로 쓴다.
+- 테스트 이름은 한국어 `@DisplayName`으로 쓴다. 메서드 이름은 영어로 쓴다(Error Prone `UnicodeInCode`가 코드의 한글 식별자를 막는다).
 - Testcontainers 컨테이너는 테스트 클래스 사이에서 재사용한다.
 
 ## 프론트엔드

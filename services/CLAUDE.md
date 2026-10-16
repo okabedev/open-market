@@ -9,8 +9,8 @@ services/
 ├─ build-logic/        convention 플러그인 (Java·Spring Boot·테스트·QueryDSL 공통 설정)
 ├─ gradle/libs.versions.toml
 ├─ libs/
-│  ├─ common-core      베이스 예외, ErrorType, Money (Spring 의존 없음)
-│  ├─ common-web       ProblemDetail 변환, Idempotency-Key 필터, 마스킹, 요청 로깅
+│  ├─ common-core      베이스 예외, ErrorType, Money, ID(UUID v7), 개인정보 마스킹 (Spring 의존 없음)
+│  ├─ common-web       ProblemDetail 변환, @Idempotent 처리, 요청 로깅 (자동설정)
 │  ├─ common-messaging outbox 기록, 멱등 리스너, EventEnvelope, 트레이스 전파
 │  └─ common-test      Testcontainers 설정, ArchUnit 규칙, 픽스처
 ├─ core/<service>
@@ -32,7 +32,8 @@ services/
 - 도메인과 유스케이스는 단위 테스트로 검증한다. 포트는 가짜 구현을 쓴다.
 - 저장소, QueryDSL, 메시징은 Testcontainers로 검증한다.
 - 발행하는 이벤트마다 JSON 예시(`src/test/resources/events/<type>.json`)를 둔다. 소비자 테스트는 발행자의 예시를 읽어 역직렬화를 확인한다.
-- 테스트 이름은 한국어 `@DisplayName`으로 쓴다.
+- 테스트 이름은 한국어 `@DisplayName`, 메서드 이름은 영어로 쓴다.
+- DB 통합 테스트는 `common-test`의 `PostgresContainerConfiguration`을 `@Import`한다.
 
 ## 명령
 `services/`에서 실행한다.

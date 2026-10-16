@@ -16,7 +16,16 @@
 - 컬럼 삭제나 이름 변경은 두 단계로 한다. 먼저 새 컬럼을 추가하고 코드를 옮긴 뒤, 다음 버전에서 옛 컬럼을 지운다.
 
 ## 공통 테이블
-아래 세 테이블은 `common-messaging`과 `common-web`이 쓴다. 각 서비스의 첫 마이그레이션(`V1__common.sql`)에 넣는다.
+아래 세 테이블은 `common-messaging`과 `common-web`이 쓴다. DDL은 서비스에 복사하지 않고 라이브러리 jar 안의 Flyway 위치로 제공한다.
+
+| 라이브러리 | Flyway 위치 | 테이블 |
+|---|---|---|
+| `common-web` | `classpath:db/common/web` | `idempotency_record` |
+| `common-messaging` | `classpath:db/common/messaging` | `outbox_event`, `processed_event` (M0-b PR 4) |
+
+- 서비스는 `spring.flyway.locations`에 자기 `classpath:db/migration`과 위 위치를 함께 적는다.
+- 라이브러리 마이그레이션 버전은 `V0_<n>`이다. 서비스 마이그레이션은 `V1`부터 시작하므로 겹치지 않는다.
+- 공통 테이블을 바꿀 때는 새 `V0_<n>` 파일을 추가한다. 이미 `V1` 이상이 적용된 서비스에도 들어가도록 config-repo 공통 설정에 `spring.flyway.out-of-order=true`를 둔다(M0-c).
 
 ### outbox_event
 | 컬럼 | 타입 | 설명 |
@@ -51,6 +60,9 @@ PK는 `(event_id, consumer)`다. 30일 지난 행은 지운다.
 | created_at | timestamptz | 24시간 지나면 지운다 |
 
 PK는 `(principal, idempotency_key)`다. 처리 중에 같은 키가 또 오면 409를 돌려준다.
+- 5xx나 예외로 끝난 요청은 기록을 지워 같은 키로 다시 시도할 수 있게 한다.
+- `IN_PROGRESS`가 1분 넘게 남아 있으면 앞선 요청이 중단된 것으로 보고 새 요청이 이어받는다.
+- 24시간 지난 기록은 새 요청으로 처리한다. 지난 행을 지우는 정리 작업은 ShedLock과 함께 M0-b PR 4에서 붙인다.
 
 ## 엔티티 규칙
 - PK는 애플리케이션이 만드는 UUID v7이다. 외부에 노출하는 ID도 같은 값을 쓴다.
