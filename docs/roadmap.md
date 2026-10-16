@@ -26,8 +26,8 @@
   - [x] `libs/common-messaging`(outbox 기록, 멱등 소비, 정리 작업과 ShedLock)
   - [x] 서비스 템플릿(빈 서비스 하나로 패키지 규약·ArchUnit·Flyway·통합 테스트 확인): `core/member` 골격
 - [ ] **M0-c 로컬 인프라**
-  - [ ] Compose 기본 profile(Postgres, Kafka, Debezium Connect, Redis, Mailpit, Kafka UI), `search`, `obs`
-  - [ ] Postgres 초기화(스키마·계정·복제 계정·publication)
+  - [ ] Compose 기본 profile(Postgres, Kafka, Debezium Connect, Redis, Mailpit, Kafka UI), `search`, `obs` — 기본 profile 완료
+  - [x] Postgres 초기화(스키마·계정·복제 계정·publication)
   - [ ] discovery, config(+ `infra/config-repo`), gateway(R4)
   - [ ] 메모리 실측(R6)
 - [ ] **M0-d 이벤트 파이프라인**

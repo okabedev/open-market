@@ -1,7 +1,7 @@
 # 개발 환경 준비
 
 기준 환경은 Windows + WSL2(Ubuntu)다. macOS나 Linux도 같은 도구를 쓰면 된다.
-빌드·실행 명령은 M0-b, M0-c에서 확정되면 이 문서에 추가한다.
+백엔드 빌드 명령은 [services/CLAUDE.md](../services/CLAUDE.md)에 있다.
 
 ## 1. 도구
 | 도구 | 버전 | 비고 |
@@ -37,4 +37,23 @@ cp .env.example .env
 - `.env`는 커밋하지 않는다.
 
 ## 5. 실행
-M0-c에서 확정한다. 예정된 구성은 [overview.md](architecture/overview.md)의 "로컬 실행 구성"을 본다.
+구성은 [overview.md](architecture/overview.md)의 "로컬 실행 구성"을 본다. 레포 루트에서 실행한다.
+
+```bash
+cp .env.example .env          # 처음 한 번
+docker compose up -d --wait   # 기본 profile. 모두 healthy가 되면 끝난다
+docker compose ps
+```
+
+| 구성 요소 | 호스트 주소 | 비고 |
+|---|---|---|
+| PostgreSQL | `localhost:5432`, DB `openmarket` | 관리자 `postgres`, 서비스 계정 `<service>_app`. 비밀번호는 `.env` |
+| Kafka | `localhost:9092` | 컨테이너끼리는 `kafka:29092` |
+| Debezium Connect | http://localhost:8083 | 커넥터 등록은 M0-d |
+| Redis | `localhost:6379` | |
+| Mailpit | SMTP `localhost:1025`, 화면 http://localhost:8025 | |
+| Kafka UI | http://localhost:8089 | |
+
+- 멈춤: `docker compose down`. 데이터는 볼륨에 남는다.
+- 초기화: `docker compose down -v`. Postgres 초기화 스크립트(`infra/postgres/init`)는 빈 볼륨에서만 실행되므로, 스크립트나 `.env` 비밀번호를 바꾸면 볼륨을 지우고 다시 띄운다.
+- 서비스는 IDE나 `./gradlew :core:<service>:bootRun`으로 띄운다. config 서버와 gateway는 M0-c에서 이어서 추가한다.
