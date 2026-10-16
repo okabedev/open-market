@@ -13,8 +13,8 @@
 | [0007](0007-ddd-cqrs-packages.md) | DDD + CQRS 패키지 구조 | 승인 |
 | [0008](0008-local-file-storage.md) | 로컬 file 서비스 | 승인 |
 | [0009](0009-version-matrix.md) | 버전 조합 | 승인 |
+| [0010](0010-code-style-tools.md) | 코드 스타일과 정적 분석 도구 | 승인 |
 
-코드 스타일 도구 ADR은 M0-b PR 2에서 0010으로 쓴다.
 
 ## 템플릿
 ```markdown
