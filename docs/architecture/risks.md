@@ -1,0 +1,27 @@
+# 기술 리스크
+
+M0에서 먼저 확인할 항목이다. 확인하면 결과와 날짜를 적고, 결정이 생기면 ADR로 남긴다.
+
+| # | 리스크 | 왜 문제인가 | 확인 방법 | 마일스톤 | 상태 |
+|---|---|---|---|---|---|
+| R1 | Java 25 + Spring Boot 4 + Spring Cloud 호환 조합 | Spring Cloud 릴리스 트레인이 쓰려는 Boot 버전을 지원해야 한다 | 공식 호환표와 start.spring.io 메타데이터로 확인하고, 빈 서비스를 빌드·기동한다 | M0-b | 미확인 |
+| R2 | QueryDSL APT와 Java 25, Hibernate 7 | 원본 QueryDSL은 유지보수가 느리다. 포크(OpenFeign) 버전의 Jakarta·JDK 지원을 확인해야 한다 | 템플릿 서비스에서 Q-타입 생성과 조회 테스트 | M0-b | 미확인 |
+| R3 | 포매터·정적 분석 도구의 Java 25 지원 | 도구가 새 문법을 못 읽으면 빌드가 깨진다 | 후보 도구로 템플릿 빌드 | M0-b | 미확인 |
+| R4 | Gateway 구현 선택(WebFlux 또는 WebMVC) | 레이트 리밋, 토큰 처리 필터 지원 범위가 다르다 | 두 구현의 필터 문서 비교, 필요한 필터(JWT, Redis 레이트 리밋, 경로 재작성) 동작 확인 | M0-c | 미확인 |
+| R5 | Debezium과 Postgres 논리 복제 | 스키마 여러 개의 outbox를 커넥터 하나로 읽고, 토픽을 `aggregate_type`으로 나눠야 한다. 복제 슬롯이 쌓이면 디스크가 찬다 | 샘플 서비스 두 개로 outbox → 토픽 확인, 커넥터 중지 후 재기동 시 유실 없는지 확인 | M0-d | 미확인 |
+| R6 | 로컬 메모리 예산 | 서비스 15개, Kafka, Connect, ES, 관측성을 함께 띄워야 한다. WSL 메모리가 부족하면 E2E를 돌릴 수 없다 | profile별로 띄워 `docker stats`로 실측하고, 서비스 JVM 힙 기본값(`-XX:MaxRAMPercentage`)을 정한다 | M0-c | 미확인 |
+| R7 | auth issuer 호스트 이름 | 브라우저, IDE 실행 서비스, 컨테이너가 같은 issuer URL로 auth에 닿아야 한다 | hosts + 네트워크 별칭으로 세 경우 모두 토큰 검증 확인 | M1 | 미확인 |
+| R8 | Next.js BFF 세션과 토큰 갱신 | 서버 컴포넌트, Server Action, Route Handler 모두에서 세션을 읽고 토큰을 갱신해야 한다. 동시 갱신 경쟁이 생길 수 있다 | 갱신 중복 방지(Redis 락) 시나리오 테스트 | M1 | 미확인 |
+| R9 | 토스페이먼츠 테스트 환경 | 테스트 키로 승인, 부분취소, 웹훅을 로컬에서 받을 수 있어야 한다. 웹훅은 공인 주소가 필요하다 | 승인·취소 API 확인. 웹훅은 결제 조회 폴링으로 대신할 수 있는지 확인 | M3 | 미확인 |
+| R10 | Elasticsearch nori 플러그인 | 공식 이미지에 nori가 없어서 커스텀 이미지가 필요하다 | Dockerfile로 플러그인 설치, 인덱스 분석기 테스트 | M2 | 미확인 |
+
+## 메모리 예산 (R6 실측 전 가정)
+| 구성 | 개수 | 가정(컨테이너당) |
+|---|---|---|
+| Spring 서비스 | 15 | 300~400MB |
+| PostgreSQL, Redis, Mailpit | 3 | 합계 1GB |
+| Kafka(KRaft), Debezium Connect, Kafka UI | 3 | 합계 2.5GB |
+| Elasticsearch | 1 | 1.5GB (힙 1GB) |
+| 관측성(Collector, Prometheus, Tempo, Loki, Grafana) | 5 | 합계 1.5GB |
+
+합계는 약 12~13GB다. 이 값은 실측으로 바꾼다. 부족하면 E2E를 범위별 profile 조합으로 나눠 돌린다.
