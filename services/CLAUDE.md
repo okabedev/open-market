@@ -35,4 +35,15 @@ services/
 - 테스트 이름은 한국어 `@DisplayName`으로 쓴다.
 
 ## 명령
-M0-b에서 확정한다.
+`services/`에서 실행한다.
+| 명령 | 용도 |
+|---|---|
+| `./gradlew build` | 컴파일, 포맷 검사, 정적 분석, 테스트 |
+| `./gradlew spotlessApply` | 포맷 자동 수정 |
+| `./gradlew :core:<service>:test` | 서비스 하나만 테스트 |
+| `./gradlew -p build-logic test` | convention 플러그인 회귀 테스트 (Java 25 도구 동작 확인) |
+
+## 빌드 규약
+- 모듈 빌드 파일은 convention 플러그인만 적용한다: 서비스 `openmarket.spring-service-conventions`, 라이브러리 `openmarket.library-conventions`, QueryDSL을 쓰면 `openmarket.querydsl-conventions`를 더한다.
+- 버전은 `gradle/libs.versions.toml`에만 적는다. Boot·Cloud BOM이 관리하는 라이브러리는 버전 없이 쓴다.
+- 포맷, Error Prone, NullAway 설정을 모듈에서 끄지 않는다.
