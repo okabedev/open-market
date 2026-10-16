@@ -7,7 +7,12 @@
 - 만드는 곳은 `infra/postgres/init/`의 초기화 SQL이다. 스키마 안의 테이블은 각 서비스의 Flyway가 만든다.
 - Debezium은 복제 전용 계정(`debezium`)을 쓴다. 이 계정은 각 스키마의 `outbox_event` 테이블만 `SELECT`할 수 있다. 발행(publication)은 `outbox_event` 테이블들만 포함한다.
 
-`order`는 SQL 예약어라서 스키마 이름을 따옴표로 감싸야 한다. 서비스 설정에서 `spring.jpa.properties.hibernate.default_schema`와 Flyway `schemas`를 지정해 쿼리에 스키마 이름이 직접 나오지 않게 한다.
+`order`는 SQL 예약어라서 스키마 이름을 따옴표로 감싸야 한다. 서비스 설정에서 아래 값을 지정해 쿼리에 스키마 이름이 직접 나오지 않게 한다.
+- `spring.datasource.hikari.schema`: 연결의 `search_path`. 공통 라이브러리의 JDBC 쿼리(outbox, 멱등 기록, ShedLock)는 스키마 이름 없이 테이블을 부르므로 꼭 필요하다
+- `spring.jpa.properties.hibernate.default_schema`
+- Flyway `schemas`와 `default-schema`
+
+예시는 `services/core/member`의 테스트 설정(`src/test/resources/config/application.yml`)이고, 실행 설정은 `infra/config-repo/<service>.yml`에 둔다(M0-c).
 
 ## 마이그레이션
 - Flyway로만 스키마를 바꾼다. 위치는 `src/main/resources/db/migration`, 이름은 `V<번호>__<설명>.sql`이다.

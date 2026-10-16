@@ -13,9 +13,11 @@ description: 오픈 마켓에 새 백엔드 서비스(core 또는 infra)를 추�
 3. 이 서비스가 발행·구독하는 이벤트를 [context-map.md](../../../docs/architecture/context-map.md)에서 확인한다.
 
 ## 체크리스트
+골격은 `services/core/member`를 본뜬다(빌드 파일, `application.yml`, 계층별 `package-info.java`, `ArchitectureTest`, 통합 테스트).
 - [ ] `services/settings.gradle.kts`에 `:core:<name>` 또는 `:infra:<name>` 추가. `build-logic`의 서비스 convention 플러그인을 적용한다
 - [ ] 패키지 골격 `com.openmarket.<name>`: `command/{application,domain}`, `query/{application,dao,dto}`, `infra`, `ui/{web,event}`
-- [ ] `src/main/resources/application.yml`: 앱 이름, config 서버 import만 둔다
+- [ ] `src/main/resources/application.yml`: 앱 이름, config 서버 import, Flyway 위치만 둔다
+- [ ] 테스트 설정은 `src/test/resources/config/application.yml`에 둔다. 같은 이름(`application.yml`)을 테스트 리소스 루트에 두면 main 설정을 가린다
 - [ ] Flyway 위치에 공통 테이블 추가: `spring.flyway.locations=classpath:db/migration,classpath:db/common/web,classpath:db/common/messaging` ([data.md](../../../docs/architecture/data.md)). 서비스 마이그레이션은 `V1`부터
 - [ ] ArchUnit 테스트: `common-test`의 `ArchitectureRules`를 이 서비스 패키지에 적용 (사용 예는 그 클래스의 Javadoc)
 - [ ] `infra/postgres/init`: 스키마, `<name>_app` 계정, 권한
