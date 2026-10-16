@@ -1,0 +1,47 @@
+# Grafana 데이터 소스. uid를 고정해 대시보드 JSON과 데이터 소스 사이 링크가 깨지지 않게 한다.
+# 지표 exemplar → 트레이스, 트레이스 → 로그, 로그 → 트레이스로 오갈 수 있게 서로 연결한다.
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    uid: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    jsonData:
+      exemplarTraceIdDestinations:
+        - name: trace_id
+          datasourceUid: tempo
+
+  - name: Tempo
+    type: tempo
+    uid: tempo
+    access: proxy
+    url: http://tempo:3200
+    jsonData:
+      tracesToLogsV2:
+        datasourceUid: loki
+        filterByTraceID: true
+        spanStartTimeShift: -5m
+        spanEndTimeShift: 5m
+      tracesToMetrics:
+        datasourceUid: prometheus
+      lokiSearch:
+        datasourceUid: loki
+      nodeGraph:
+        enabled: true
+
+  - name: Loki
+    type: loki
+    uid: loki
+    access: proxy
+    url: http://loki:3100
+    jsonData:
+      derivedFields:
+        # OTLP 로그의 trace_id는 구조화 메타데이터로 들어온다.
+        - name: TraceID
+          matcherType: label
+          matcherRegex: trace_id
+          datasourceUid: tempo
+          url: "$${__value.raw}"

@@ -1,7 +1,12 @@
 # 레포 루트에서 `docker compose up -d`로 로컬 인프라를 띄운다. 실제 정의는 infra/compose에 있다.
+# search, obs profile은 `--profile`로 더한다(docs/dev-setup.md).
 # 루트 .env를 변수로 읽는다. 처음에는 `cp .env.example .env`.
 name: openmarket
 
 include:
   - path: infra/compose/compose.yaml
+    env_file: .env
+  - path: infra/compose/search.yaml
+    env_file: .env
+  - path: infra/compose/obs.yaml
     env_file: .env

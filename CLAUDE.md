@@ -31,7 +31,7 @@
 docs/        PRD, 용어집, 로드맵, 개발 환경, architecture/, adr/
 services/    Gradle 멀티 모듈: build-logic/, libs/, core/<service>, infra/<service>   → services/CLAUDE.md
 clients/     pnpm 모노레포: apps/{shop,seller,admin}, packages/                      → clients/CLAUDE.md
-infra/       compose/, config-repo/, postgres/, debezium/, kafka/, elasticsearch/, grafana/, k6/  → infra/CLAUDE.md
+infra/       compose/, config-repo/, postgres/, debezium/, kafka/, elasticsearch/, observability/, grafana/, k6/  → infra/CLAUDE.md
 .claude/     skills/
 ```
 
@@ -58,5 +58,5 @@ infra/       compose/, config-repo/, postgres/, debezium/, kafka/, elasticsearch
 
 ## 명령
 - 백엔드: `services/`에서 `./gradlew build` (포맷 고치기 `./gradlew spotlessApply`). 자세한 것은 [services/CLAUDE.md](services/CLAUDE.md).
-- 로컬 인프라: 레포 루트에서 `cp .env.example .env`(처음 한 번), `docker compose up -d`. 포트와 초기화는 [dev-setup.md](docs/dev-setup.md).
+- 로컬 인프라: 레포 루트에서 `cp .env.example .env`(처음 한 번), `docker compose up -d --wait`. 검색·관측성은 `--profile search --profile obs`를 더한다. 포트와 초기화는 [dev-setup.md](docs/dev-setup.md).
 - 프론트(M0-e)는 확정되면 여기에 적는다.
