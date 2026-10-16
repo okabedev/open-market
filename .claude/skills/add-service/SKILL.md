@@ -25,7 +25,7 @@ description: 오픈 마켓에 새 백엔드 서비스(core 또는 infra)를 추�
 - [ ] `infra/debezium`: 커넥터 `table.include.list`에 `<name>.outbox_event` 추가
 - [ ] `infra/kafka/topics`: 이 서비스가 발행하는 토픽과 `.DLT` 토픽 선언
 - [ ] `infra/config-repo/<name>.yml`: 포트, DB 비밀번호 자리 표시자 `${<NAME>_DB_PASSWORD}`, Kafka 소비자 그룹 `<name>`. 스키마·계정·URL은 공통 `application.yml`이 서비스 이름으로 정한다
-- [ ] gateway 라우트 `/api/<name>/**` → `lb://<name>` (외부 API가 있을 때)
+- [ ] gateway 라우트 `/api/<name>/**` → `lb://<name>`, `StripPrefix=2` (외부 API가 있을 때). `infra/config-repo/gateway.yml`의 `routes`에 더하고, 토큰 없이 열 API는 `openmarket.gateway.public-paths`에 적는다
 - [ ] auth에 `client_credentials` 클라이언트 `<name>` 등록 (다른 서비스를 동기 호출할 때)
 - [ ] `infra/compose`의 `apps` profile에 서비스 추가
 - [ ] CI 변경 경로 필터에 모듈 추가

@@ -1,0 +1,14 @@
+# 테스트 설정. 레포의 config-repo(공통 application.yml + gateway.yml)를 그대로 읽어 실제 라우트·공개 경로·토큰 검증 설정을 검사한다.
+# config 서버와 Eureka 없이 뜨게 한다. 서비스 주소(simple discovery)와 JWK 주소는 테스트가 가짜 서버로 넣는다.
+# 경로는 테스트 작업 디렉터리(services/infra/gateway) 기준이다.
+spring:
+  config:
+    import:
+      - file:../../../infra/config-repo/application.yml
+      - file:../../../infra/config-repo/gateway.yml
+  cloud:
+    config:
+      enabled: false
+eureka:
+  client:
+    enabled: false

@@ -60,6 +60,7 @@ docker compose --profile search --profile obs down
 | Kafka UI | http://localhost:8089 | |
 | discovery (Eureka) | http://localhost:8761 | 등록된 인스턴스 화면. 레지스트리 API는 `/eureka/apps` |
 | config | http://localhost:8888 | 서비스가 받을 설정 확인: `curl localhost:8888/member/default` |
+| gateway | http://localhost:8080 | 외부 진입점. 예: `curl localhost:8080/api/member/v1/ping`(member 실행 필요). 관리 포트 8081은 호스트에 열지 않는다 |
 | Elasticsearch (`search`) | http://localhost:9200 | 인증 없음. nori 플러그인은 M2 |
 | OTel Collector (`obs`) | OTLP gRPC `localhost:4317`, HTTP `localhost:4318` | 서비스가 트레이스와 로그를 보낸다 |
 | Prometheus (`obs`) | http://localhost:9090 | |
@@ -67,7 +68,7 @@ docker compose --profile search --profile obs down
 
 - 멈춤: `docker compose down`. 데이터는 볼륨에 남는다.
 - 초기화: `docker compose down -v`. Postgres 초기화 스크립트(`infra/postgres/init`)는 빈 볼륨에서만 실행되므로, 스크립트나 `.env` 비밀번호를 바꾸면 볼륨을 지우고 다시 띄운다.
-- 처음 `up`은 discovery와 config 이미지를 빌드하므로 몇 분 걸린다. 이후에는 캐시를 쓴다.
+- 처음 `up`은 discovery, config, gateway 이미지를 빌드하므로 몇 분 걸린다. 이후에는 캐시를 쓴다. 이 서비스들의 코드를 바꾸면 `docker compose up -d --wait --build <서비스>`로 다시 빌드한다.
 
 ## 6. 서비스 실행
 인프라(기본 profile)를 띄운 뒤 `services/`에서 실행한다.
@@ -78,4 +79,7 @@ docker compose --profile search --profile obs down
 
 - 설정은 config 서버에서 받는다(`infra/config-repo`). config-repo를 고쳤으면 서비스만 재시작한다.
 - DB 비밀번호 같은 비밀 값은 레포 루트 `.env`에서 온다. `bootRun`은 `.env`를 환경 변수로 읽는다. IDE로 실행하면 실행 설정에 `.env` 파일을 환경 변수로 지정한다(IntelliJ: Run Configuration의 Environment variables 또는 EnvFile).
-- 서비스는 WSL IP로 Eureka에 등록된다. 그래서 컨테이너(Prometheus 등)가 그 주소로 접속할 수 있다. gateway는 M0-c에서 이어서 추가한다.
+- 서비스는 WSL IP로 Eureka에 등록된다. 그래서 컨테이너(Prometheus, gateway)가 그 주소로 접속할 수 있다.
+- gateway 경유 호출: `curl localhost:8080/api/member/v1/ping`. 새로 띄운 서비스는 Eureka 등록과 gateway의 인스턴스 캐시 갱신 때문에 몇 초 뒤부터 라우팅된다. 그 전에는 503이다.
+- gateway 자체를 IDE로 실행할 때는 컨테이너를 먼저 멈춘다(`docker compose stop gateway`). 호스트에서는 컨테이너 IP에 닿지 못하므로, 이때 뒤의 서비스도 IDE로 띄워야 한다.
+- 로그인 없이 쓸 수 있는 것은 공개 경로뿐이다. 토큰이 필요한 API는 auth(M1) 이후 BFF를 거쳐 호출한다.

@@ -1,0 +1,57 @@
+# gateway 실행 설정. 공통 설정은 application.yml에 있다. 정책 근거는 docs/adr/0011-gateway-webflux.md와 docs/architecture/auth.md.
+server:
+  port: 8080
+management:
+  server:
+    # actuator는 외부 진입점(8080)에 두지 않는다. Prometheus는 Eureka 메타데이터(management.port)로 이 포트를 찾는다.
+    port: 8081
+spring:
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: 6379
+      # Redis가 죽으면 레이트 리미터는 요청을 통과시키지만, 기본 명령 타임아웃(60s)이면 그동안 모든 요청이 60초씩 멈춘다.
+      timeout: 200ms
+      connect-timeout: 500ms
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # 브라우저·IDE·컨테이너가 같은 issuer로 auth에 닿는다(auth.md "issuer 호스트 이름"). 키는 처음 검증할 때 가져온다.
+          issuer-uri: http://auth.openmarket.local:9000
+          jwk-set-uri: http://auth.openmarket.local:9000/oauth2/jwks
+          # 사용자 토큰만 받는다. 서비스 간 토큰(aud=internal)은 gateway를 지나지 않는다.
+          audiences: [shop, seller, admin]
+          authorities-claim-name: roles
+          authority-prefix: ROLE_
+  cloud:
+    gateway:
+      server:
+        webflux:
+          httpclient:
+            connect-timeout: 2000
+            response-timeout: 10s
+          default-filters:
+            - name: RequestRateLimiter
+              args:
+                rate-limiter: "#{@defaultRateLimiter}"
+                key-resolver: "#{@clientKeyResolver}"
+          # 서비스를 추가하면 라우트를 더한다(add-service skill). /api/<service>/** → lb://<service>, 접두어 두 단계를 뗀다.
+          routes:
+            - id: member
+              uri: lb://member
+              predicates:
+                - Path=/api/member/**
+              filters:
+                - StripPrefix=2
+
+openmarket:
+  gateway:
+    # 토큰 없이 통과시킬 경로. 판매자·관리자·내부 경로는 여기에 넣어도 공개되지 않는다.
+    public-paths:
+      - method: GET
+        pattern: /api/member/v1/ping
+    # 사용자(sub) 또는 클라이언트 IP마다 토큰 버킷. 로그인·쿠폰 발급의 엄격한 한도는 해당 기능과 함께 더한다(NFR-5).
+    rate-limit:
+      replenish-rate: 20
+      burst-capacity: 40

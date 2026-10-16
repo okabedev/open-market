@@ -16,6 +16,7 @@ flowchart LR
 - 지표: Micrometer → Prometheus 스크레이프. 서비스 목록은 Eureka 서비스 디스커버리로 찾는다.
 - 로그: JSON 구조화 로그(Spring Boot 구조화 로깅). 표준 출력과 OTLP 양쪽으로 낸다. 필드에 `traceId`, `spanId`, `service`가 들어간다.
 - Next.js 서버도 OTel을 붙여 BFF → gateway 구간을 같은 트레이스로 잇는다(M1).
+- gateway는 응답 헤더 `X-Request-Id`로 trace id를 돌려준다. 오류를 신고받으면 이 값으로 로그와 트레이스를 찾는다.
 
 ## 설정 위치
 | 파일 | 내용 |
@@ -24,7 +25,7 @@ flowchart LR
 | `infra/observability/otel-collector.yaml` | OTLP 수신(4317, 4318) → 트레이스는 Tempo, 로그는 Loki(`/otlp`). 지표 파이프라인은 없다 |
 | `infra/observability/tempo.yaml` | 단일 바이너리 모드, 로컬 디스크 저장, 보존 7일 |
 | `infra/observability/loki.yaml` | 단일 바이너리 모드, 로컬 디스크 저장, 보존 7일. OTLP 로그의 `trace_id`는 구조화 메타데이터로 들어간다 |
-| `infra/observability/prometheus.yml` | 스크레이프 대상. 보존 7일, exemplar 저장 켬. 관측성 스택과 discovery는 고정 대상으로, Spring 서비스는 Eureka 서비스 디스커버리(잡 `services`, 라벨 `application`)로 찾는다. IDE로 띄운 서비스는 WSL IP로 등록돼 컨테이너에서 접속된다 |
+| `infra/observability/prometheus.yml` | 스크레이프 대상. 보존 7일, exemplar 저장 켬. 관측성 스택과 discovery는 고정 대상으로, Spring 서비스는 Eureka 서비스 디스커버리(잡 `services`, 라벨 `application`)로 찾는다. IDE로 띄운 서비스는 WSL IP로 등록돼 컨테이너에서 접속된다. 관리 포트를 따로 둔 서비스(gateway 8081)는 Eureka 메타데이터 `management.port`로 주소를 바꾼다 |
 | `infra/grafana/provisioning/datasources` | Prometheus, Tempo, Loki. uid를 이름과 같게 고정한다. 지표 exemplar → 트레이스, 트레이스 → 로그, 로그 → 트레이스 링크를 건다 |
 
 ## Kafka 구간 트레이스

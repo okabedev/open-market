@@ -14,6 +14,7 @@
 | [0008](0008-local-file-storage.md) | 로컬 file 서비스 | 승인 |
 | [0009](0009-version-matrix.md) | 버전 조합 | 승인 |
 | [0010](0010-code-style-tools.md) | 코드 스타일과 정적 분석 도구 | 승인 |
+| [0011](0011-gateway-webflux.md) | Gateway는 Spring Cloud Gateway WebFlux | 승인 |
 
 
 ## 템플릿

@@ -21,3 +21,4 @@ include(":core:member")
 
 include(":infra:discovery")
 include(":infra:config")
+include(":infra:gateway")
