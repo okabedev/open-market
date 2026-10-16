@@ -81,14 +81,14 @@ flowchart LR
 - 버전 조합과 근거는 [ADR 0009](../adr/0009-version-matrix.md)에 있다. 실제 값의 원본은 빌드 파일이다. 다른 문서에는 버전 숫자를 적지 않는다.
 
 ## 로컬 실행 구성 (Docker Compose)
-`infra/compose`에 profile별로 나눈다. 개발할 때는 인프라만 Compose로 띄우고, 작업 중인 서비스는 IDE나 `bootRun`으로 실행한다. 전체 E2E는 `apps` profile로 모두 띄운다.
+`infra/compose`에 profile별로 나눈다. 개발할 때는 인프라만 Compose로 띄우고, 작업 중인 서비스는 IDE나 `bootRun`으로 실행한다. discovery와 config는 어느 서비스든 먼저 필요하므로 기본 profile에 둔다. Spring 서비스 이미지는 `services/Dockerfile` 하나로 만든다. 전체 E2E는 `apps` profile로 모두 띄운다.
 
 | profile | 구성 요소 |
 |---|---|
-| (기본) | PostgreSQL(`wal_level=logical`), Kafka(KRaft 단일 노드), Debezium Connect, Redis, Mailpit, Kafka UI |
+| (기본) | PostgreSQL(`wal_level=logical`), Kafka(KRaft 단일 노드), Debezium Connect, Redis, Mailpit, Kafka UI, discovery, config |
 | `search` | Elasticsearch(+ nori 플러그인, M2) |
 | `obs` | OpenTelemetry Collector, Prometheus, Tempo, Loki, Grafana |
-| `apps` | Spring 서비스 전체(빌드 이미지) |
+| `apps` | discovery, config를 뺀 Spring 서비스(빌드 이미지) |
 
 메모리 예산(WSL 할당 기준)과 profile 조합의 실측은 [risks.md](risks.md)에서 관리한다.
 

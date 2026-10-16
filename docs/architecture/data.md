@@ -16,7 +16,7 @@
 - `spring.jpa.properties.hibernate.default_schema`
 - Flyway `schemas`와 `default-schema`
 
-예시는 `services/core/member`의 테스트 설정(`src/test/resources/config/application.yml`)이고, 실행 설정은 `infra/config-repo/<service>.yml`에 둔다(M0-c).
+예시는 `services/core/member`의 테스트 설정(`src/test/resources/config/application.yml`)이고, 실행 설정은 config-repo에 있다. 스키마·계정·search_path는 공통 `infra/config-repo/application.yml`이 서비스 이름(`${spring.application.name}`)으로 정하고, `<service>.yml`에는 비밀번호 자리 표시자만 둔다.
 
 ## 마이그레이션
 - Flyway로만 스키마를 바꾼다. 위치는 `src/main/resources/db/migration`, 이름은 `V<번호>__<설명>.sql`이다.
@@ -35,7 +35,7 @@
 - 서비스는 `spring.flyway.locations`에 자기 `classpath:db/migration`과 위 위치를 함께 적는다.
 - 라이브러리 마이그레이션 버전은 `V0_<n>`이다. 서비스 마이그레이션은 `V1`부터 시작하므로 겹치지 않는다.
 - 라이브러리들이 한 스키마의 Flyway 이력을 같이 쓰므로 `<n>`은 라이브러리 전체에서 이어 매긴다. 지금은 `V0_1` common-web, `V0_2`~`V0_4` common-messaging이다. 다음 번호는 `V0_5`다.
-- 공통 테이블을 바꿀 때는 새 `V0_<n>` 파일을 추가한다. 이미 `V1` 이상이 적용된 서비스에도 들어가도록 config-repo 공통 설정에 `spring.flyway.out-of-order=true`를 둔다(M0-c).
+- 공통 테이블을 바꿀 때는 새 `V0_<n>` 파일을 추가한다. 이미 `V1` 이상이 적용된 서비스에도 들어가도록 config-repo 공통 설정에 `spring.flyway.out-of-order=true`를 둔다.
 
 ### outbox_event
 | 컬럼 | 타입 | 설명 |

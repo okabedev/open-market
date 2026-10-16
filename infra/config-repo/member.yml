@@ -1,0 +1,6 @@
+# member 실행 설정. 공통 설정은 application.yml에 있다.
+server:
+  port: 8101
+spring:
+  datasource:
+    password: ${MEMBER_DB_PASSWORD}

@@ -6,6 +6,7 @@ Gradle 멀티 모듈. 상세 규약은 [conventions.md](../docs/architecture/con
 ```
 services/
 ├─ settings.gradle.kts
+├─ Dockerfile          서비스 공통 이미지(빌드 인자 MODULE=infra/discovery 등). compose가 쓴다
 ├─ build-logic/        convention 플러그인 (Java·Spring Boot·테스트·QueryDSL 공통 설정)
 ├─ gradle/libs.versions.toml
 ├─ libs/
@@ -14,7 +15,7 @@ services/
 │  ├─ common-messaging outbox 기록, 멱등 소비, EventEnvelope, 트레이스 전파, ShedLock·정리 작업 (자동설정)
 │  └─ common-test      Testcontainers 설정, ArchUnit 규칙, 픽스처
 ├─ core/<service>
-└─ infra/<service>
+└─ infra/<service>     discovery(Eureka), config(Config 서버) …
 ```
 
 ## 꼭 지킬 것
@@ -45,6 +46,7 @@ services/
 | `./gradlew build` | 컴파일, 포맷 검사, 정적 분석, 테스트 |
 | `./gradlew spotlessApply` | 포맷 자동 수정 |
 | `./gradlew :core:<service>:test` | 서비스 하나만 테스트 |
+| `./gradlew :core:<service>:bootRun` | 서비스 실행. 레포 루트 `.env`를 환경 변수로 읽고, config 서버(기본 profile)에서 설정을 받는다 |
 | `./gradlew -p build-logic test` | convention 플러그인 회귀 테스트 (Java 25 도구 동작 확인) |
 
 ## 빌드 규약

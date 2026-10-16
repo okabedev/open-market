@@ -16,7 +16,7 @@ description: 오픈 마켓에 새 백엔드 서비스(core 또는 infra)를 추�
 골격은 `services/core/member`를 본뜬다(빌드 파일, `application.yml`, 계층별 `package-info.java`, `ArchitectureTest`, 통합 테스트).
 - [ ] `services/settings.gradle.kts`에 `:core:<name>` 또는 `:infra:<name>` 추가. `build-logic`의 서비스 convention 플러그인을 적용한다
 - [ ] 패키지 골격 `com.openmarket.<name>`: `command/{application,domain}`, `query/{application,dao,dto}`, `infra`, `ui/{web,event}`
-- [ ] `src/main/resources/application.yml`: 앱 이름, config 서버 import, Flyway 위치만 둔다
+- [ ] `src/main/resources/application.yml`: 앱 이름, config 서버 import와 `fail-fast`, Flyway 위치만 둔다
 - [ ] 테스트 설정은 `src/test/resources/config/application.yml`에 둔다. 같은 이름(`application.yml`)을 테스트 리소스 루트에 두면 main 설정을 가린다
 - [ ] Flyway 위치에 공통 테이블 추가: `spring.flyway.locations=classpath:db/migration,classpath:db/common/web,classpath:db/common/messaging` ([data.md](../../../docs/architecture/data.md)). 서비스 마이그레이션은 `V1`부터
 - [ ] ArchUnit 테스트: `common-test`의 `ArchitectureRules`를 이 서비스 패키지에 적용 (사용 예는 그 클래스의 Javadoc)
@@ -24,7 +24,7 @@ description: 오픈 마켓에 새 백엔드 서비스(core 또는 infra)를 추�
 - [ ] `infra/debezium` 등록 스크립트: `debezium` 계정에 `<name>.outbox_event` SELECT 권한, publication `openmarket_outbox`에 테이블 추가
 - [ ] `infra/debezium`: 커넥터 `table.include.list`에 `<name>.outbox_event` 추가
 - [ ] `infra/kafka/topics`: 이 서비스가 발행하는 토픽과 `.DLT` 토픽 선언
-- [ ] `infra/config-repo/<name>.yml`: 포트, 데이터 소스(스키마·계정), Kafka 소비자 그룹 `<name>`
+- [ ] `infra/config-repo/<name>.yml`: 포트, DB 비밀번호 자리 표시자 `${<NAME>_DB_PASSWORD}`, Kafka 소비자 그룹 `<name>`. 스키마·계정·URL은 공통 `application.yml`이 서비스 이름으로 정한다
 - [ ] gateway 라우트 `/api/<name>/**` → `lb://<name>` (외부 API가 있을 때)
 - [ ] auth에 `client_credentials` 클라이언트 `<name>` 등록 (다른 서비스를 동기 호출할 때)
 - [ ] `infra/compose`의 `apps` profile에 서비스 추가

@@ -18,3 +18,6 @@ include(":libs:common-messaging")
 include(":libs:common-test")
 
 include(":core:member")
+
+include(":infra:discovery")
+include(":infra:config")
