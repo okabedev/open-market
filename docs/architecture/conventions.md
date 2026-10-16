@@ -39,7 +39,7 @@ com.openmarket.<service>
 | `query.dao` | `query.dto`, QueryDSL, `command.domain`의 Q-타입(`Q*` 클래스)만 |
 | `query.dto` | JDK, JSpecify, Jackson·OpenAPI 애노테이션 |
 | `infra` | `command.domain`, `command.application`(포트 구현), 외부 라이브러리 |
-| `ui` | `command.application`, `query.application`, `query.dto`, `common-web` |
+| `ui` | `command.application`, `query.application`, `query.dto`, `common-web`, `common-messaging`(리스너의 멱등 소비, `EventEnvelope`) |
 
 금지 규칙
 - `query.*` ↛ `command.application`, 그리고 `command.domain`의 Q-타입이 아닌 클래스. 커맨드와 쿼리는 서로 모델을 공유하지 않는다.

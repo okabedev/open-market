@@ -1,11 +1,15 @@
 package com.openmarket.common.web;
 
 import com.openmarket.common.web.error.GlobalExceptionHandler;
+import com.openmarket.common.web.idempotency.IdempotencyCleanupJob;
 import com.openmarket.common.web.idempotency.IdempotencyFilter;
 import com.openmarket.common.web.idempotency.IdempotencyInterceptor;
 import com.openmarket.common.web.idempotency.IdempotencyStore;
 import com.openmarket.common.web.idempotency.JdbcIdempotencyStore;
 import com.openmarket.common.web.logging.RequestLoggingFilter;
+import java.time.Clock;
+import net.javacrumbs.shedlock.core.LockingTaskExecutor;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -20,7 +24,10 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 /** Spring MVC 서비스에 공통 오류 응답, 요청 로깅, Idempotency-Key 처리를 붙인다. 서비스는 의존성만 추가하면 된다. */
 @AutoConfiguration(
-        afterName = "org.springframework.boot.jdbc.autoconfigure.JdbcClientAutoConfiguration")
+        afterName = {
+            "org.springframework.boot.jdbc.autoconfigure.JdbcClientAutoConfiguration",
+            "com.openmarket.common.messaging.CommonMessagingAutoConfiguration"
+        })
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 public class CommonWebAutoConfiguration {
 
@@ -64,6 +71,17 @@ public class CommonWebAutoConfiguration {
                     registry.addInterceptor(new IdempotencyInterceptor(store));
                 }
             };
+        }
+
+        /** 락 실행기는 common-messaging이 등록한다. */
+        @Bean
+        @ConditionalOnBean(LockingTaskExecutor.class)
+        IdempotencyCleanupJob idempotencyCleanupJob(
+                IdempotencyStore store,
+                LockingTaskExecutor lockingTaskExecutor,
+                ObjectProvider<Clock> clock) {
+            return new IdempotencyCleanupJob(
+                    store, lockingTaskExecutor, clock.getIfAvailable(Clock::systemUTC));
         }
     }
 }

@@ -12,14 +12,14 @@ flowchart LR
   col --> loki[Loki]
   grafana[Grafana] --> prom & tempo & loki
 ```
-- 트레이스: Micrometer Tracing의 OTel 브리지로 만들고 OTLP로 Collector에 보낸다. Spring Boot 4의 OpenTelemetry 지원과 Java agent 중 무엇을 쓸지는 M0-b에서 정한다.
+- 트레이스: Micrometer Tracing의 OTel 브리지로 만들고 OTLP로 Collector에 보낸다. Java agent는 쓰지 않고 Spring Boot 4의 OpenTelemetry 스타터(`spring-boot-starter-opentelemetry`)로 구성한다. `common-messaging`이 Micrometer `Tracer`·`Propagator`로 `traceparent`를 만들고, 이 조합으로 테스트했다.
 - 지표: Micrometer → Prometheus 스크레이프. 서비스 목록은 Eureka 서비스 디스커버리로 찾는다.
 - 로그: JSON 구조화 로그(Spring Boot 구조화 로깅). 표준 출력과 OTLP 양쪽으로 낸다. 필드에 `traceId`, `spanId`, `service`가 들어간다.
 - Next.js 서버도 OTel을 붙여 BFF → gateway 구간을 같은 트레이스로 잇는다(M1).
 
 ## Kafka 구간 트레이스
 - 발행: outbox에 이벤트를 넣을 때 현재 트레이스 컨텍스트를 `traceparent` 컬럼에 담는다. Debezium이 헤더로 옮긴다.
-- 소비: `common-messaging`의 리스너 래퍼가 `traceparent` 헤더로 자식 스팬을 연다.
+- 소비: Spring Kafka 리스너 관측(`spring.kafka.listener.observation-enabled=true`)이 `traceparent` 헤더로 자식 스팬을 연다. `common-messaging`은 같은 값을 `EventEnvelope.traceparent`로도 넘긴다. 설정과 확인은 M0-d에서 한다.
 - 결과: 주문 생성 요청 하나에서 `OrderPlaced` → 재고 예약 → `StockReserved` → 결제 대기까지 한 트레이스로 보인다.
 
 ## 대시보드와 알림

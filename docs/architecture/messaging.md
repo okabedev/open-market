@@ -3,7 +3,7 @@
 이벤트 목록은 [context-map.md](context-map.md)가 원본이다. 이 문서는 이벤트를 **어떻게** 발행하고 소비하는지 다룬다.
 
 ## 발행: Transactional Outbox + Debezium
-1. 유스케이스는 도메인 변경과 `outbox_event` INSERT를 **한 트랜잭션**에서 커밋한다. 직접 Kafka로 보내지 않는다.
+1. 유스케이스는 도메인 변경과 `outbox_event` INSERT를 **한 트랜잭션**에서 커밋한다. 직접 Kafka로 보내지 않는다. INSERT는 `common-messaging`의 `Outbox.append(aggregateType, aggregateId, type, payload)`로 한다. 트랜잭션 밖에서 부르면 예외가 난다.
 2. Debezium Postgres 커넥터가 논리 복제로 모든 서비스 스키마의 `outbox_event` 테이블을 읽는다. 커넥터는 **하나**만 둔다(복제 슬롯 하나). 테이블 목록은 `table.include.list`로 지정한다.
 3. Debezium Outbox Event Router(SMT)가 `aggregate_type` 값을 토픽 이름으로 쓴다. `aggregate_id`는 Kafka 키, `payload`는 메시지 값이 된다. 나머지 필드는 헤더로 옮긴다.
 4. 발행된 행은 서비스별 정리 작업이 지운다(보관 기간 7일).
@@ -31,6 +31,8 @@
 | `schemaVersion` | outbox `schema_version` | 페이로드 버전. 하위 호환이 깨지면 올린다 |
 | `traceparent` | outbox `traceparent` | W3C 트레이스 컨텍스트. 소비자가 이어 받는다 |
 
+헤더 값은 UTF-8 문자열이다. Debezium 헤더 변환기를 이 형식에 맞추는 설정은 M0-d에서 확정해 이 절에 적는다.
+
 소비 쪽 `common-messaging`은 헤더와 페이로드를 `EventEnvelope<T>`로 묶어 리스너에 넘긴다.
 
 스키마 규칙
@@ -40,6 +42,8 @@
 - 발행 쪽 페이로드 타입과 소비 쪽 타입은 공유 라이브러리로 묶지 않는다. 각 서비스가 자기 타입을 둔다. 형식이 맞는지는 발행자가 JSON 예시(`src/test/resources/events/<type>.json`)를 두고, 소비자 테스트가 같은 예시를 읽어 확인한다.
 
 ## 소비: 멱등 소비자
+리스너(`ui.event`)는 받은 `ConsumerRecord`를 `common-messaging`의 `IdempotentEventProcessor.process(listener, record, payloadType, handler)`에 넘긴다. 이 메서드가 아래 1~3을 한다. `listener`는 `processed_event.consumer`에 들어가는 리스너 이름이고 `<서비스>.<이벤트>` 형식으로 짓는다(예: `catalog.order-placed`).
+
 1. 리스너는 트랜잭션을 연다.
 2. 같은 트랜잭션에서 `processed_event`에 `(event_id, consumer)`를 INSERT한다. 키가 겹치면 이미 처리한 것이므로 건너뛴다.
 3. 도메인 처리를 하고, 필요하면 새 이벤트를 outbox에 넣는다. 그다음 커밋한다.
@@ -47,7 +51,8 @@
 
 오류 처리
 - 일시 오류(DB 연결, 타임아웃): 지수 백오프로 3회 재시도한 뒤 DLT로 보낸다.
-- 영구 오류(역직렬화 실패, 도메인 규칙 위반): 바로 DLT로 보낸다.
+- 영구 오류(역직렬화 실패, 도메인 규칙 위반): 바로 DLT로 보낸다. 헤더가 빠졌거나 페이로드를 읽을 수 없으면 `common-messaging`이 `InvalidEventException`을 던진다.
+- 재시도와 DLT 전송을 맡는 Spring Kafka 오류 처리기는 M0-d에서 브로커와 함께 붙인다.
 - 비즈니스 실패는 예외가 아니다. 예를 들어 재고 부족은 `StockReservationFailed` 이벤트로 발행한다.
 - DLT 메시지는 관리자 화면에서 보고 원래 토픽으로 다시 보낸다(ADM-5, M6).
 
@@ -141,6 +146,9 @@ sequenceDiagram
 | 자동 구매확정(배송 완료 + 7일) | fulfillment | 1시간 |
 | 주간 정산 확정 | settlement | 매주 월요일 03:00 |
 | 미첨부 파일 삭제 | file | 1시간 |
-| 발행된 outbox 행 정리 | 각 서비스(`common-messaging`) | 1일 |
+| 발행된 outbox 행(7일), `processed_event`(30일) 정리 | 각 서비스(`common-messaging`) | 매일 04:00 |
+| 멱등성 키 기록 정리(24시간) | 각 서비스(`common-web`) | 1시간 |
 
 인스턴스가 여러 개여도 한 번만 실행되도록 ShedLock을 쓴다. 각 작업은 다시 실행해도 결과가 같아야 한다.
+- `common-messaging`이 스케줄링을 켜고 락 실행기(`LockingTaskExecutor`)와 `shedlock` 테이블을 제공한다.
+- 서비스의 스케줄 작업도 `@Scheduled` 메서드 안에서 이 실행기로 감싼다. 락 이름은 `<서비스>-<작업>`이다.

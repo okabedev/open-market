@@ -21,7 +21,10 @@ import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
-@SpringBootTest(properties = "spring.flyway.locations=classpath:db/common/web")
+// common-messaging은 정리 작업의 락 실행기(ShedLock)를 등록한다. 실제 서비스처럼 두 Flyway 위치를 함께 쓴다.
+@SpringBootTest(
+        properties =
+                "spring.flyway.locations=classpath:db/common/web,classpath:db/common/messaging")
 @AutoConfigureMockMvc
 @Import(PostgresContainerConfiguration.class)
 class IdempotencyIntegrationTest {
@@ -31,6 +34,8 @@ class IdempotencyIntegrationTest {
     @Autowired IdempotencyTestController controller;
 
     @Autowired JdbcClient jdbc;
+
+    @Autowired IdempotencyCleanupJob cleanupJob;
 
     @Test
     @DisplayName("같은 키로 다시 보내면 핸들러를 다시 실행하지 않고 첫 응답을 돌려준다")
@@ -131,6 +136,30 @@ class IdempotencyIntegrationTest {
         send("/orders", key, item, "bob")
                 .andExpect(header().doesNotExist(IdempotencyInterceptor.REPLAYED_HEADER))
                 .andExpect(jsonPath("$.callCount").value(2));
+    }
+
+    @Test
+    @DisplayName("정리 작업은 24시간 지난 기록만 지운다")
+    void cleanupDeletesOnlyExpiredRecords() {
+        String expired = newKey();
+        String recent = newKey();
+        insertInProgress("alice", expired, "now() - interval '25 hours'");
+        insertInProgress("alice", recent, "now() - interval '23 hours'");
+
+        assertThat(cleanupJob.cleanUp()).isGreaterThanOrEqualTo(1);
+
+        assertThat(countRecords("alice", expired)).isZero();
+        assertThat(countRecords("alice", recent)).isEqualTo(1);
+    }
+
+    private int countRecords(String principal, String key) {
+        return jdbc.sql(
+                        "SELECT count(*) FROM idempotency_record WHERE principal = :principal AND"
+                                + " idempotency_key = :key")
+                .param("principal", principal)
+                .param("key", key)
+                .query(Integer.class)
+                .single();
     }
 
     private ResultActions send(String path, String key, String item, String user) throws Exception {

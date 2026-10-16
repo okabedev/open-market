@@ -11,7 +11,7 @@ services/
 ├─ libs/
 │  ├─ common-core      베이스 예외, ErrorType, Money, ID(UUID v7), 개인정보 마스킹 (Spring 의존 없음)
 │  ├─ common-web       ProblemDetail 변환, @Idempotent 처리, 요청 로깅 (자동설정)
-│  ├─ common-messaging outbox 기록, 멱등 리스너, EventEnvelope, 트레이스 전파
+│  ├─ common-messaging outbox 기록, 멱등 소비, EventEnvelope, 트레이스 전파, ShedLock·정리 작업 (자동설정)
 │  └─ common-test      Testcontainers 설정, ArchUnit 규칙, 픽스처
 ├─ core/<service>
 └─ infra/<service>
@@ -22,7 +22,9 @@ services/
 - 의존 방향과 이름 규칙은 `common-test`의 ArchUnit 규칙이 검사한다. 규칙을 우회하지 말고, 규칙이 틀렸다면 conventions.md와 규칙을 같이 고친다.
 - `Command`, `Request`, `Response`, `View`, 유스케이스 반환값에는 도메인 타입을 쓰지 않는다.
 - 상태를 바꾸는 서비스 사이 연동은 outbox 이벤트로만 한다. 유스케이스 안에서 Kafka로 직접 보내지 않는다.
-- 리스너는 `common-messaging`의 멱등 처리를 거친다. 비즈니스 실패는 예외가 아니라 실패 이벤트로 낸다.
+- 리스너는 `common-messaging`의 `IdempotentEventProcessor`를 거친다. 비즈니스 실패는 예외가 아니라 실패 이벤트로 낸다.
+- 스케줄 작업은 `common-messaging`의 `LockingTaskExecutor`(ShedLock)로 감싸 한 번만 실행되게 한다.
+- Flyway 위치에 `classpath:db/migration`, `classpath:db/common/web`, `classpath:db/common/messaging`을 함께 적는다.
 - 예외 핸들러는 서비스에 두지 않는다. `common-core` 예외를 던지면 `common-web`이 ProblemDetail로 바꾼다.
 - 스키마는 Flyway(`db/migration/V<n>__<설명>.sql`)로만 바꾼다. `ddl-auto=validate`.
 - 금액은 `long`(원)과 `Money`, 시각은 `Instant`, ID는 UUID v7이다.
