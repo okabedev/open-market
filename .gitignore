@@ -1,0 +1,28 @@
+# IDE
+.idea/
+*.iml
+.vscode/
+.DS_Store
+
+# 환경 변수 (예시 파일만 커밋)
+.env
+.env.*
+!.env.example
+
+# Gradle / Java
+.gradle/
+build/
+out/
+!gradle/wrapper/gradle-wrapper.jar
+
+# Node / Next.js
+node_modules/
+.next/
+.turbo/
+coverage/
+*.tsbuildinfo
+next-env.d.ts
+
+# 로컬 실행 산출물
+infra/compose/data/
+*.log
