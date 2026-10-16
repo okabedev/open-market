@@ -16,8 +16,8 @@ description: 오픈 마켓에 새 백엔드 서비스(core 또는 infra)를 추�
 - [ ] `services/settings.gradle.kts`에 `:core:<name>` 또는 `:infra:<name>` 추가. `build-logic`의 서비스 convention 플러그인을 적용한다
 - [ ] 패키지 골격 `com.openmarket.<name>`: `command/{application,domain}`, `query/{application,dao,dto}`, `infra`, `ui/{web,event}`
 - [ ] `src/main/resources/application.yml`: 앱 이름, config 서버 import만 둔다
-- [ ] Flyway `V1__common.sql`: `outbox_event`, `processed_event`, `idempotency_record` ([data.md](../../../docs/architecture/data.md))
-- [ ] ArchUnit 테스트: `common-test`의 규칙을 이 서비스 패키지에 적용
+- [ ] Flyway 위치에 공통 테이블 추가: `spring.flyway.locations=classpath:db/migration,classpath:db/common/web,classpath:db/common/messaging` ([data.md](../../../docs/architecture/data.md)). 서비스 마이그레이션은 `V1`부터
+- [ ] ArchUnit 테스트: `common-test`의 `ArchitectureRules`를 이 서비스 패키지에 적용 (사용 예는 그 클래스의 Javadoc)
 - [ ] `infra/postgres/init`: 스키마, `<name>_app` 계정, 권한
 - [ ] `infra/postgres/init`: `debezium` 계정에 `<name>.outbox_event` SELECT 권한, publication에 테이블 추가
 - [ ] `infra/debezium`: 커넥터 `table.include.list`에 `<name>.outbox_event` 추가

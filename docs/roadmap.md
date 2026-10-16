@@ -22,7 +22,8 @@
   - [x] 버전 조합 확정(R1~R3), ADR 0009
   - [x] Gradle 래퍼, `build-logic` convention 플러그인, 버전 카탈로그
   - [x] 포매터·정적 분석 도구 확정(ADR 0010), conventions.md 코드 스타일 절
-  - [ ] `libs/common-core`, `common-web`, `common-messaging`, `common-test`(ArchUnit 규칙, Testcontainers)
+  - [x] `libs/common-core`, `common-web`, `common-test`(ArchUnit 규칙, Testcontainers)
+  - [ ] `libs/common-messaging`
   - [ ] 서비스 템플릿(빈 서비스 하나로 패키지 규약·ArchUnit·Flyway·통합 테스트 확인)
 - [ ] **M0-c 로컬 인프라**
   - [ ] Compose 기본 profile(Postgres, Kafka, Debezium Connect, Redis, Mailpit, Kafka UI), `search`, `obs`
