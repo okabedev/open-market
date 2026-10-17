@@ -1,7 +1,7 @@
 # 로컬 인프라. profile 구성은 docs/architecture/overview.md의 "로컬 실행 구성"을 따른다.
-# 이 파일은 기본 profile(profile 없음)이다. search는 search.yaml, obs는 obs.yaml에 있다. apps profile은 M0-c 마지막 PR에서 더한다.
+# 이 파일은 기본 profile(profile 없음)이다. search는 search.yaml, obs는 obs.yaml, apps는 apps.yaml에 있다.
 # discovery, config, gateway는 IDE로 띄우는 서비스도 항상 쓰므로 기본 profile에 둔다. 처음 up할 때 services/Dockerfile로 이미지를 빌드한다.
-# 이미지 태그는 버전을 고정한다. 메모리 상한은 R6 실측 후 정한다(docs/architecture/risks.md).
+# 이미지 태그는 버전을 고정한다. JVM 컨테이너의 메모리 상한(mem_limit)은 R6 실측 값이다(docs/architecture/risks.md).
 services:
   postgres:
     image: postgres:18.6-alpine
@@ -135,6 +135,9 @@ services:
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
       KAFKA_CLUSTERS_0_KAFKACONNECT_0_NAME: debezium
       KAFKA_CLUSTERS_0_KAFKACONNECT_0_ADDRESS: http://connect:8083
+      # 상한이 없으면 VM 메모리의 25%를 힙으로 잡는다. Spring 서비스와 같은 기준으로 둔다(R6).
+      JAVA_OPTS: -XX:MaxRAMPercentage=50
+    mem_limit: 512m
     ports:
       - "8089:8080" # 8080은 gateway가 쓴다
     healthcheck:
@@ -149,6 +152,7 @@ services:
       args:
         MODULE: infra/discovery
     image: openmarket/discovery:local
+    mem_limit: 512m # 힙 비율은 services/Dockerfile(R6)
     ports:
       - "8761:8761"
     healthcheck:
@@ -163,6 +167,7 @@ services:
       args:
         MODULE: infra/config
     image: openmarket/config:local
+    mem_limit: 512m # 힙 비율은 services/Dockerfile(R6)
     depends_on:
       discovery:
         condition: service_healthy
@@ -188,6 +193,7 @@ services:
       args:
         MODULE: infra/gateway
     image: openmarket/gateway:local
+    mem_limit: 512m # 힙 비율은 services/Dockerfile(R6)
     depends_on:
       config:
         condition: service_healthy

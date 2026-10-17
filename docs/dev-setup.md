@@ -13,13 +13,19 @@
 | gh | 최신 | GitHub 작업용 |
 
 ## 2. WSL 메모리
-전체 스택은 메모리를 많이 쓴다([risks.md](architecture/risks.md) R6). Windows 사용자 폴더의 `.wslconfig`에 할당량을 적는다. 권장값은 R6 실측 후 여기에 적는다.
+전체 스택은 메모리를 많이 쓴다. Windows 사용자 폴더의 `.wslconfig`에 할당량을 적는다. Docker Desktop(WSL 연동)의 컨테이너도 이 할당량 안에서 돈다.
 
 ```ini
 [wsl2]
-memory=16GB
+memory=20GB
+swap=8GB
 processors=6
 ```
+
+- `memory=20GB`는 전체 profile(`search`, `obs`, `apps`)을 띄운 채 `./gradlew build`까지 돌리는 기준이다. 서비스 15개일 때 VM 사용량은 약 11GB, 빌드 중에는 약 16~18GB로 계산했다. 실측과 계산은 [risks.md](architecture/risks.md)의 "메모리 예산"에 있다.
+- 16GB만 줄 수 있으면 `apps`를 띄운 채 전체 빌드를 하지 않는다. 빌드할 때는 `apps`를 내리거나 모듈 하나만 테스트한다(`./gradlew :core:<service>:test`).
+- 그보다 적으면 `apps`와 `search`를 빼고 작업 중인 서비스만 IDE로 띄운다.
+- Spring 서비스 컨테이너는 `mem_limit` 512MB, 힙은 그 50%다(`services/Dockerfile`).
 
 ## 3. hosts
 auth의 issuer 주소를 브라우저와 컨테이너가 같게 보도록 이름을 등록한다([auth.md](architecture/auth.md)).
@@ -47,7 +53,8 @@ docker compose ps
 # 필요할 때 profile을 더한다. 멈출 때도 같은 --profile을 붙여야 그 컨테이너까지 내려간다.
 docker compose --profile search up -d --wait               # Elasticsearch
 docker compose --profile obs up -d --wait                  # 관측성 스택
-docker compose --profile search --profile obs down
+docker compose --profile apps up -d --wait --build         # Spring 서비스 전체를 컨테이너로(E2E). 코드를 바꿨으면 --build
+docker compose --profile search --profile obs --profile apps down
 ```
 
 | 구성 요소 | 호스트 주소 | 비고 |
@@ -61,6 +68,7 @@ docker compose --profile search --profile obs down
 | discovery (Eureka) | http://localhost:8761 | 등록된 인스턴스 화면. 레지스트리 API는 `/eureka/apps` |
 | config | http://localhost:8888 | 서비스가 받을 설정 확인: `curl localhost:8888/member/default` |
 | gateway | http://localhost:8080 | 외부 진입점. 예: `curl localhost:8080/api/member/v1/ping`(member 실행 필요). 관리 포트 8081은 호스트에 열지 않는다 |
+| Spring 서비스 (`apps`) | 호스트에 열지 않음 | gateway(8080)로 부른다. 목록은 `infra/compose/apps.yaml` |
 | Elasticsearch (`search`) | http://localhost:9200 | 인증 없음. nori 플러그인은 M2 |
 | OTel Collector (`obs`) | OTLP gRPC `localhost:4317`, HTTP `localhost:4318` | 서비스가 트레이스와 로그를 보낸다 |
 | Prometheus (`obs`) | http://localhost:9090 | |
@@ -68,7 +76,7 @@ docker compose --profile search --profile obs down
 
 - 멈춤: `docker compose down`. 데이터는 볼륨에 남는다.
 - 초기화: `docker compose down -v`. Postgres 초기화 스크립트(`infra/postgres/init`)는 빈 볼륨에서만 실행되므로, 스크립트나 `.env` 비밀번호를 바꾸면 볼륨을 지우고 다시 띄운다.
-- 처음 `up`은 discovery, config, gateway 이미지를 빌드하므로 몇 분 걸린다. 이후에는 캐시를 쓴다. 이 서비스들의 코드를 바꾸면 `docker compose up -d --wait --build <서비스>`로 다시 빌드한다.
+- 처음 `up`은 discovery, config, gateway 이미지를 빌드하므로 몇 분 걸린다. 이후에는 캐시를 쓴다. 이 서비스들의 코드를 바꾸면 `docker compose up -d --wait --build <서비스>`로 다시 빌드한다. `apps` 서비스도 같다(예: `docker compose --profile apps up -d --wait --build member`).
 
 ## 6. 서비스 실행
 인프라(기본 profile)를 띄운 뒤 `services/`에서 실행한다.
@@ -78,6 +86,7 @@ docker compose --profile search --profile obs down
 ```
 
 - 설정은 config 서버에서 받는다(`infra/config-repo`). config-repo를 고쳤으면 서비스만 재시작한다.
+- `apps` profile을 띄워 둔 상태라면 같은 서비스 컨테이너를 먼저 멈춘다(`docker compose stop member`). 둘 다 Eureka에 등록되면 gateway가 요청을 번갈아 보낸다.
 - DB 비밀번호 같은 비밀 값은 레포 루트 `.env`에서 온다. `bootRun`은 `.env`를 환경 변수로 읽는다. IDE로 실행하면 실행 설정에 `.env` 파일을 환경 변수로 지정한다(IntelliJ: Run Configuration의 Environment variables 또는 EnvFile).
 - 서비스는 WSL IP로 Eureka에 등록된다. 그래서 컨테이너(Prometheus, gateway)가 그 주소로 접속할 수 있다.
 - gateway 경유 호출: `curl localhost:8080/api/member/v1/ping`. 새로 띄운 서비스는 Eureka 등록과 gateway의 인스턴스 캐시 갱신 때문에 몇 초 뒤부터 라우팅된다. 그 전에는 503이다.

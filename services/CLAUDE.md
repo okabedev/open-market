@@ -6,7 +6,7 @@ Gradle 멀티 모듈. 상세 규약은 [conventions.md](../docs/architecture/con
 ```
 services/
 ├─ settings.gradle.kts
-├─ Dockerfile          서비스 공통 이미지(빌드 인자 MODULE=infra/discovery 등). compose가 쓴다
+├─ Dockerfile          서비스 공통 이미지(빌드 인자 MODULE=infra/discovery 등). compose가 쓴다. 힙은 컨테이너 상한의 50%
 ├─ build-logic/        convention 플러그인 (Java·Spring Boot·테스트·QueryDSL 공통 설정)
 ├─ gradle/libs.versions.toml
 ├─ libs/
