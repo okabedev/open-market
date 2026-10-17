@@ -10,6 +10,8 @@ dependencies {
     api("org.testcontainers:testcontainers-postgresql")
     api("org.testcontainers:testcontainers-kafka")
     api(libs.archunit.junit5)
+    // OpenAPI 문서 비교(OpenApiSnapshot)
+    implementation("tools.jackson.core:jackson-databind")
 
     // 규칙 픽스처의 Q-타입 예시용
     testImplementation(libs.querydsl.jpa)

@@ -21,6 +21,9 @@
 | eslint-config-prettier | 10.1.8 | 포맷과 겹치는 lint 규칙을 끈다 |
 | Prettier | 3.9.9 | 포매터 |
 | Vitest | 5.0.3 (+ vite 8.3.2) | 단위 테스트. vite는 Vitest 5의 피어 의존성이다 |
+| openapi-typescript | 7.13.0 | OpenAPI 문서 → TypeScript 타입(`packages/api-client`). 피어는 `typescript ^5.x`지만 6.0.3에서 생성 결과를 확인했다 |
+| openapi-fetch | 0.17.0 | 생성한 경로 타입으로 부르는 fetch 클라이언트 |
+| server-only | 0.0.1 | 서버 전용 모듈을 클라이언트 컴포넌트에서 불러오면 빌드를 실패시킨다 |
 
 설정 위치
 - 외부 패키지 버전은 `clients/pnpm-workspace.yaml`의 `catalog`에만 적는다. 각 `package.json`은 `catalog:`로 참조한다.
@@ -40,4 +43,5 @@ ESLint 9
 ## 검토한 대안
 - Biome(lint와 포맷을 하나로): 빠르지만 Next.js 전용 규칙(Core Web Vitals)을 대신하지 못한다. 사용자 결정으로 ESLint + Prettier를 쓴다.
 - Jest: Next.js 앱에서 TypeScript·ESM 변환 설정이 더 필요하다. Vitest는 설정 없이 TypeScript를 실행한다.
+- 타입 생성 없이 손으로 쓴 fetch 래퍼: 백엔드 API가 바뀌어도 프론트 컴파일이 깨지지 않아 어긋남을 늦게 안다.
 - 앱마다 버전 직접 적기: 앱 3개와 패키지가 같은 버전을 쓰는지 사람이 맞춰야 한다.

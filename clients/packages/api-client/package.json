@@ -1,0 +1,29 @@
+{
+  "name": "@openmarket/api-client",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "generate": "node scripts/generate.mjs",
+    "generate:check": "node scripts/generate.mjs --check",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "openapi-fetch": "catalog:",
+    "server-only": "catalog:"
+  },
+  "devDependencies": {
+    "@openmarket/config": "workspace:*",
+    "@types/node": "catalog:",
+    "eslint": "catalog:",
+    "openapi-typescript": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:"
+  }
+}

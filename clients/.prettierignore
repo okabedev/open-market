@@ -3,3 +3,7 @@ pnpm-lock.yaml
 coverage/
 next-env.d.ts
 *.md
+# OpenAPI에서 생성한 코드(packages/api-client)
+packages/api-client/src/generated/
+# 백엔드 테스트(OpenApiSnapshot)가 쓰는 OpenAPI 문서
+packages/api-client/openapi/

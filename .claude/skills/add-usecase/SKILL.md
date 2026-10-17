@@ -36,5 +36,5 @@ description: 오픈 마켓 백엔드 서비스에 커맨드 유스케이스(상�
 
 ## 마무리
 - 테스트, ArchUnit, 포매터가 모두 통과하는지 확인한다.
-- OpenAPI가 바뀌었으면 `clients/packages/api-client` 타입을 다시 생성한다.
+- REST API가 바뀌면 서비스 테스트가 실패한다(`OpenApiSnapshot`). `OPENAPI_UPDATE=true ./gradlew :core:<service>:test`으로 문서를 고치고 `clients/`에서 `pnpm --filter @openmarket/api-client generate`로 타입을 다시 만들어 함께 커밋한다.
 - 문서와 달라진 점이 있으면 같은 변경에서 문서를 고친다.

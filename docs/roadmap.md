@@ -36,7 +36,7 @@
   - [x] 샘플 발행 → 소비(멱등, DLT) 왕복(R5)
   - [x] OTel 트레이스가 Kafka 구간까지 이어지는지 확인
 - [ ] **M0-e 프론트·CI**
-  - [ ] `clients` pnpm 모노레포(shop, seller, admin, packages)
+  - [x] `clients` pnpm 모노레포(shop, seller, admin, packages), OpenAPI 타입 생성(ADR 0012)
   - [ ] GitHub Actions: 변경 경로 기반 백엔드·프론트 빌드와 테스트
   - [ ] 이슈·PR 템플릿, 라벨, 브랜치 보호
 
