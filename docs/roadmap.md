@@ -32,7 +32,7 @@
   - [x] gateway(R4, ADR 0011): 라우팅, JWT·역할 검사, Redis 레이트 리밋, member 샘플 API
   - [x] `apps` profile(서비스 컨테이너), 메모리 실측과 상한(R6)
 - [ ] **M0-d 이벤트 파이프라인**
-  - [ ] Debezium 커넥터 등록 스크립트, 토픽 선언
+  - [x] Debezium 커넥터 등록 스크립트, 토픽 선언(R5)
   - [ ] 샘플 발행 → 소비(멱등, DLT) 왕복(R5)
   - [ ] OTel 트레이스가 Kafka 구간까지 이어지는지 확인
 - [ ] **M0-e 프론트·CI**

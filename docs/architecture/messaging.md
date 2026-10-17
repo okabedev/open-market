@@ -4,9 +4,28 @@
 
 ## 발행: Transactional Outbox + Debezium
 1. 유스케이스는 도메인 변경과 `outbox_event` INSERT를 **한 트랜잭션**에서 커밋한다. 직접 Kafka로 보내지 않는다. INSERT는 `common-messaging`의 `Outbox.append(aggregateType, aggregateId, type, payload)`로 한다. 트랜잭션 밖에서 부르면 예외가 난다.
-2. Debezium Postgres 커넥터가 논리 복제로 모든 서비스 스키마의 `outbox_event` 테이블을 읽는다. 커넥터는 **하나**만 둔다(복제 슬롯 하나). 테이블 목록은 `table.include.list`로 지정한다.
+2. Debezium Postgres 커넥터가 논리 복제로 모든 서비스 스키마의 `outbox_event` 테이블을 읽는다. 커넥터는 **하나**만 둔다(복제 슬롯 하나). 테이블은 publication `openmarket_outbox`에 들어 있는 것만 읽는다. 서비스의 Flyway가 `outbox_event`를 만들면 Postgres event trigger가 publication에 넣는다([data.md](data.md)). 그래서 서비스를 추가해도 커넥터 설정을 고치지 않는다.
 3. Debezium Outbox Event Router(SMT)가 `aggregate_type` 값을 토픽 이름으로 쓴다. `aggregate_id`는 Kafka 키, `payload`는 메시지 값이 된다. 나머지 필드는 헤더로 옮긴다.
-4. 발행된 행은 서비스별 정리 작업이 지운다(보관 기간 7일).
+4. 발행된 행은 서비스별 정리 작업이 지운다(보관 기간 7일). publication이 INSERT와 UPDATE만 복제하므로 이 DELETE는 커넥터에 오지 않는다.
+
+커넥터 설정은 `infra/debezium/outbox-connector.json`이다. connect 컨테이너가 기동할 때 워커를 띄운 뒤 `PUT /connectors/outbox/config`로 등록한다(`start.sh`). connect의 healthy는 커넥터 태스크가 RUNNING이라는 뜻이다.
+| 설정 | 값 | 이유 |
+|---|---|---|
+| `snapshot.mode` | `when_needed` | 오프셋이 없거나, 슬롯이 `max_slot_wal_keep_size`를 넘어 무효가 됐을 때만 스냅샷을 찍는다. 스냅샷은 남아 있는 outbox 행을 다시 보내지만 소비자가 멱등이라 괜찮다 |
+| `heartbeat.interval.ms`, `heartbeat.action.query` | 10초, `debezium.heartbeat` 행 UPDATE | outbox에 쓰기가 없고 다른 테이블만 바뀌면 Debezium이 LSN을 확인하지 못해 WAL이 쌓인다. heartbeat 행 변경으로 LSN을 앞으로 민다. 이 변경 이벤트는 `Filter` SMT가 버린다 |
+| `key.converter`, `value.converter` | `StringConverter` | 키는 `aggregate_id` 문자열, 값은 `payload`(jsonb) 원문 JSON이다 |
+| `header.converter` | `SimpleHeaderConverter` | 헤더를 UTF-8 문자열로 쓴다(아래 "이벤트 형식") |
+| `table.op.invalid.behavior` | `fatal` | outbox 행 UPDATE는 버그다. 경고만 남기고 넘어가지 않고 커넥터를 멈춘다 |
+| `extended.headers.enabled` | `false` | Debezium 3.x가 붙이는 `__debezium.context.*` 헤더(OpenLineage용)를 끈다. 헤더는 아래 "이벤트 형식"의 다섯 개만 둔다 |
+| `producer.override.max.block.ms` | 30초 | 없는 토픽에 쓰면 기본값으로는 프로듀서가 끝없이 기다린다. 태스크 상태는 RUNNING으로 남고 뒤의 모든 이벤트가 멈춘다. 30초 뒤 태스크를 FAILED로 만들어 드러낸다 |
+| 비밀번호 | `${env:DEBEZIUM_DB_PASSWORD}` | Connect 워커의 `EnvVarConfigProvider`가 푼다. 등록된 설정에는 자리 표시자만 남는다 |
+
+워커 설정(compose 환경 변수)으로 `scheduled.rebalance.max.delay.ms=0`을 둔다. Kafka가 잠깐 끊겼다 돌아오면 워커가 그룹에 다시 들어온다. 기본값(5분)이면 그동안 태스크를 다시 받지 못해 발행이 멈춘다. 워커가 하나라 기다릴 이유가 없다.
+
+장애 때 동작(R5에서 확인, [risks.md](risks.md))
+- 커넥터나 Kafka가 멈춘 동안 쓴 outbox 행은 재기동 뒤 모두 발행된다. 유실이 없다.
+- 선언하지 않은 토픽으로 쓰면 30초 뒤 태스크가 FAILED가 되고 connect가 unhealthy로 바뀐다. 오프셋을 커밋하지 않았으므로 유실은 없다. `infra/kafka/topics.txt`에 선언해 토픽을 만든 뒤 `curl -X POST localhost:8083/connectors/outbox/tasks/0/restart`로 재시작하면 이어서 보낸다.
+- 스냅샷이나 재시작은 이미 보낸 이벤트를 같은 `id`로 다시 보낼 수 있다. 소비자가 `id`로 거른다.
 
 `outbox_event` 테이블 형식은 [data.md](data.md)에 있다.
 
@@ -18,7 +37,7 @@
 | 파티션 | 로컬은 3개. 소비자 동시성은 파티션 수 이하로 둔다 |
 | 보관 | 7일 |
 | DLT | `<토픽>.DLT` (Spring Kafka `DeadLetterPublishingRecoverer` 기본 규칙) |
-| 생성 | 자동 생성을 끈다. `infra/kafka/topics`에 선언하고 기동 시 생성한다 |
+| 생성 | 자동 생성을 끈다. `infra/kafka/topics.txt`에 선언하고, Compose 기동 때 `kafka-init` 컨테이너가 없는 토픽만 만든다. DLT와 Debezium heartbeat 토픽(`__debezium-heartbeat.openmarket`)도 여기에 선언한다 |
 
 ## 이벤트 형식
 메시지 값(JSON)은 이벤트 페이로드만 담는다. 공통 필드는 헤더로 보낸다.
@@ -31,7 +50,11 @@
 | `schemaVersion` | outbox `schema_version` | 페이로드 버전. 하위 호환이 깨지면 올린다 |
 | `traceparent` | outbox `traceparent` | W3C 트레이스 컨텍스트. 소비자가 이어 받는다 |
 
-헤더 값은 UTF-8 문자열이다. Debezium 헤더 변환기를 이 형식에 맞추는 설정은 M0-d에서 확정해 이 절에 적는다.
+헤더 값은 UTF-8 문자열이다. Outbox Event Router가 `id`를 헤더로 넣고, `table.fields.additional.placement`가 나머지 컬럼을 위 이름으로 옮긴다. `SimpleHeaderConverter`가 문자열로 쓴다.
+- `id`: UUID 문자열
+- `occurredAt`: Debezium이 `timestamptz`를 ISO-8601 UTC 문자열로 바꾼다(예: `2026-10-18T03:04:05.123456Z`)
+- `schemaVersion`: 정수를 문자열로 쓴다(예: `1`)
+- `traceparent`: 트레이스가 없을 때 쓴 행이면 값이 비어 있다
 
 소비 쪽 `common-messaging`은 헤더와 페이로드를 `EventEnvelope<T>`로 묶어 리스너에 넘긴다.
 

@@ -21,9 +21,7 @@ description: 오픈 마켓에 새 백엔드 서비스(core 또는 infra)를 추�
 - [ ] Flyway 위치에 공통 테이블 추가: `spring.flyway.locations=classpath:db/migration,classpath:db/common/web,classpath:db/common/messaging` ([data.md](../../../docs/architecture/data.md)). 서비스 마이그레이션은 `V1`부터
 - [ ] ArchUnit 테스트: `common-test`의 `ArchitectureRules`를 이 서비스 패키지에 적용 (사용 예는 그 클래스의 Javadoc)
 - [ ] 스키마와 계정: `infra/postgres/init/services.txt`에 이름 추가, `.env.example`과 `infra/compose/compose.yaml`의 postgres 환경 변수에 `<NAME>_DB_PASSWORD` 추가. 이미 뜬 DB에는 `docker compose down -v` 후 다시 띄워 적용한다
-- [ ] `infra/debezium` 등록 스크립트: `debezium` 계정에 `<name>.outbox_event` SELECT 권한, publication `openmarket_outbox`에 테이블 추가
-- [ ] `infra/debezium`: 커넥터 `table.include.list`에 `<name>.outbox_event` 추가
-- [ ] `infra/kafka/topics`: 이 서비스가 발행하는 토픽과 `.DLT` 토픽 선언
+- [ ] `infra/kafka/topics.txt`: 이 서비스가 발행하는 토픽과 `.DLT` 토픽 선언(context-map과 같은지 확인). Debezium은 고치지 않는다. `outbox_event` 테이블은 Flyway가 만들 때 Postgres event trigger가 publication에 넣는다
 - [ ] `infra/config-repo/<name>.yml`: 포트, DB 비밀번호 자리 표시자 `${<NAME>_DB_PASSWORD}`, Kafka 소비자 그룹 `<name>`. 스키마·계정·URL은 공통 `application.yml`이 서비스 이름으로 정한다
 - [ ] gateway 라우트 `/api/<name>/**` → `lb://<name>`, `StripPrefix=2` (외부 API가 있을 때). `infra/config-repo/gateway.yml`의 `routes`에 더하고, 토큰 없이 열 API는 `openmarket.gateway.public-paths`에 적는다
 - [ ] auth에 `client_credentials` 클라이언트 `<name>` 등록 (다른 서비스를 동기 호출할 때)
