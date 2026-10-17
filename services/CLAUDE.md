@@ -12,7 +12,7 @@ services/
 ├─ libs/
 │  ├─ common-core      베이스 예외, ErrorType, Money, ID(UUID v7), 개인정보 마스킹 (Spring 의존 없음)
 │  ├─ common-web       ProblemDetail 변환, @Idempotent 처리, 요청 로깅 (자동설정)
-│  ├─ common-messaging outbox 기록, 멱등 소비, EventEnvelope, 트레이스 전파, ShedLock·정리 작업 (자동설정)
+│  ├─ common-messaging outbox 기록, 멱등 소비, EventEnvelope, 재시도·DLT 오류 처리기, 트레이스 전파, ShedLock·정리 작업 (자동설정)
 │  └─ common-test      Testcontainers 설정, ArchUnit 규칙, 픽스처
 ├─ core/<service>
 └─ infra/<service>     discovery(Eureka), config(Config 서버), gateway(WebFlux, ADR 0011) …
@@ -36,7 +36,7 @@ services/
 - 저장소, QueryDSL, 메시징은 Testcontainers로 검증한다.
 - 발행하는 이벤트마다 JSON 예시(`src/test/resources/events/<type>.json`)를 둔다. 소비자 테스트는 발행자의 예시를 읽어 역직렬화를 확인한다.
 - 테스트 이름은 한국어 `@DisplayName`, 메서드 이름은 영어로 쓴다.
-- DB 통합 테스트는 `common-test`의 `PostgresContainerConfiguration`을, Redis가 필요하면 `RedisContainerConfiguration`을 `@Import`한다.
+- DB 통합 테스트는 `common-test`의 `PostgresContainerConfiguration`을, Redis가 필요하면 `RedisContainerConfiguration`을, Kafka가 필요하면 `KafkaContainerConfiguration`을 `@Import`한다. Kafka 컨테이너는 토픽 자동 생성을 끄므로 테스트가 쓰는 토픽과 `.DLT`를 `NewTopic` 빈으로 만든다. 예: `common-messaging`의 `KafkaListenerIntegrationTest`.
 - 서비스 테스트 설정은 `src/test/resources/config/application.yml`에 둔다(main `application.yml`을 가리지 않게). 예: `core/member`.
 
 ## 명령

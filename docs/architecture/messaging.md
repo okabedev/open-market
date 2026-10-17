@@ -36,7 +36,7 @@
 | 키 | 집계 ID. 같은 집계의 이벤트 순서를 보장한다 |
 | 파티션 | 로컬은 3개. 소비자 동시성은 파티션 수 이하로 둔다 |
 | 보관 | 7일 |
-| DLT | `<토픽>.DLT` (Spring Kafka `DeadLetterPublishingRecoverer` 기본 규칙) |
+| DLT | `<토픽>.DLT`, 원본과 같은 파티션. 파티션 수를 원본과 같게 둔다. `common-messaging`이 이름을 정한다(spring-kafka 4 기본값 `<토픽>-dlt`를 쓰지 않는다) |
 | 생성 | 자동 생성을 끈다. `infra/kafka/topics.txt`에 선언하고, Compose 기동 때 `kafka-init` 컨테이너가 없는 토픽만 만든다. DLT와 Debezium heartbeat 토픽(`__debezium-heartbeat.openmarket`)도 여기에 선언한다 |
 
 ## 이벤트 형식
@@ -73,11 +73,23 @@
 4. 커밋한 뒤 오프셋을 커밋한다(at-least-once).
 
 오류 처리
-- 일시 오류(DB 연결, 타임아웃): 지수 백오프로 3회 재시도한 뒤 DLT로 보낸다.
-- 영구 오류(역직렬화 실패, 도메인 규칙 위반): 바로 DLT로 보낸다. 헤더가 빠졌거나 페이로드를 읽을 수 없으면 `common-messaging`이 `InvalidEventException`을 던진다.
-- 재시도와 DLT 전송을 맡는 Spring Kafka 오류 처리기는 M0-d에서 브로커와 함께 붙인다.
+`common-messaging`의 자동설정(`KafkaConsumerAutoConfiguration`)이 Spring Kafka `DefaultErrorHandler`를 등록하고, Boot가 만드는 리스너 컨테이너 팩토리가 이를 쓴다. 서비스가 `CommonErrorHandler` 빈을 직접 두면 그쪽이 이긴다.
+- 일시 오류(DB 연결, 타임아웃 등 아래 영구 오류가 아닌 예외): 같은 메시지를 1초, 2초, 4초 뒤 다시 처리한다(재시도 3회, 처리 4번). 그래도 실패하면 DLT로 보낸다. 재시도하는 동안 그 파티션의 뒤 메시지는 기다린다.
+- 영구 오류: 재시도하지 않고 바로 DLT로 보낸다. 헤더가 빠졌거나 페이로드를 읽을 수 없으면 `common-messaging`이 `InvalidEventException`을 던진다. Spring Kafka가 재시도하지 않는 예외(역직렬화 실패, 메시지 변환 실패 등)도 같다. 도메인 규칙 위반이 영구 오류라면 서비스는 예외를 던지지 않고 실패 이벤트를 내거나 무시한다(아래).
+- DLT 메시지는 원본 키, 값, 헤더를 그대로 갖고, Spring Kafka가 예외 정보 헤더(`kafka_dlt-exception-cause-fqcn`, `kafka_dlt-exception-message`, `kafka_dlt-original-offset` 등)를 더한다.
+- DLT 전송이 실패하면 오프셋을 넘기지 않고 같은 메시지를 다시 처리한다. 유실하지 않는다.
+- 처리 실패(WARN), DLT 전송(ERROR), DLT 전송 실패(ERROR)는 로그로 남는다. 로그에는 위치(`토픽-파티션@오프셋`), 이벤트 `type`·`id`, 예외 클래스만 쓴다. 키, 값, 예외 메시지는 개인정보가 들어갈 수 있어 쓰지 않는다.
+- 처리 기록(`processed_event`)은 핸들러와 같은 트랜잭션이라 실패한 처리에는 남지 않는다. DLT에서 다시 보낸 메시지는 처음 보는 이벤트로 처리된다.
 - 비즈니스 실패는 예외가 아니다. 예를 들어 재고 부족은 `StockReservationFailed` 이벤트로 발행한다.
 - DLT 메시지는 관리자 화면에서 보고 원래 토픽으로 다시 보낸다(ADM-5, M6).
+
+소비자 설정(`infra/config-repo/application.yml`)
+| 설정 | 값 | 이유 |
+|---|---|---|
+| `spring.kafka.consumer.auto-offset-reset` | `earliest` | 소비자 그룹이 처음 붙을 때 남아 있는 이벤트부터 읽는다. 기본값 `latest`면 서비스가 처음 뜨기 전에 발행된 이벤트를 놓친다 |
+| `spring.kafka.listener.observation-enabled` | `true` | `traceparent` 헤더로 소비 스팬을 이어 연다([observability.md](observability.md)) |
+| `spring.kafka.template.observation-enabled` | `true` | DLT 전송 스팬. 서비스는 Kafka로 직접 발행하지 않으므로 템플릿은 DLT 전송에만 쓴다 |
+| 오프셋 커밋 | Spring Kafka 기본(`BATCH`, 자동 커밋 끔) | 처리한 뒤에 커밋한다. 커밋 전에 죽으면 다시 받지만 멱등 소비가 거른다 |
 
 순서
 - 순서는 같은 키(집계) 안에서만 보장된다. 다른 집계의 이벤트 순서에 기대지 않는다.

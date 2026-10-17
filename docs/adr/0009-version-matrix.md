@@ -43,7 +43,7 @@ Spring Authorization Server는 Spring Security 7.x에 포함되어 Boot BOM이 �
 | 이미지 | 태그 | 비고 |
 |---|---|---|
 | postgres | 18.6-alpine | Testcontainers(`common-test` `TestImages`)와 M0-c Compose가 같은 태그를 쓴다 |
-| apache/kafka | 4.2.2 | KRaft 단일 노드. Boot BOM의 Kafka 클라이언트(4.2.x)와 같은 라인 |
+| apache/kafka | 4.2.2 | KRaft 단일 노드. Boot BOM의 Kafka 클라이언트(4.2.x)와 같은 라인. Testcontainers(`TestImages`)도 같은 태그를 쓴다 |
 | quay.io/debezium/connect | 3.6.2.Final | 2026-10-16 릴리스된 3.6.3·3.7.0은 2주 지난 뒤 검토한다 |
 | redis | 8.10.2-alpine | |
 | axllent/mailpit | v1.31.6 | |
