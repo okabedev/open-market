@@ -66,7 +66,7 @@ management:
     health:
       probes:
         enabled: true
-  # 지표는 Prometheus가 스크레이프한다. OTLP로는 트레이스만 보낸다(docs/architecture/observability.md).
+  # 지표는 Prometheus가 스크레이프한다. OTLP로는 트레이스와 로그만 보낸다(docs/architecture/observability.md).
   otlp:
     metrics:
       export:
@@ -81,3 +81,8 @@ management:
         otlp:
           # OTel Collector(obs profile). 컨테이너로 띄우면 compose가 otel-collector를 넣는다.
           endpoint: http://${OTEL_COLLECTOR_HOST:localhost}:4318/v1/traces
+    logging:
+      export:
+        otlp:
+          # 로그는 common-observability가 Logback에서 OpenTelemetry로 넘긴다.
+          endpoint: http://${OTEL_COLLECTOR_HOST:localhost}:4318/v1/logs

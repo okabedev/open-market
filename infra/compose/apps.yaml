@@ -13,6 +13,8 @@ x-spring-service: &spring-service
     POSTGRES_HOST: postgres
     KAFKA_BOOTSTRAP_SERVERS: kafka:29092
     OTEL_COLLECTOR_HOST: otel-collector
+    # 컨테이너 표준 출력은 JSON(ECS) 한 줄씩. IDE·bootRun은 Boot 기본 텍스트 로그다.
+    LOGGING_STRUCTURED_FORMAT_CONSOLE: ecs
 
 services:
   member:

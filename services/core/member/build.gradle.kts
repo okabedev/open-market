@@ -7,13 +7,13 @@ plugins {
 dependencies {
     implementation(project(":libs:common-web"))
     implementation(project(":libs:common-messaging"))
+    implementation(project(":libs:common-observability"))
 
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-flyway")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
-    implementation("org.springframework.boot:spring-boot-starter-opentelemetry")
     implementation("org.springframework.cloud:spring-cloud-starter-config")
     implementation("org.springframework.cloud:spring-cloud-starter-netflix-eureka-client")
     implementation(libs.springdoc.webmvc.ui)

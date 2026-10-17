@@ -22,7 +22,9 @@ datasources:
     jsonData:
       tracesToLogsV2:
         datasourceUid: loki
-        filterByTraceID: true
+        # OTLP 로그의 trace_id는 본문이 아니라 구조화 메타데이터라 filterByTraceID(본문 검색)로는 찾지 못한다.
+        customQuery: true
+        query: '{service_name=~".+"} | trace_id="$${__trace.traceId}"'
         spanStartTimeShift: -5m
         spanEndTimeShift: 5m
       tracesToMetrics:

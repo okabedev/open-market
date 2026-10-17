@@ -235,6 +235,7 @@ services:
       EUREKA_URL: http://discovery:8761/eureka/
       REDIS_HOST: redis
       OTEL_COLLECTOR_HOST: otel-collector
+      LOGGING_STRUCTURED_FORMAT_CONSOLE: ecs # infra/compose/apps.yaml과 같다
     ports:
       - "8080:8080"
       # 관리 포트(8081)는 호스트에 열지 않는다. Prometheus는 컨테이너 네트워크로 스크레이프한다.
