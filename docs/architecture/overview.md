@@ -76,7 +76,7 @@ flowchart LR
 - 공통 라이브러리(`services/libs`)
   - `common-core`: 프레임워크 의존 없는 베이스 예외, 오류 분류, `Money`, ID 생성, 개인정보 마스킹
   - `common-web`: 오류 응답 변환, `@Idempotent` 처리, 요청 로깅 (Boot 자동설정)
-  - `common-messaging`: Outbox 기록기, 멱등 소비자, 이벤트 봉투
+  - `common-messaging`: Outbox 기록기, 멱등 소비자, 이벤트 봉투, 리스너 재시도·DLT 오류 처리기
   - `common-test`: Testcontainers 설정, ArchUnit 규칙, 테스트 픽스처
 - 버전 조합과 근거는 [ADR 0009](../adr/0009-version-matrix.md)에 있다. 실제 값의 원본은 빌드 파일이다. 다른 문서에는 버전 숫자를 적지 않는다.
 

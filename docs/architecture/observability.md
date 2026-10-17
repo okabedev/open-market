@@ -30,7 +30,7 @@ flowchart LR
 
 ## Kafka 구간 트레이스
 - 발행: outbox에 이벤트를 넣을 때 현재 트레이스 컨텍스트를 `traceparent` 컬럼에 담는다. Debezium이 헤더로 옮긴다.
-- 소비: Spring Kafka 리스너 관측(`spring.kafka.listener.observation-enabled=true`)이 `traceparent` 헤더로 자식 스팬을 연다. `common-messaging`은 같은 값을 `EventEnvelope.traceparent`로도 넘긴다. 설정과 확인은 M0-d에서 한다.
+- 소비: Spring Kafka 리스너 관측(`spring.kafka.listener.observation-enabled=true`, config-repo 공통 설정)이 `traceparent` 헤더로 자식 스팬을 연다. 핸들러가 그 안에서 outbox에 쌓은 이벤트에도 같은 트레이스가 들어가 다음 소비자까지 이어진다. 헤더 값이 비어 있으면 새 트레이스로 시작한다. `common-messaging`은 같은 값을 `EventEnvelope.traceparent`로도 넘긴다. 이 동작은 `common-messaging`의 Kafka 통합 테스트가 확인한다. Tempo에서 보는 확인은 M0-d 샘플 이벤트로 한다.
 - 결과: 주문 생성 요청 하나에서 `OrderPlaced` → 재고 예약 → `StockReserved` → 결제 대기까지 한 트레이스로 보인다.
 
 ## 대시보드와 알림

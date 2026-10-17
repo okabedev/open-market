@@ -9,5 +9,7 @@ public final class TestImages {
 
     public static final DockerImageName REDIS = DockerImageName.parse("redis:8.10.2-alpine");
 
+    public static final DockerImageName KAFKA = DockerImageName.parse("apache/kafka:4.2.2");
+
     private TestImages() {}
 }
