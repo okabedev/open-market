@@ -12,7 +12,13 @@
 ## 진행 기록
 | 마일스톤 | 시작 | 완료 | 태그 | 회고 |
 |---|---|---|---|---|
-| M0 | 2026-10-16 | | | |
+| M0 | 2026-10-16 | 2026-10-18 | `m0` | [M0 회고](#m0-회고) |
+
+### M0 회고
+- 완료 기준 E2E(2026-10-18): 빈 볼륨으로 기본·`obs`·`apps` profile을 띄웠다. gateway 경유 `POST /api/member/v1/ping`은 202였다. 이벤트가 outbox → Debezium → `member.ping` → `PingSentListener`로 갔다. 같은 메시지(키·값·헤더)를 다시 넣어도 처리 로그와 `processed_event`는 1건, DLT는 0건이었다. Tempo에서 trace 하나에 gateway → member HTTP → Kafka 소비 스팬이 이어졌고, Loki에서 같은 trace id로 로그 2줄이 나왔다.
+- 잘된 점: 리스크(R1~R6)를 기능보다 먼저 실측으로 확인했다. 기본 설정의 함정을 찾아 고쳤다. Kafka 재접속 뒤 5분간 발행이 멈췄고, Redis가 응답하지 않으면 요청이 60초 멈췄고, JVM이 힙 상한을 5GB로 잡았다. 버전과 도구 선택은 ADR에 근거를 남겼다. E2E는 별도 Compose 프로젝트(`-p`)로 사용자 볼륨과 섞지 않고 반복할 수 있다.
+- 바꿀 점: ESLint 10, TypeScript 7을 올렸다가 되돌렸다. 최신 버전은 피어 지원을 먼저 확인한다. 마일스톤 E2E가 수동 명령의 나열이다. 권한이 필요한 작업(GitHub 설정 적용)은 계획 단계에서 사용자가 실행할 몫으로 나눈다.
+- M1에 넘기는 것: 샘플 API·토픽 제거(M1 항목), 프론트 미정 항목([clients/CLAUDE.md](../clients/CLAUDE.md)), R7·R8 확인, 마일스톤 E2E 스크립트화. 메모리 재측정(R6)은 M3, 복제 슬롯 무효 시나리오(R5)는 M6에서 한다.
 
 ---
 
@@ -25,17 +31,17 @@
   - [x] `libs/common-core`, `common-web`, `common-test`(ArchUnit 규칙, Testcontainers)
   - [x] `libs/common-messaging`(outbox 기록, 멱등 소비, 정리 작업과 ShedLock)
   - [x] 서비스 템플릿(빈 서비스 하나로 패키지 규약·ArchUnit·Flyway·통합 테스트 확인): `core/member` 골격
-- [ ] **M0-c 로컬 인프라**
+- [x] **M0-c 로컬 인프라**
   - [x] Compose 기본 profile(Postgres, Kafka, Debezium Connect, Redis, Mailpit, Kafka UI), `search`, `obs`
   - [x] Postgres 초기화(스키마·계정·복제 계정·publication)
   - [x] discovery, config(+ `infra/config-repo`), Prometheus Eureka 서비스 디스커버리
   - [x] gateway(R4, ADR 0011): 라우팅, JWT·역할 검사, Redis 레이트 리밋, member 샘플 API
   - [x] `apps` profile(서비스 컨테이너), 메모리 실측과 상한(R6)
-- [ ] **M0-d 이벤트 파이프라인**
+- [x] **M0-d 이벤트 파이프라인**
   - [x] Debezium 커넥터 등록 스크립트, 토픽 선언(R5)
   - [x] 샘플 발행 → 소비(멱등, DLT) 왕복(R5)
   - [x] OTel 트레이스가 Kafka 구간까지 이어지는지 확인
-- [ ] **M0-e 프론트·CI**
+- [x] **M0-e 프론트·CI**
   - [x] `clients` pnpm 모노레포(shop, seller, admin, packages), OpenAPI 타입 생성(ADR 0012)
   - [x] GitHub Actions: 변경 경로 기반 백엔드·프론트 빌드와 테스트
   - [x] 이슈·PR 템플릿, 라벨, 브랜치 보호

@@ -3,7 +3,7 @@
 여러 판매자가 입점하는 오픈 마켓을 **실제로 운영할 수 있는 수준**으로 만드는 풀스택 프로젝트입니다.
 상품 등록부터 검색, 주문, 결제, 배송, 반품·환불, 쿠폰, 리뷰, 판매자 정산까지 전 과정을 다룹니다.
 
-> 현재 단계: **M0 기반** — 설계 문서 작성 완료, 빌드·인프라 구성 중. 진행 상황은 [로드맵](docs/roadmap.md)에 있습니다.
+> 현재 단계: **M0 기반 완료**(빌드, 로컬 인프라, 이벤트 파이프라인, 관측성, 프론트 골격, CI). 다음은 **M1 회원·인증·판매자 입점**입니다. 진행 상황은 [로드맵](docs/roadmap.md)에 있습니다.
 
 ## 기술 스택
 | 영역 | 사용 기술 |
@@ -24,9 +24,9 @@ flowchart LR
   apps --> auth
   gw --> member & catalog & order & payment & fulfillment & promotion & review & settlement & search
   gw --> file & notification
-  order & catalog & payment & fulfillment -- Outbox --> pg[(PostgreSQL)]
+  auth & member & catalog & order & payment & fulfillment & promotion & review & settlement -- Outbox --> pg[(PostgreSQL)]
   pg -- Debezium --> kafka[(Kafka)]
-  kafka --> order & catalog & payment & fulfillment & promotion & review & settlement & search & notification
+  kafka --> auth & member & catalog & order & payment & fulfillment & promotion & review & settlement & search & file & notification
 ```
 
 | 구분 | 서비스 |
@@ -56,7 +56,15 @@ flowchart LR
 | [개발 환경](docs/dev-setup.md) | 로컬 실행 준비 |
 
 ## 실행
-M0에서 구성을 마치면 여기에 적습니다. 준비 사항은 [개발 환경](docs/dev-setup.md)을 보세요.
+도구, WSL 메모리, hosts 준비는 [개발 환경](docs/dev-setup.md)에 있습니다.
+
+```bash
+cp .env.example .env
+docker compose --profile obs --profile apps up -d --wait --build
+curl -X POST localhost:8080/api/member/v1/ping   # 샘플 이벤트 발행(M1에서 제거)
+```
+
+포트, 화면 주소, 서비스를 IDE로 띄우는 방법은 [개발 환경](docs/dev-setup.md)의 "실행" 절에 있습니다.
 
 ## 성능 개선 기록
 k6 부하 테스트로 측정한 개선 내역입니다. (M2부터 기록)

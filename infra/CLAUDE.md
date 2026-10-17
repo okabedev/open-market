@@ -2,7 +2,7 @@
 
 비용 0 제약으로 모든 것을 Docker Compose로 로컬에서 실행한다. 구성 개요는 [overview.md](../docs/architecture/overview.md)의 "로컬 실행 구성"에 있다.
 
-## 구조 (M0-c에서 만든다)
+## 구조
 ```
 infra/
 ├─ compose/        compose 파일. compose.yaml(기본, discovery·config·gateway 포함), search.yaml, obs.yaml, apps.yaml(나머지 Spring 서비스)
