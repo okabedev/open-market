@@ -20,8 +20,11 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.transaction.support.TransactionTemplate;
 
-/** 서비스 템플릿 확인: 앱이 뜨고, 서비스 스키마에 공통 테이블이 만들어지고, 공통 라이브러리가 그 스키마를 쓴다. */
-@SpringBootTest
+/**
+ * 서비스 템플릿 확인: 앱이 뜨고, 서비스 스키마에 공통 테이블이 만들어지고, 공통 라이브러리가 그 스키마를 쓴다. Kafka 브로커 없이 돌도록 리스너는 띄우지 않는다.
+ * 리스너는 {@link PingEventIntegrationTest}가 확인한다.
+ */
+@SpringBootTest(properties = "spring.kafka.listener.auto-startup=false")
 @AutoConfigureMockMvc
 @Import(PostgresContainerConfiguration.class)
 class MemberApplicationIntegrationTest {

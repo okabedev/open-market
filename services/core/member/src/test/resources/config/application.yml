@@ -17,7 +17,18 @@ spring:
     properties:
       hibernate:
         default_schema: member
+  # 아래 Kafka·트레이싱 값은 infra/config-repo/application.yml과 같게 둔다. 브로커 주소는 KafkaContainerConfiguration이 넣는다.
+  kafka:
+    consumer:
+      auto-offset-reset: earliest
+    listener:
+      observation-enabled: true
+    template:
+      observation-enabled: true
 management:
+  tracing:
+    sampling:
+      probability: 1.0
   otlp:
     metrics:
       export:
