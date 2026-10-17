@@ -48,6 +48,7 @@ infra/       compose/, config-repo/, postgres/, debezium/, kafka/, elasticsearch
 - 기본 브랜치는 `main`이다. 작업은 `<type>/<짧은-설명>` 브랜치에서 하고 PR로 합친다(squash merge).
 - 커밋은 Conventional Commits 형식에 한국어 설명을 붙인다. 예: `feat(order): 주문 만료 스케줄러 추가`. type은 `feat`, `fix`, `docs`, `refactor`, `test`, `build`, `ci`, `chore`다. scope는 서비스 이름, `clients`, `infra`, `libs`다.
 - push, PR 생성, merge, 태그는 사용자에게 확인받고 한다.
+- CI는 `.github/workflows/ci.yml`이다. 바뀐 경로(백엔드, clients, Compose)만 검사하고, 결과를 모은 `ci` 체크가 merge 조건이다.
 
 ## 작업 방식
 - 마일스톤 시작·마감: `milestone` skill
