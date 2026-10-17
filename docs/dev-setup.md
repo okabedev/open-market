@@ -70,7 +70,7 @@ docker compose --profile search --profile obs --profile apps down
 | gateway | http://localhost:8080 | 외부 진입점. 예: `curl localhost:8080/api/member/v1/ping`(member 실행 필요). 관리 포트 8081은 호스트에 열지 않는다 |
 | Spring 서비스 (`apps`) | 호스트에 열지 않음 | gateway(8080)로 부른다. 목록은 `infra/compose/apps.yaml` |
 | Elasticsearch (`search`) | http://localhost:9200 | 인증 없음. nori 플러그인은 M2 |
-| OTel Collector (`obs`) | OTLP gRPC `localhost:4317`, HTTP `localhost:4318` | 서비스가 트레이스와 로그를 보낸다 |
+| OTel Collector (`obs`) | OTLP gRPC `localhost:4317`, HTTP `localhost:4318` | 서비스가 트레이스를 보낸다. `obs`를 띄우지 않으면 서비스 로그에 `Failed to export spans` ERROR가 가끔 남는다(OTel이 빈도를 제한한다). 무시해도 된다 |
 | Prometheus (`obs`) | http://localhost:9090 | |
 | Grafana (`obs`) | http://localhost:3003 | 로그인 없음. 데이터 소스 Prometheus, Tempo, Loki가 미리 등록된다 |
 
@@ -91,6 +91,6 @@ docker compose --profile search --profile obs --profile apps down
 - `apps` profile을 띄워 둔 상태라면 같은 서비스 컨테이너를 먼저 멈춘다(`docker compose stop member`). 둘 다 Eureka에 등록되면 gateway가 요청을 번갈아 보낸다.
 - DB 비밀번호 같은 비밀 값은 레포 루트 `.env`에서 온다. `bootRun`은 `.env`를 환경 변수로 읽는다. IDE로 실행하면 실행 설정에 `.env` 파일을 환경 변수로 지정한다(IntelliJ: Run Configuration의 Environment variables 또는 EnvFile).
 - 서비스는 WSL IP로 Eureka에 등록된다. 그래서 컨테이너(Prometheus, gateway)가 그 주소로 접속할 수 있다.
-- gateway 경유 호출: `curl localhost:8080/api/member/v1/ping`. 새로 띄운 서비스는 Eureka 등록과 gateway의 인스턴스 캐시 갱신 때문에 몇 초 뒤부터 라우팅된다. 그 전에는 503이다.
+- gateway 경유 호출: `curl localhost:8080/api/member/v1/ping`. 샘플 이벤트 발행은 `curl -X POST localhost:8080/api/member/v1/ping`이고, member 로그에 `샘플 이벤트를 처리했다`가 남는다(M1에서 지운다). 새로 띄운 서비스는 Eureka 등록과 gateway의 인스턴스 캐시 갱신 때문에 몇 초 뒤부터 라우팅된다. 그 전에는 503이다.
 - gateway 자체를 IDE로 실행할 때는 컨테이너를 먼저 멈춘다(`docker compose stop gateway`). 호스트에서는 컨테이너 IP에 닿지 못하므로, 이때 뒤의 서비스도 IDE로 띄워야 한다.
 - 로그인 없이 쓸 수 있는 것은 공개 경로뿐이다. 토큰이 필요한 API는 auth(M1) 이후 BFF를 거쳐 호출한다.

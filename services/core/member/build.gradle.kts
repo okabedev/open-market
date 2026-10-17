@@ -23,4 +23,6 @@ dependencies {
 
     testImplementation(project(":libs:common-test"))
     testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
+    testImplementation("org.springframework.boot:spring-boot-micrometer-tracing-test")
+    testImplementation("org.awaitility:awaitility")
 }

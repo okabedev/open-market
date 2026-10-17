@@ -27,6 +27,8 @@ spring:
         # 새로 뜬 인스턴스를 빨리 쓰도록 Eureka 조회 주기(5s)에 맞춘다. 기본값 35s.
         ttl: 5s
   kafka:
+    # 컨테이너로 띄우면 compose가 kafka:29092를 넣는다.
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     consumer:
       # 소비자 그룹이 처음 붙으면 남아 있는 이벤트부터 읽는다. 기본값(latest)이면 서비스가 처음 뜨기 전에 발행된 이벤트를 놓친다.
       auto-offset-reset: earliest
@@ -64,8 +66,18 @@ management:
     health:
       probes:
         enabled: true
-  # 지표는 Prometheus가 스크레이프한다. OTLP로는 트레이스와 로그만 보낸다(docs/architecture/observability.md).
+  # 지표는 Prometheus가 스크레이프한다. OTLP로는 트레이스만 보낸다(docs/architecture/observability.md).
   otlp:
     metrics:
       export:
         enabled: false
+  tracing:
+    sampling:
+      # 로컬에서는 모든 요청을 남긴다. 기본값은 0.1이다.
+      probability: 1.0
+  opentelemetry:
+    tracing:
+      export:
+        otlp:
+          # OTel Collector(obs profile). 컨테이너로 띄우면 compose가 otel-collector를 넣는다.
+          endpoint: http://${OTEL_COLLECTOR_HOST:localhost}:4318/v1/traces

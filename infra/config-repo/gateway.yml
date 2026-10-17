@@ -51,6 +51,9 @@ openmarket:
     public-paths:
       - method: GET
         pattern: /api/member/v1/ping
+      # M0 샘플 이벤트 발행. M1에서 샘플 API와 함께 지운다.
+      - method: POST
+        pattern: /api/member/v1/ping
     # 사용자(sub) 또는 클라이언트 IP마다 토큰 버킷. 로그인·쿠폰 발급의 엄격한 한도는 해당 기능과 함께 더한다(NFR-5).
     rate-limit:
       replenish-rate: 20

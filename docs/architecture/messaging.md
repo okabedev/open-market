@@ -86,6 +86,7 @@
 소비자 설정(`infra/config-repo/application.yml`)
 | 설정 | 값 | 이유 |
 |---|---|---|
+| `spring.kafka.bootstrap-servers` | `${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}` | IDE로 띄운 서비스는 호스트 리스너, 컨테이너는 compose가 넣는 `kafka:29092` |
 | `spring.kafka.consumer.auto-offset-reset` | `earliest` | 소비자 그룹이 처음 붙을 때 남아 있는 이벤트부터 읽는다. 기본값 `latest`면 서비스가 처음 뜨기 전에 발행된 이벤트를 놓친다 |
 | `spring.kafka.listener.observation-enabled` | `true` | `traceparent` 헤더로 소비 스팬을 이어 연다([observability.md](observability.md)) |
 | `spring.kafka.template.observation-enabled` | `true` | DLT 전송 스팬. 서비스는 Kafka로 직접 발행하지 않으므로 템플릿은 DLT 전송에만 쓴다 |

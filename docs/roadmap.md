@@ -33,8 +33,8 @@
   - [x] `apps` profile(서비스 컨테이너), 메모리 실측과 상한(R6)
 - [ ] **M0-d 이벤트 파이프라인**
   - [x] Debezium 커넥터 등록 스크립트, 토픽 선언(R5)
-  - [ ] 샘플 발행 → 소비(멱등, DLT) 왕복(R5)
-  - [ ] OTel 트레이스가 Kafka 구간까지 이어지는지 확인
+  - [x] 샘플 발행 → 소비(멱등, DLT) 왕복(R5)
+  - [x] OTel 트레이스가 Kafka 구간까지 이어지는지 확인
 - [ ] **M0-e 프론트·CI**
   - [ ] `clients` pnpm 모노레포(shop, seller, admin, packages)
   - [ ] GitHub Actions: 변경 경로 기반 백엔드·프론트 빌드와 테스트
@@ -47,7 +47,7 @@
 - [ ] member: 프로필, 배송지, 입점 신청·심사, 판매자 정지, 탈퇴
 - [ ] notification: 이메일 발송 기반, 중복 방지
 - [ ] BFF 로그인·로그아웃·토큰 갱신(R8), 앱 3개 로그인 화면
-- [ ] gateway 공개 경로 등록, 로그인·가입의 엄격한 레이트 리밋(NFR-5). member 샘플 API(`/v1/ping`) 제거
+- [ ] gateway 공개 경로 등록, 로그인·가입의 엄격한 레이트 리밋(NFR-5). member 샘플 API(`/v1/ping`), 샘플 이벤트(`member.ping` 토픽, `PingSent`, `PingSentListener`)와 그 공개 경로 제거
 - 관련 요구사항: ACC-1~4, SEL-1~3, NTF-1(가입), NFR-5, NFR-6
 
 **완료 기준 E2E**: 가입 → 인증 메일(Mailpit) → 로그인 → 입점 신청 → 관리자 승인 → 토큰 갱신 후 판매자 앱 진입. 승인 전에는 판매자 API가 403이다.
