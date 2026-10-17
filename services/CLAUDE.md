@@ -13,6 +13,7 @@ services/
 │  ├─ common-core      베이스 예외, ErrorType, Money, ID(UUID v7), 개인정보 마스킹 (Spring 의존 없음)
 │  ├─ common-web       ProblemDetail 변환, @Idempotent 처리, 요청 로깅 (자동설정)
 │  ├─ common-messaging outbox 기록, 멱등 소비, EventEnvelope, 재시도·DLT 오류 처리기, 트레이스 전파, ShedLock·정리 작업 (자동설정)
+│  ├─ common-observability OpenTelemetry 스타터, Logback → OpenTelemetry 로그 어펜더 (자동설정). OTel을 쓰는 서비스는 스타터 대신 이 모듈을 쓴다
 │  └─ common-test      Testcontainers 설정, ArchUnit 규칙, 픽스처
 ├─ core/<service>
 └─ infra/<service>     discovery(Eureka), config(Config 서버), gateway(WebFlux, ADR 0011) …

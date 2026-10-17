@@ -11,7 +11,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-security-oauth2-resource-server")
     implementation("org.springframework.boot:spring-boot-starter-data-redis-reactive")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
-    implementation("org.springframework.boot:spring-boot-starter-opentelemetry")
+    implementation(project(":libs:common-observability"))
     runtimeOnly("io.micrometer:micrometer-registry-prometheus")
 
     testImplementation(project(":libs:common-test"))
