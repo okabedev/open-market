@@ -14,7 +14,7 @@ services/
 │  ├─ common-web       ProblemDetail 변환, @Idempotent 처리, 요청 로깅 (자동설정)
 │  ├─ common-messaging outbox 기록, 멱등 소비, EventEnvelope, 재시도·DLT 오류 처리기, 트레이스 전파, ShedLock·정리 작업 (자동설정)
 │  ├─ common-observability OpenTelemetry 스타터, Logback → OpenTelemetry 로그 어펜더 (자동설정). OTel을 쓰는 서비스는 스타터 대신 이 모듈을 쓴다
-│  └─ common-test      Testcontainers 설정, ArchUnit 규칙, 픽스처
+│  └─ common-test      Testcontainers 설정, ArchUnit 규칙, OpenAPI 문서 비교(OpenApiSnapshot), 픽스처
 ├─ core/<service>
 └─ infra/<service>     discovery(Eureka), config(Config 서버), gateway(WebFlux, ADR 0011) …
 ```
@@ -39,6 +39,7 @@ services/
 - 테스트 이름은 한국어 `@DisplayName`, 메서드 이름은 영어로 쓴다.
 - DB 통합 테스트는 `common-test`의 `PostgresContainerConfiguration`을, Redis가 필요하면 `RedisContainerConfiguration`을, Kafka가 필요하면 `KafkaContainerConfiguration`을 `@Import`한다. Kafka 컨테이너는 토픽 자동 생성을 끄므로 테스트가 쓰는 토픽과 `.DLT`를 `NewTopic` 빈으로 만든다. 예: `common-messaging`의 `KafkaListenerIntegrationTest`.
 - 서비스 테스트 설정은 `src/test/resources/config/application.yml`에 둔다(main `application.yml`을 가리지 않게). 예: `core/member`.
+- 외부 API가 있는 서비스는 앱 통합 테스트에서 `common-test`의 `OpenApiSnapshot`으로 OpenAPI 문서를 프론트 `api-client`의 파일과 비교한다. API를 바꿨으면 `OPENAPI_UPDATE=true ./gradlew :core:<service>:test`으로 파일을 고친다([conventions.md](../docs/architecture/conventions.md)).
 
 ## 명령
 `services/`에서 실행한다.

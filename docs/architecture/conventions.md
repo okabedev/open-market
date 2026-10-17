@@ -79,6 +79,9 @@ com.openmarket.<service>
 - 목록은 커서 페이징(`?cursor=&size=`)이 기본이다. 관리자 화면처럼 쪽 번호가 필요한 곳만 오프셋을 쓴다.
 - 상태 변경 API 중 중복되면 안 되는 것은 `Idempotency-Key`를 필수로 받는다([data.md](data.md)).
 - 문서는 springdoc OpenAPI로 만든다. 프론트 `packages/api-client`가 이 문서에서 타입을 생성한다.
+  - 서비스 앱 통합 테스트가 `/v3/api-docs`를 `clients/packages/api-client/openapi/<서비스>.json`과 비교한다(`common-test`의 `OpenApiSnapshot`). 서버 주소는 빼고 저장한다. 프론트는 gateway의 `/api/<서비스>` 아래로 부른다.
+  - API를 바꾸면 `OPENAPI_UPDATE=true`로 테스트를 돌려 문서를 고치고, `pnpm --filter @openmarket/api-client generate`로 타입을 다시 만든다. CI는 `generate:check`로 둘이 맞는지 본다.
+  - 응답 타입을 따로 적지 않은 API도 `application/json`으로 문서화한다(`springdoc.default-produces-media-type`).
 
 ## 오류
 - 베이스 예외는 `common-core`의 `BusinessException`이다. `ErrorType`(`INVALID`, `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `CONFLICT`, `UNPROCESSABLE`, `UNAVAILABLE`)과 오류 코드 문자열을 가진다. HTTP 상태는 모른다.

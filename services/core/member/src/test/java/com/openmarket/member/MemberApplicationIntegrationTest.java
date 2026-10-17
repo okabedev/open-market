@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.openmarket.common.messaging.outbox.Outbox;
 import com.openmarket.common.test.container.PostgresContainerConfiguration;
+import com.openmarket.common.test.openapi.OpenApiSnapshot;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -88,10 +89,16 @@ class MemberApplicationIntegrationTest {
     }
 
     @Test
-    @DisplayName("OpenAPI 문서를 제공한다")
-    void exposesOpenApi() throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.get("/v3/api-docs"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.openapi").exists());
+    @DisplayName("OpenAPI 문서가 프론트 api-client에 저장된 문서와 같다")
+    void openApiMatchesClientSnapshot() throws Exception {
+        String apiDocs =
+                mockMvc.perform(MockMvcRequestBuilders.get("/v3/api-docs"))
+                        .andExpect(status().isOk())
+                        .andExpect(jsonPath("$.openapi").exists())
+                        .andReturn()
+                        .getResponse()
+                        .getContentAsString();
+
+        OpenApiSnapshot.assertMatches("member", apiDocs);
     }
 }

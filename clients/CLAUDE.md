@@ -11,7 +11,7 @@ clients/
 │  └─ admin    관리자 (3002)
 └─ packages/
    ├─ ui          공유 컴포넌트. TypeScript 원본을 내보내고 앱이 `transpilePackages`로 컴파일한다
-   ├─ api-client  서비스 OpenAPI에서 생성한 타입과 서버 전용 fetch 래퍼 (M0-e에서 추가)
+   ├─ api-client  서비스 OpenAPI 문서(openapi/<서비스>.json, 백엔드 테스트가 쓴다)에서 생성한 타입(src/generated)과 서버 전용 클라이언트 `createServiceClient`
    └─ config      TypeScript(tsconfig), ESLint, Prettier 공통 설정
 ```
 - 앱마다 `app/api/health`(Route Handler)가 `{"status":"UP","app":"<앱>"}`을 돌려준다.
@@ -22,7 +22,8 @@ clients/
 - **브라우저 코드는 gateway를 직접 부르지 않는다.** 데이터 읽기는 서버 컴포넌트에서, 변경은 Server Action이나 Route Handler에서 한다.
 - 토큰은 서버 세션(Redis)에만 둔다. 브라우저에는 HttpOnly 세션 쿠키 `om_sid`만 간다. 토큰을 props나 클라이언트 상태로 넘기지 않는다.
 - `packages/api-client`는 서버 전용이다(`server-only`). 클라이언트 컴포넌트에서 import하지 않는다.
-- API 타입은 손으로 쓰지 않고 OpenAPI에서 생성한다. 백엔드 API가 바뀌면 다시 생성한다.
+- API 타입은 손으로 쓰지 않고 OpenAPI에서 생성한다. `openapi/*.json`과 `src/generated`는 고치지 않는다. 백엔드 API가 바뀌면 백엔드 테스트로 문서를 고친 뒤 `generate`로 다시 만든다([conventions.md](../docs/architecture/conventions.md) "REST API").
+- 서비스 호출은 `createServiceClient("<서비스>")`를 쓴다. gateway 주소는 서버 환경 변수 `GATEWAY_URL`(기본 `http://localhost:8080`)이다.
 - 상태 변경 요청 중 중복되면 안 되는 것(주문, 결제 승인, 쿠폰 발급, 클레임)은 BFF가 `Idempotency-Key`를 붙인다.
 - 파일 업로드는 BFF Route Handler를 거쳐 file 서비스로 보낸다.
 - 화면 문구는 한국어다.
@@ -42,6 +43,7 @@ clients/
 | `pnpm test` | 단위 테스트(Vitest) |
 | `pnpm build` | 앱 프로덕션 빌드 |
 | `pnpm format` / `pnpm format:check` | Prettier로 고치기 / 검사 |
+| `pnpm --filter @openmarket/api-client generate` / `generate:check` | OpenAPI 문서에서 타입 다시 만들기 / 최신인지 검사 |
 | `pnpm --filter @openmarket/<앱> dev` | 앱 하나를 개발 모드로 띄운다(shop 3000, seller 3001, admin 3002) |
 
 ## 미정 (M1에서 확정)
