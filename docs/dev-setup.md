@@ -8,7 +8,7 @@
 |---|---|---|
 | JDK | 25 (Temurin) | `JAVA_HOME` 설정. Gradle은 래퍼로 실행하므로 따로 설치하지 않는다 |
 | Node.js | 24 LTS | 레포 루트 `.nvmrc`. nvm 사용 시 `nvm use` |
-| pnpm | `clients/package.json`의 `packageManager` 값 (M0-e에서 고정) | `corepack enable`로 맞춘다 |
+| pnpm | 12.9.1 (`clients/package.json`의 `packageManager`) | `corepack enable`로 맞춘다. 버전 근거는 [ADR 0012](adr/0012-frontend-toolchain.md) |
 | Docker | Docker Desktop(WSL 연동) 또는 WSL 안의 Docker Engine | Compose v2 |
 | gh | 최신 | GitHub 작업용 |
 

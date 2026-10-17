@@ -1,0 +1,26 @@
+# pnpm 워크스페이스. 외부 패키지 버전은 아래 catalog에만 적고, 각 package.json은 `catalog:`로 참조한다.
+# 버전 근거는 docs/adr/0012-frontend-toolchain.md에 있다.
+packages:
+  - apps/*
+  - packages/*
+
+catalog:
+  next: 16.3.8
+  react: 19.3.0
+  react-dom: 19.3.0
+  typescript: 6.0.3
+  "@types/node": 24.19.1
+  "@types/react": 19.3.0
+  "@types/react-dom": 19.3.0
+  # 10은 eslint-config-next가 쓰는 eslint-plugin-react 7.37.5와 맞지 않는다(ADR 0012).
+  eslint: 9.39.5
+  eslint-config-next: 16.3.8
+  eslint-config-prettier: 10.1.8
+  prettier: 3.9.9
+  vitest: 5.0.3
+  vite: 8.3.2
+
+# 의존성의 설치 스크립트는 여기서 허용한 것만 실행한다. 없는 패키지가 스크립트를 가지면 설치가 실패한다.
+allowBuilds:
+  # 네이티브 바인딩이 없을 때만 받는 대체 설치. 바인딩은 플랫폼별 선택 의존성으로 이미 들어온다.
+  unrs-resolver: false
