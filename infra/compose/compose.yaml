@@ -77,6 +77,7 @@ services:
       timeout: 10s
       retries: 20
 
+  # 워커를 띄운 뒤 outbox 커넥터를 등록한다(infra/debezium/start.sh). healthy는 커넥터 태스크가 RUNNING이라는 뜻이다.
   connect:
     image: quay.io/debezium/connect:3.6.2.Final
     depends_on:
@@ -84,7 +85,12 @@ services:
         condition: service_healthy
       postgres:
         condition: service_healthy
+      # 커넥터가 쓰는 토픽이 먼저 있어야 한다.
+      kafka-init:
+        condition: service_completed_successfully
+    entrypoint: ["/bin/bash", "/debezium-init/start.sh"]
     environment:
+      CONNECT_URL: http://localhost:8083
       BOOTSTRAP_SERVERS: kafka:29092
       GROUP_ID: debezium
       CONFIG_STORAGE_TOPIC: debezium.configs
@@ -94,13 +100,38 @@ services:
       OFFSET_STORAGE_REPLICATION_FACTOR: 1
       STATUS_STORAGE_REPLICATION_FACTOR: 1
       HEAP_OPTS: -Xms256m -Xmx512m
+      # 커넥터 설정의 ${env:DEBEZIUM_DB_PASSWORD}를 워커가 푼다. 등록한 설정과 REST 응답에는 자리 표시자만 남는다.
+      CONNECT_CONFIG_PROVIDERS: env
+      CONNECT_CONFIG_PROVIDERS_ENV_CLASS: org.apache.kafka.common.config.provider.EnvVarConfigProvider
+      DEBEZIUM_DB_PASSWORD: ${DEBEZIUM_DB_PASSWORD:?}
+      # Kafka가 잠깐 끊기면 워커가 그룹에서 빠졌다가 다시 들어온다. 기본값(5분)이면 그동안 태스크를 다시 받지 못해
+      # 발행이 멈춘다. 워커가 하나뿐이라 기다릴 다른 워커가 없으므로 바로 재할당한다(docs/architecture/risks.md R5).
+      CONNECT_SCHEDULED_REBALANCE_MAX_DELAY_MS: 0
     ports:
       - "8083:8083"
+    volumes:
+      - ../debezium:/debezium-init:ro
     healthcheck:
-      test: ["CMD-SHELL", "curl -fs http://localhost:8083/connectors > /dev/null"]
+      # 태스크가 FAILED가 되면 unhealthy로 바뀐다. 원인은 `curl localhost:8083/connectors/outbox/status`로 본다.
+      test: ["CMD", "bash", "/debezium-init/healthcheck.sh"]
       interval: 10s
       timeout: 5s
-      retries: 30
+      start_period: 120s # 워커 기동과 커넥터 등록. 이 동안의 실패는 세지 않는다
+      start_interval: 3s
+      retries: 3
+
+  # 일회성: infra/kafka/topics.txt의 토픽을 만들고 끝난다.
+  kafka-init:
+    image: apache/kafka:4.2.2
+    depends_on:
+      kafka:
+        condition: service_healthy
+    environment:
+      BOOTSTRAP_SERVERS: kafka:29092
+    entrypoint: ["/bin/bash", "/kafka-init/create-topics.sh"]
+    volumes:
+      - ../kafka:/kafka-init:ro
+    restart: "no"
 
   redis:
     image: redis:8.10.2-alpine

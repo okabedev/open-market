@@ -12,7 +12,7 @@ import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Kafka 메시지를 {@link EventEnvelope}로 바꾼다. 헤더 값은 UTF-8 문자열이고 메시지 값은 페이로드 JSON이다(Debezium Outbox Event
- * Router 설정, M0-d).
+ * Router 설정, docs/architecture/messaging.md "이벤트 형식").
  *
  * <p>모르는 필드는 무시한다(Jackson 3 기본값). 발행자가 하위 호환으로 필드를 추가해도 소비자가 깨지지 않는다.
  */

@@ -1,0 +1,37 @@
+# Kafka 토픽 선언. 한 줄에 `<토픽> <파티션 수>`. 브로커 자동 생성을 껐으므로 여기 없는 토픽에는 쓸 수 없다.
+# kafka-init 컨테이너(create-topics.sh)가 기동할 때 없는 토픽만 만든다. 이미 있는 토픽의 파티션 수는 바꾸지 않는다.
+#
+# - 이벤트 토픽은 docs/architecture/context-map.md의 이벤트 목록과 같다. 그 문서에 토픽을 추가하면 여기에도 더한다.
+#   선언하지 않은 aggregate_type으로 outbox에 쓰면 Debezium 커넥터 태스크가 멈춘다(docs/architecture/messaging.md).
+# - 토픽마다 DLT(<토픽>.DLT)를 같은 파티션 수로 둔다. Spring Kafka가 원래 파티션 번호로 DLT에 보낸다.
+# - 보관 기간은 브로커 기본값(7일)이다.
+
+auth.account 3
+auth.account.DLT 3
+member.member 3
+member.member.DLT 3
+member.seller 3
+member.seller.DLT 3
+catalog.product 3
+catalog.product.DLT 3
+catalog.stock 3
+catalog.stock.DLT 3
+order.order 3
+order.order.DLT 3
+promotion.issued-coupon 3
+promotion.issued-coupon.DLT 3
+payment.payment 3
+payment.payment.DLT 3
+fulfillment.shipment 3
+fulfillment.shipment.DLT 3
+fulfillment.claim 3
+fulfillment.claim.DLT 3
+review.review 3
+review.review.DLT 3
+review.rating-summary 3
+review.rating-summary.DLT 3
+settlement.settlement 3
+settlement.settlement.DLT 3
+
+# Debezium heartbeat(heartbeat.interval.ms). 커넥터가 LSN을 확인했다는 표시만 담는다.
+__debezium-heartbeat.openmarket 1

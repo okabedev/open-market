@@ -61,7 +61,7 @@ docker compose --profile search --profile obs --profile apps down
 |---|---|---|
 | PostgreSQL | `localhost:5432`, DB `openmarket` | 관리자 `postgres`, 서비스 계정 `<service>_app`. 비밀번호는 `.env` |
 | Kafka | `localhost:9092` | 컨테이너끼리는 `kafka:29092` |
-| Debezium Connect | http://localhost:8083 | 커넥터 등록은 M0-d |
+| Debezium Connect | http://localhost:8083 | 기동할 때 outbox 커넥터를 등록한다. 상태: `curl localhost:8083/connectors/outbox/status` |
 | Redis | `localhost:6379` | |
 | Mailpit | SMTP `localhost:1025`, 화면 http://localhost:8025 | |
 | Kafka UI | http://localhost:8089 | |
@@ -74,6 +74,8 @@ docker compose --profile search --profile obs --profile apps down
 | Prometheus (`obs`) | http://localhost:9090 | |
 | Grafana (`obs`) | http://localhost:3003 | 로그인 없음. 데이터 소스 Prometheus, Tempo, Loki가 미리 등록된다 |
 
+- `kafka-init`은 `infra/kafka/topics.txt`의 토픽을 만들고 끝나는 일회성 컨테이너다. `docker compose ps -a`에서 `Exited (0)`이면 정상이다. 실패하면 `docker compose logs kafka-init`로 원인을 본다.
+- connect가 unhealthy면 outbox 커넥터 태스크가 RUNNING이 아니다. 원인은 커넥터 상태(`curl localhost:8083/connectors/outbox/status`)의 `trace`와 `docker compose logs connect`로 본다. 대처는 [messaging.md](architecture/messaging.md)의 "장애 때 동작"에 있다.
 - 멈춤: `docker compose down`. 데이터는 볼륨에 남는다.
 - 초기화: `docker compose down -v`. Postgres 초기화 스크립트(`infra/postgres/init`)는 빈 볼륨에서만 실행되므로, 스크립트나 `.env` 비밀번호를 바꾸면 볼륨을 지우고 다시 띄운다.
 - 처음 `up`은 discovery, config, gateway 이미지를 빌드하므로 몇 분 걸린다. 이후에는 캐시를 쓴다. 이 서비스들의 코드를 바꾸면 `docker compose up -d --wait --build <서비스>`로 다시 빌드한다. `apps` 서비스도 같다(예: `docker compose --profile apps up -d --wait --build member`).
