@@ -37,7 +37,7 @@
   - [x] OTel 트레이스가 Kafka 구간까지 이어지는지 확인
 - [ ] **M0-e 프론트·CI**
   - [x] `clients` pnpm 모노레포(shop, seller, admin, packages), OpenAPI 타입 생성(ADR 0012)
-  - [ ] GitHub Actions: 변경 경로 기반 백엔드·프론트 빌드와 테스트
+  - [x] GitHub Actions: 변경 경로 기반 백엔드·프론트 빌드와 테스트
   - [ ] 이슈·PR 템플릿, 라벨, 브랜치 보호
 
 **완료 기준 E2E**: `docker compose up` 후 gateway 경유로 샘플 API를 호출한다. 샘플 이벤트가 outbox → Kafka → 소비자까지 가고, 같은 이벤트를 다시 넣어도 한 번만 처리된다. Grafana에서 그 요청의 트레이스 하나가 보인다.

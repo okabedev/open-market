@@ -27,7 +27,7 @@ description: 오픈 마켓에 새 백엔드 서비스(core 또는 infra)를 추�
 - [ ] 외부 API가 있으면 OpenAPI 문서를 프론트에 연결한다: 앱 통합 테스트에 `OpenApiSnapshot.assertMatches("<name>", ...)`를 두고 `OPENAPI_UPDATE=true`로 `clients/packages/api-client/openapi/<name>.json`을 만든다. `api-client`의 `src/client.ts` `ServicePaths`와 `src/index.ts`에 서비스를 더하고 `pnpm --filter @openmarket/api-client generate`
 - [ ] auth에 `client_credentials` 클라이언트 `<name>` 등록 (다른 서비스를 동기 호출할 때)
 - [ ] `infra/compose/apps.yaml`에 서비스 추가: `<<: *spring-service`, 빌드 인자 `MODULE`, `depends_on`(config, 쓰면 postgres·kafka·redis), `<NAME>_DB_PASSWORD`, 서비스 포트의 `/actuator/health` healthcheck. 호스트 포트는 열지 않는다
-- [ ] CI 변경 경로 필터에 모듈 추가
+- [ ] CI: `.github/workflows/ci.yml`의 백엔드 필터가 `services/**` 전체를 보므로 고칠 것이 없다. 서비스 밖 경로(예: 새 설정 디렉터리)를 테스트가 읽으면 필터에 더한다
 - [ ] overview 표와 roadmap 체크 항목 갱신
 
 ## 검증
