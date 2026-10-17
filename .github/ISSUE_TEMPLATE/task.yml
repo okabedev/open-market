@@ -1,0 +1,17 @@
+name: 작업
+description: 기능이나 버그가 아닌 일(리팩터링, 빌드, 인프라, 문서, 리스크 확인)
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: 내용
+      description: 관련 리스크(risks.md)나 ADR이 있으면 링크한다.
+    validations:
+      required: true
+  - type: textarea
+    id: done
+    attributes:
+      label: 완료 조건
+      placeholder: "- [ ] ..."
+    validations:
+      required: true

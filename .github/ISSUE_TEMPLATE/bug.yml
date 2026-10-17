@@ -1,0 +1,39 @@
+name: 버그
+description: 동작이 문서나 수용 기준과 다르다
+labels: ["type:fix"]
+body:
+  - type: markdown
+    attributes:
+      value: 공개 저장소다. 비밀 값, 토큰, 개인정보(이름, 이메일, 연락처, 주소)는 붙이지 않는다. 로그는 trace id로 대신한다.
+  - type: textarea
+    id: actual
+    attributes:
+      label: 증상
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 기대 동작
+      description: 근거가 되는 문서나 요구사항 ID가 있으면 적는다.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 재현 절차
+      placeholder: |
+        1. docker compose up -d --wait
+        2. ...
+    validations:
+      required: true
+  - type: input
+    id: trace
+    attributes:
+      label: trace id
+      description: 응답의 X-Request-Id 헤더. Grafana Tempo에서 찾을 수 있다.
+  - type: input
+    id: commit
+    attributes:
+      label: 커밋
+      description: git rev-parse --short HEAD

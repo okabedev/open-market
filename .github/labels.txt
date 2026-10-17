@@ -1,0 +1,31 @@
+# GitHub 라벨 선언. 한 줄에 `<이름> <색(16진수 6자리)> <설명>`. apply-settings.sh가 저장소 라벨을 이 목록과 같게 맞춘다(여기 없는 라벨은 지운다).
+# - type: 커밋 type과 같다(CLAUDE.md "Git"). PR에는 type 하나를 단다.
+# - scope: 커밋 scope와 같다. 서비스 이름, clients, infra, libs. 서비스를 추가하면 여기에도 더한다(add-service skill).
+
+type:feat 1d76db 새 기능
+type:fix d73a4a 버그 수정
+type:docs 0075ca 문서
+type:refactor 5319e7 동작이 같은 구조 변경
+type:test 0e8a16 테스트
+type:build fbca04 빌드·의존성
+type:ci 6f42c1 CI
+type:chore c5def5 그 밖의 작업
+
+scope:member bfdadc core 서비스
+scope:catalog bfdadc core 서비스
+scope:order bfdadc core 서비스
+scope:payment bfdadc core 서비스
+scope:fulfillment bfdadc core 서비스
+scope:promotion bfdadc core 서비스
+scope:review bfdadc core 서비스
+scope:settlement bfdadc core 서비스
+scope:search bfdadc core 서비스
+scope:gateway d4c5f9 infra 서비스
+scope:discovery d4c5f9 infra 서비스
+scope:config d4c5f9 infra 서비스
+scope:auth d4c5f9 infra 서비스
+scope:file d4c5f9 infra 서비스
+scope:notification d4c5f9 infra 서비스
+scope:clients c2e0c6 프론트 앱과 packages
+scope:infra fef2c0 Compose와 로컬 인프라 설정
+scope:libs e4e669 services/libs 공통 모듈
