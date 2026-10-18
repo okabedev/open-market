@@ -13,6 +13,7 @@
 | 마일스톤 | 시작 | 완료 | 태그 | 회고 |
 |---|---|---|---|---|
 | M0 | 2026-10-16 | 2026-10-18 | `m0` | [M0 회고](#m0-회고) |
+| M1 | 2026-10-18 | | | |
 
 ### M0 회고
 - 완료 기준 E2E(2026-10-18): 빈 볼륨으로 기본·`obs`·`apps` profile을 띄웠다. gateway 경유 `POST /api/member/v1/ping`은 202였다. 이벤트가 outbox → Debezium → `member.ping` → `PingSentListener`로 갔다. 같은 메시지(키·값·헤더)를 다시 넣어도 처리 로그와 `processed_event`는 1건, DLT는 0건이었다. Tempo에서 trace 하나에 gateway → member HTTP → Kafka 소비 스팬이 이어졌고, Loki에서 같은 trace id로 로그 2줄이 나왔다.
@@ -54,7 +55,9 @@
 - [ ] notification: 이메일 발송 기반, 중복 방지
 - [ ] BFF 로그인·로그아웃·토큰 갱신(R8), 앱 3개 로그인 화면
 - [ ] gateway 공개 경로 등록, 로그인·가입의 엄격한 레이트 리밋(NFR-5). member 샘플 API(`/v1/ping`), 샘플 이벤트(`member.ping` 토픽, `PingSent`, `PingSentListener`)와 그 공개 경로 제거
-- 관련 요구사항: ACC-1~4, SEL-1~3, NTF-1(가입), NFR-5, NFR-6
+- 관련 요구사항: ACC-1, ACC-3, ACC-4, SEL-1~3, NTF-1(가입), NTF-2, NFR-5~8
+- 범위 결정(2026-10-18): ACC-2(소셜 로그인)는 제외한다. ACC-4의 진행 중 주문 검사는 M3에서 order에 연결한다.
+- 순서: R7(auth 골격·issuer) → R8(BFF 세션·갱신) → 가입·인증 메일 → gateway 공개 경로·레이트 리밋·샘플 제거 → member 프로필·배송지 → 입점 → 탈퇴 → 화면 → E2E 스크립트
 
 **완료 기준 E2E**: 가입 → 인증 메일(Mailpit) → 로그인 → 입점 신청 → 관리자 승인 → 토큰 갱신 후 판매자 앱 진입. 승인 전에는 판매자 API가 403이다.
 
