@@ -4,3 +4,8 @@ server:
 spring:
   datasource:
     password: ${MEMBER_DB_PASSWORD}
+
+openmarket:
+  member:
+    # 정산 계좌 번호 암호화 키(AES-256-GCM, Base64 32바이트). 바꾸면 저장된 계좌 번호를 복호화하지 못한다.
+    account-number-key: ${MEMBER_ACCOUNT_NUMBER_KEY}

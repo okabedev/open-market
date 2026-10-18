@@ -71,6 +71,11 @@ class SeedAdminUseCaseTest {
         }
 
         @Override
+        public Optional<Account> findForUpdateById(UUID id) {
+            return findById(id);
+        }
+
+        @Override
         public Account save(Account account) {
             saved.add(account);
             return account;

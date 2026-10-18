@@ -34,6 +34,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/members/me/seller-applications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["myApplications"];
+        put?: never;
+        post: operations["submit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/members/me/addresses": {
         parameters: {
             query?: never;
@@ -66,6 +82,118 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/sellers/{sellerId}/suspend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["suspend"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/sellers/{sellerId}/reinstate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["reinstate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/seller-applications/{applicationId}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["reject"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/seller-applications/{applicationId}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["approve"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/seller/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["me_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/sellers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["sellers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/seller-applications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["applications"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -82,6 +210,18 @@ export interface components {
             baseAddress: string;
             detailAddress?: string;
         };
+        SubmitSellerApplicationRequest: {
+            storeName: string;
+            businessNumber: string;
+            representativeName: string;
+            bankName: string;
+            accountHolder: string;
+            accountNumber: string;
+        };
+        SubmitSellerApplicationResponse: {
+            /** Format: uuid */
+            applicationId?: string;
+        };
         AddAddressRequest: {
             label?: string;
             recipientName: string;
@@ -95,6 +235,24 @@ export interface components {
             /** Format: uuid */
             addressId?: string;
         };
+        ReasonRequest: {
+            reason: string;
+        };
+        SellerView: {
+            /** Format: uuid */
+            sellerId?: string;
+            storeName?: string;
+            businessNumber?: string;
+            representativeName?: string;
+            bankName?: string;
+            accountHolder?: string;
+            accountNumberMasked?: string;
+            /** @enum {string} */
+            status?: "ACTIVE" | "SUSPENDED";
+            suspendReason?: string;
+            /** Format: date-time */
+            approvedAt?: string;
+        };
         MemberView: {
             /** Format: uuid */
             memberId?: string;
@@ -104,6 +262,23 @@ export interface components {
             emailVerified?: boolean;
             /** Format: date-time */
             joinedAt?: string;
+        };
+        MySellerApplicationView: {
+            /** Format: uuid */
+            applicationId?: string;
+            storeName?: string;
+            businessNumber?: string;
+            representativeName?: string;
+            bankName?: string;
+            accountHolder?: string;
+            accountNumberMasked?: string;
+            /** @enum {string} */
+            status?: "SUBMITTED" | "APPROVED" | "REJECTED";
+            rejectReason?: string;
+            /** Format: date-time */
+            submittedAt?: string;
+            /** Format: date-time */
+            reviewedAt?: string;
         };
         AddressView: {
             /** Format: uuid */
@@ -117,6 +292,56 @@ export interface components {
             isDefault?: boolean;
             /** Format: date-time */
             createdAt?: string;
+        };
+        PageViewSellerReviewView: {
+            items?: components["schemas"]["SellerReviewView"][];
+            /** Format: int64 */
+            totalCount?: number;
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+        };
+        SellerReviewView: {
+            /** Format: uuid */
+            sellerId?: string;
+            storeName?: string;
+            businessNumber?: string;
+            representativeName?: string;
+            /** @enum {string} */
+            status?: "ACTIVE" | "SUSPENDED";
+            suspendReason?: string;
+            /** Format: date-time */
+            approvedAt?: string;
+        };
+        PageViewSellerApplicationReviewView: {
+            items?: components["schemas"]["SellerApplicationReviewView"][];
+            /** Format: int64 */
+            totalCount?: number;
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+        };
+        SellerApplicationReviewView: {
+            /** Format: uuid */
+            applicationId?: string;
+            /** Format: uuid */
+            memberId?: string;
+            applicantEmail?: string;
+            storeName?: string;
+            businessNumber?: string;
+            representativeName?: string;
+            bankName?: string;
+            accountHolder?: string;
+            accountNumberMasked?: string;
+            /** @enum {string} */
+            status?: "SUBMITTED" | "APPROVED" | "REJECTED";
+            rejectReason?: string;
+            /** Format: date-time */
+            submittedAt?: string;
+            /** Format: date-time */
+            reviewedAt?: string;
         };
     };
     responses: never;
@@ -213,6 +438,50 @@ export interface operations {
             };
         };
     };
+    myApplications: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MySellerApplicationView"][];
+                };
+            };
+        };
+    };
+    submit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubmitSellerApplicationRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubmitSellerApplicationResponse"];
+                };
+            };
+        };
+    };
     addresses: {
         parameters: {
             query?: never;
@@ -274,6 +543,162 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    suspend: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sellerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReasonRequest"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    reinstate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sellerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    reject: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                applicationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReasonRequest"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    approve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                applicationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    me_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SellerView"];
+                };
+            };
+        };
+    };
+    sellers: {
+        parameters: {
+            query?: {
+                status?: "ACTIVE" | "SUSPENDED";
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageViewSellerReviewView"];
+                };
+            };
+        };
+    };
+    applications: {
+        parameters: {
+            query?: {
+                status?: "SUBMITTED" | "APPROVED" | "REJECTED";
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageViewSellerApplicationReviewView"];
+                };
             };
         };
     };

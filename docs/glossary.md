@@ -13,7 +13,8 @@
 | 회원 | `Member` | member | 계정에 딸린 프로필(이름, 연락처). `memberId`는 `accountId`와 같은 값을 쓴다 |
 | 배송지 | `Address` | member | 회원당 최대 10개, 기본 배송지 1개 |
 | 판매자 | `Seller` | member | 승인된 입점 판매자. 상호, 사업자 번호, 정산 계좌를 가진다 |
-| 입점 신청 | `SellerApplication` | member | 상태: `SUBMITTED` → `APPROVED` 또는 `REJECTED` |
+| 입점 신청 | `SellerApplication` | member | 상호, 사업자 번호, 대표자, 정산 계좌. 상태: `SUBMITTED` → `APPROVED` 또는 `REJECTED`. 회원당 심사 중인 신청은 하나다 |
+| 정산 계좌 | `SettlementAccount` | member | 은행, 예금주, 계좌 번호. 계좌 번호는 암호화해 저장하고 응답에는 마스킹한 값만 준다 |
 | 판매자 정지 | `Seller.suspend()` | member | 상태: `ACTIVE` ↔ `SUSPENDED` |
 
 ## 상품·재고
@@ -73,3 +74,4 @@
 | 멱등성 키 | `Idempotency-Key` 헤더, `idempotency_record` 테이블 | 상태 변경 API의 중복 요청을 막는다 |
 | 이벤트 봉투 | `EventEnvelope` | 이벤트 공통 필드. [messaging.md](architecture/messaging.md) 참고 |
 | DLT | `<topic>.DLT` | 재시도 후에도 실패한 메시지가 가는 토픽 |
+| 감사 로그 | `AuditLog`, `audit_log` 테이블 | 관리자 작업을 누가, 언제, 무엇에 했는지 남긴다(NFR-8). 작업과 같은 트랜잭션에 쓴다 |

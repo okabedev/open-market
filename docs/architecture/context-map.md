@@ -69,10 +69,10 @@ flowchart LR
 ### member.seller
 | 이벤트 | 시점 | 주요 필드 | 소비자 |
 |---|---|---|---|
-| `SellerApproved` | 입점 승인 | sellerId(=memberId), storeName | auth(`SELLER` 역할 추가), notification |
-| `SellerRejected` | 입점 반려 | memberId, reason | notification |
+| `SellerApproved` | 입점 승인 | sellerId(=memberId), storeName | auth(`SELLER` 역할 추가), notification(M4) |
+| `SellerRejected` | 입점 반려 | memberId, applicationId, reason | notification(M4) |
 | `SellerSuspended` | 판매자 정지 | sellerId, reason | catalog(전 상품 판매 중지), auth(`SELLER` 역할 회수) |
-| `SellerReinstated` | 정지 해제 | sellerId | catalog, auth |
+| `SellerReinstated` | 정지 해제 | sellerId | catalog, auth(`SELLER` 역할 복구) |
 
 ### catalog.product
 | 이벤트 | 시점 | 주요 필드 | 소비자 |

@@ -10,6 +10,10 @@ spring:
   flyway:
     schemas: auth
     default-schema: auth
+  kafka:
+    listener:
+      # 대부분의 테스트는 Kafka 없이 돈다. 리스너 테스트(SellerEventsIntegrationTest)만 켠다.
+      auto-startup: false
   jpa:
     open-in-view: false
     hibernate:

@@ -42,3 +42,6 @@ management:
 eureka:
   client:
     enabled: false
+openmarket:
+  member:
+    account-number-key: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=

@@ -90,6 +90,53 @@
         }
       }
     },
+    "/v1/members/me/seller-applications" : {
+      "get" : {
+        "tags" : [ "seller-application-query-controller" ],
+        "operationId" : "myApplications",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/MySellerApplicationView"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "seller-application-command-controller" ],
+        "operationId" : "submit",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SubmitSellerApplicationRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Created",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SubmitSellerApplicationResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/members/me/addresses" : {
       "get" : {
         "tags" : [ "member-query-controller" ],
@@ -156,6 +203,221 @@
           }
         }
       }
+    },
+    "/v1/admin/sellers/{sellerId}/suspend" : {
+      "post" : {
+        "tags" : [ "seller-review-command-controller" ],
+        "operationId" : "suspend",
+        "parameters" : [ {
+          "name" : "sellerId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ReasonRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        }
+      }
+    },
+    "/v1/admin/sellers/{sellerId}/reinstate" : {
+      "post" : {
+        "tags" : [ "seller-review-command-controller" ],
+        "operationId" : "reinstate",
+        "parameters" : [ {
+          "name" : "sellerId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        }
+      }
+    },
+    "/v1/admin/seller-applications/{applicationId}/reject" : {
+      "post" : {
+        "tags" : [ "seller-review-command-controller" ],
+        "operationId" : "reject",
+        "parameters" : [ {
+          "name" : "applicationId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ReasonRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        }
+      }
+    },
+    "/v1/admin/seller-applications/{applicationId}/approve" : {
+      "post" : {
+        "tags" : [ "seller-review-command-controller" ],
+        "operationId" : "approve",
+        "parameters" : [ {
+          "name" : "applicationId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        }
+      }
+    },
+    "/v1/seller/me" : {
+      "get" : {
+        "tags" : [ "seller-application-query-controller" ],
+        "operationId" : "me_1",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SellerView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/sellers" : {
+      "get" : {
+        "tags" : [ "seller-review-query-controller" ],
+        "operationId" : "sellers",
+        "parameters" : [ {
+          "name" : "status",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "enum" : [ "ACTIVE", "SUSPENDED" ]
+          }
+        }, {
+          "name" : "page",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 0,
+            "minimum" : 0
+          }
+        }, {
+          "name" : "size",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 20,
+            "maximum" : 100,
+            "minimum" : 1
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PageViewSellerReviewView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/seller-applications" : {
+      "get" : {
+        "tags" : [ "seller-review-query-controller" ],
+        "operationId" : "applications",
+        "parameters" : [ {
+          "name" : "status",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "default" : "SUBMITTED",
+            "enum" : [ "SUBMITTED", "APPROVED", "REJECTED" ]
+          }
+        }, {
+          "name" : "page",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 0,
+            "minimum" : 0
+          }
+        }, {
+          "name" : "size",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 20,
+            "maximum" : 100,
+            "minimum" : 1
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PageViewSellerApplicationReviewView"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components" : {
@@ -196,6 +458,39 @@
         },
         "required" : [ "baseAddress", "recipientName", "recipientPhone", "zipCode" ]
       },
+      "SubmitSellerApplicationRequest" : {
+        "type" : "object",
+        "properties" : {
+          "storeName" : {
+            "type" : "string"
+          },
+          "businessNumber" : {
+            "type" : "string"
+          },
+          "representativeName" : {
+            "type" : "string"
+          },
+          "bankName" : {
+            "type" : "string"
+          },
+          "accountHolder" : {
+            "type" : "string"
+          },
+          "accountNumber" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "accountHolder", "accountNumber", "bankName", "businessNumber", "representativeName", "storeName" ]
+      },
+      "SubmitSellerApplicationResponse" : {
+        "type" : "object",
+        "properties" : {
+          "applicationId" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }
+      },
       "AddAddressRequest" : {
         "type" : "object",
         "properties" : {
@@ -232,6 +527,53 @@
           }
         }
       },
+      "ReasonRequest" : {
+        "type" : "object",
+        "properties" : {
+          "reason" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "reason" ]
+      },
+      "SellerView" : {
+        "type" : "object",
+        "properties" : {
+          "sellerId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "storeName" : {
+            "type" : "string"
+          },
+          "businessNumber" : {
+            "type" : "string"
+          },
+          "representativeName" : {
+            "type" : "string"
+          },
+          "bankName" : {
+            "type" : "string"
+          },
+          "accountHolder" : {
+            "type" : "string"
+          },
+          "accountNumberMasked" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string",
+            "enum" : [ "ACTIVE", "SUSPENDED" ]
+          },
+          "suspendReason" : {
+            "type" : "string"
+          },
+          "approvedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
       "MemberView" : {
         "type" : "object",
         "properties" : {
@@ -252,6 +594,48 @@
             "type" : "boolean"
           },
           "joinedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "MySellerApplicationView" : {
+        "type" : "object",
+        "properties" : {
+          "applicationId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "storeName" : {
+            "type" : "string"
+          },
+          "businessNumber" : {
+            "type" : "string"
+          },
+          "representativeName" : {
+            "type" : "string"
+          },
+          "bankName" : {
+            "type" : "string"
+          },
+          "accountHolder" : {
+            "type" : "string"
+          },
+          "accountNumberMasked" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string",
+            "enum" : [ "SUBMITTED", "APPROVED", "REJECTED" ]
+          },
+          "rejectReason" : {
+            "type" : "string"
+          },
+          "submittedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "reviewedAt" : {
             "type" : "string",
             "format" : "date-time"
           }
@@ -286,6 +670,130 @@
             "type" : "boolean"
           },
           "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "PageViewSellerReviewView" : {
+        "type" : "object",
+        "properties" : {
+          "items" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/SellerReviewView"
+            }
+          },
+          "totalCount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "page" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "size" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }
+      },
+      "SellerReviewView" : {
+        "type" : "object",
+        "properties" : {
+          "sellerId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "storeName" : {
+            "type" : "string"
+          },
+          "businessNumber" : {
+            "type" : "string"
+          },
+          "representativeName" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string",
+            "enum" : [ "ACTIVE", "SUSPENDED" ]
+          },
+          "suspendReason" : {
+            "type" : "string"
+          },
+          "approvedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "PageViewSellerApplicationReviewView" : {
+        "type" : "object",
+        "properties" : {
+          "items" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/SellerApplicationReviewView"
+            }
+          },
+          "totalCount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "page" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "size" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }
+      },
+      "SellerApplicationReviewView" : {
+        "type" : "object",
+        "properties" : {
+          "applicationId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "memberId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "applicantEmail" : {
+            "type" : "string"
+          },
+          "storeName" : {
+            "type" : "string"
+          },
+          "businessNumber" : {
+            "type" : "string"
+          },
+          "representativeName" : {
+            "type" : "string"
+          },
+          "bankName" : {
+            "type" : "string"
+          },
+          "accountHolder" : {
+            "type" : "string"
+          },
+          "accountNumberMasked" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string",
+            "enum" : [ "SUBMITTED", "APPROVED", "REJECTED" ]
+          },
+          "rejectReason" : {
+            "type" : "string"
+          },
+          "submittedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "reviewedAt" : {
             "type" : "string",
             "format" : "date-time"
           }

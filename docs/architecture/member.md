@@ -1,6 +1,6 @@
 # 회원 (member 서비스)
 
-회원 프로필과 배송지(ACC-3)를 갖는다. 입점 신청·심사(SEL-1~3)와 탈퇴(ACC-4)는 [roadmap.md](../roadmap.md) M1의 다음 작업에서 더한다.
+회원 프로필과 배송지(ACC-3), 입점 신청·심사와 판매자(SEL-1~3)를 갖는다. 탈퇴(ACC-4)는 [roadmap.md](../roadmap.md) M1의 다음 작업에서 더한다.
 자격 증명과 역할은 auth가 갖는다([auth.md](auth.md)). 두 서비스는 같은 ID(`memberId` = `accountId`)를 쓴다.
 
 ## 회원 생성
@@ -35,7 +35,35 @@ gateway 경로는 `/api/member` + 아래 경로다. 모두 사용자 토큰이 �
 
 다른 회원의 배송지는 404 `MEMBER_ADDRESS_NOT_FOUND`다(삭제는 204이고 아무것도 지우지 않는다).
 
+## 입점과 판매자 (SEL-1~3)
+1. 회원이 사업자 정보(상호, 사업자 등록 번호, 대표자)와 정산 계좌(은행, 예금주, 계좌 번호)로 신청한다. 이메일 인증을 마쳐야 하고, 판매자이거나 심사 중인 신청이 있으면 409다.
+2. 관리자가 승인하면 판매자(`Seller`, ID = memberId)가 생기고 `SellerApproved`가 나간다. auth가 `SELLER` 역할을 붙이고, 다음 토큰 갱신부터 판매자 앱에 들어갈 수 있다.
+3. 반려에는 사유가 꼭 있어야 하고 `SellerRejected`가 나간다. 반려된 회원은 새로 신청할 수 있다.
+4. 관리자가 정지하면(사유 필수) `SellerSuspended`가 나가고 auth가 `SELLER`를 뗀다. 상품 판매 중지는 catalog가 M2에서 받는다. 해제하면 `SellerReinstated`가 나가고 역할이 돌아온다.
+
+- 심사·정지·해제는 같은 결과로 다시 하면 아무것도 바꾸지 않고 204다(이벤트·감사 로그도 다시 남지 않는다). 이미 다른 결과로 심사한 신청은 409 `MEMBER_APPLICATION_ALREADY_REVIEWED`다.
+- 동시성: 신청은 회원 행, 심사는 신청 행, 정지·해제는 판매자 행을 잠그고 한다. 회원당 심사 중인 신청 하나는 부분 유니크 인덱스로도 막는다.
+- 사업자 등록 번호는 국세청 검증 숫자 규칙을 확인하고 `123-45-67890` 형식으로 저장한다.
+- 계좌 번호는 숫자 10~16자리로 정리한 뒤 암호화한 값(`MEMBER_ACCOUNT_NUMBER_KEY`)과 마스킹한 값(`********6789`)만 저장한다. 응답에는 본인에게도 마스킹한 값만 준다. 원문은 정산 지급(M5)에서 복호화한다.
+- 관리자 작업(승인, 반려, 정지, 해제)은 감사 로그(`audit_log`, [data.md](data.md))에 관리자 ID, 작업, 대상, 사유를 남긴다(NFR-8).
+- 승인·반려 알림 메일(notification)은 M4에서 더한다.
+
+| 메서드 | 경로 | 설명 |
+|---|---|---|
+| POST | `/v1/members/me/seller-applications` | 입점 신청. `Idempotency-Key` 필수 |
+| GET | `/v1/members/me/seller-applications` | 본인 신청 이력. 최근 순 |
+| GET | `/v1/seller/me` | 판매자 본인 정보. `SELLER` |
+| GET | `/v1/admin/seller-applications?status=&page=&size=` | 심사 목록(기본 `SUBMITTED`, 오래된 순). `ADMIN` |
+| POST | `/v1/admin/seller-applications/{id}/approve` | 승인 |
+| POST | `/v1/admin/seller-applications/{id}/reject` | 반려. 본문 `{"reason"}` |
+| GET | `/v1/admin/sellers?status=&page=&size=` | 판매자 목록(최근 승인 순) |
+| POST | `/v1/admin/sellers/{id}/suspend` | 정지. 본문 `{"reason"}` |
+| POST | `/v1/admin/sellers/{id}/reinstate` | 정지 해제 |
+
+관리자 목록은 쪽 번호(`page`는 0부터, `size`는 1~100) 응답 `{items, totalCount, page, size}`다.
+
 ## 개인정보 (NFR-7)
 - 본인 프로필·배송지 응답은 원문이다. 본인이 고치려면 원래 값이 보여야 한다.
-- 다른 사람이 보는 응답(관리자 심사 화면, 판매자의 주문 화면)과 로그에서는 `common-core`의 `Masking`으로 가린다.
+- 다른 사람이 보는 응답(관리자 심사 화면, 판매자의 주문 화면)과 로그에서는 `common-core`의 `Masking`으로 가린다. 관리자 심사·판매자 목록은 신청자 이메일, 대표자, 예금주를 가린다. 상호와 사업자 등록 번호는 공개 정보라 원문이다.
+- 정산 계좌 번호는 본인에게도 마스킹한 값만 준다(원문을 저장하지 않는다).
 - 요청·명령·조회 결과·엔티티의 `toString()`은 ID만 남긴다. 요청 로그에는 본문을 남기지 않는다(`common-web`).

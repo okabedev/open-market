@@ -79,6 +79,7 @@ sequenceDiagram
 - 인가·동의: `oauth2_authorization`, `oauth2_authorization_consent`(JDBC). 로그인 세션은 auth 인스턴스의 HTTP 세션이다.
 - 서명 키: `signing_key` 표. 처음 기동할 때 RSA 2048 키를 만들고, 개인 키는 `AUTH_SIGNING_KEY_SECRET`(.env)으로 AES-256-GCM 암호화해 저장한다. 서명은 가장 최근의 ACTIVE 키로 하고, 헤더에 `kid`를 넣는다. JWK 세트에는 RETIRED가 아닌 키를 모두 싣는다. 회전 작업은 아직 없다.
 - `roles`는 토큰을 만들 때마다 DB에서 읽는다. 그래서 갱신하면 바뀐 역할이 반영된다.
+- 판매자 역할: `member.seller` 토픽을 소비한다(`SellerEventsListener`). `SellerApproved`, `SellerReinstated`는 `SELLER`를 붙이고 `SellerSuspended`는 뗀다. 이미 그 상태면 그대로다. 계정 행을 잠그고 바꾼다.
 - 관리자 계정은 `ADMIN_SEED_EMAIL`, `ADMIN_SEED_PASSWORD`(.env)로 기동할 때 한 번 만든다. 이미 있으면 바꾸지 않는다.
 - 로그인 화면은 auth의 Thymeleaf 템플릿(`templates/login.html`)이다. 실패 안내는 계정이 있는지 드러내지 않는다. 잠김(`?locked`)과 시도 초과(`?limited`)는 따로 안내한다.
 - 잠금: 비밀번호가 틀리면(`AuthenticationFailureBadCredentialsEvent`) 입력한 이메일의 계정을 행 잠금으로 읽어 센다. 5회째에 15분 잠근다. 잠긴 계정은 비밀번호를 확인하기 전에 거절하므로 잠긴 동안의 시도는 세지 않는다. 폼 로그인에 성공하면 횟수를 지운다.

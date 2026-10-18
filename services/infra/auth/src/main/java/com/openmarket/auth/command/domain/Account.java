@@ -126,6 +126,24 @@ public class Account {
         updatedAt = now;
     }
 
+    /** 역할을 붙인다. 새로 붙었으면 {@code true}다. 토큰에는 다음 발급(갱신)부터 반영된다. */
+    public boolean grantRole(Role role, Instant now) {
+        if (!roles.add(role)) {
+            return false;
+        }
+        updatedAt = now;
+        return true;
+    }
+
+    /** 역할을 뗀다. 있던 역할을 뗐으면 {@code true}다. */
+    public boolean revokeRole(Role role, Instant now) {
+        if (!roles.remove(role)) {
+            return false;
+        }
+        updatedAt = now;
+        return true;
+    }
+
     public void recordLoginSuccess() {
         failedLoginCount = 0;
         lockedUntil = null;

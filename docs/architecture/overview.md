@@ -74,8 +74,8 @@ flowchart LR
 - 설정은 config 서버에서 받는다. 공통 설정은 `infra/config-repo/application.yml`, 서비스별 설정은 `<service>.yml`에 둔다. 비밀 값은 환경 변수로 넣는다.
 - 모든 서비스는 Eureka에 등록되고, Actuator(`health`, `prometheus`)와 OpenAPI(`/v3/api-docs`)를 노출한다.
 - 공통 라이브러리(`services/libs`)
-  - `common-core`: 프레임워크 의존 없는 베이스 예외, 오류 분류, `Money`, ID 생성, 개인정보 마스킹
-  - `common-web`: 오류 응답 변환, `@Idempotent` 처리, 요청 로깅 (Boot 자동설정)
+  - `common-core`: 프레임워크 의존 없는 베이스 예외, 오류 분류, `Money`, ID 생성, 개인정보 마스킹, AES-GCM 암호화, 감사 로그 인터페이스
+  - `common-web`: 오류 응답 변환, `@Idempotent` 처리, 요청 로깅, 감사 로그 저장 (Boot 자동설정)
   - `common-messaging`: Outbox 기록기, 멱등 소비자, 이벤트 봉투, 리스너 재시도·DLT 오류 처리기
   - `common-observability`: OpenTelemetry 스타터와 Logback 로그를 OpenTelemetry로 넘기는 어펜더
   - `common-security`: 리소스 서버 설정. 토큰 재검증, 역할·내부 경로 규칙, `roles`·`scope` 권한 변환 (Boot 자동설정)

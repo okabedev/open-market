@@ -16,4 +16,9 @@ public interface JpaAccountRepository extends Repository<Account, UUID>, Account
     @Override
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<Account> findForUpdateByEmail(EmailAddress email);
+
+    /** {@code SELECT ... FOR UPDATE}. */
+    @Override
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    Optional<Account> findForUpdateById(UUID id);
 }
