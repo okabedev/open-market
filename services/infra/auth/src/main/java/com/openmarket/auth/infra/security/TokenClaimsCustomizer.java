@@ -4,6 +4,7 @@ import com.openmarket.auth.command.domain.Account;
 import com.openmarket.auth.command.domain.AccountRepository;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
 import org.springframework.security.core.Authentication;
@@ -19,7 +20,8 @@ import org.springframework.transaction.annotation.Transactional;
  * <ul>
  *   <li>모든 JWT 헤더에 서명 키 ID를 넣는다. JWK 세트에 키가 여럿이어도 서명 키를 하나로 고른다.
  *   <li>서비스 토큰({@code client_credentials}): {@code aud=internal}.
- *   <li>사용자 액세스 토큰: {@code roles}. 갱신할 때도 DB에서 다시 읽어, 입점 승인·정지가 다음 갱신부터 반영된다(SEL-2).
+ *   <li>사용자 액세스 토큰: {@code roles}, {@code email_verified}. 갱신할 때도 DB에서 다시 읽어, 입점 승인·정지와 이메일 인증이 다음
+ *       갱신부터 반영된다(SEL-2).
  * </ul>
  */
 public class TokenClaimsCustomizer implements OAuth2TokenCustomizer<JwtEncodingContext> {
@@ -53,14 +55,12 @@ public class TokenClaimsCustomizer implements OAuth2TokenCustomizer<JwtEncodingC
         // 모듈이
         // 허용하는 타입이어야 해서 List.of·toList()의 불변 리스트 대신 ArrayList를 쓴다.
         ArrayList<String> roles = new ArrayList<>();
-        accounts.findById(UUID.fromString(principal.getName()))
-                .filter(Account::isActive)
-                .ifPresent(
-                        account ->
-                                account.roles().stream()
-                                        .map(Enum::name)
-                                        .sorted()
-                                        .forEach(roles::add));
+        Optional<Account> account =
+                accounts.findById(UUID.fromString(principal.getName())).filter(Account::isActive);
+        account.ifPresent(a -> a.roles().stream().map(Enum::name).sorted().forEach(roles::add));
         context.getClaims().claim("roles", roles);
+        // 주문은 이메일 인증을 마친 계정만 할 수 있다(ACC-1). 서비스가 이 클레임으로 판단한다.
+        context.getClaims()
+                .claim("email_verified", account.map(Account::isEmailVerified).orElse(false));
     }
 }

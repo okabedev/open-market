@@ -13,6 +13,7 @@ import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.openmarket.auth.infra.key.JdbcSigningKeyStore;
 import com.openmarket.common.test.container.PostgresContainerConfiguration;
+import com.openmarket.common.test.container.RedisContainerConfiguration;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.Duration;
@@ -44,7 +45,7 @@ import org.springframework.web.util.UriComponentsBuilder;
  */
 @SpringBootTest(properties = "spring.kafka.listener.auto-startup=false")
 @AutoConfigureMockMvc
-@Import(PostgresContainerConfiguration.class)
+@Import({PostgresContainerConfiguration.class, RedisContainerConfiguration.class})
 class AuthorizationServerIntegrationTest {
 
     static final String ISSUER = "http://auth.openmarket.local:9000";
@@ -129,6 +130,7 @@ class AuthorizationServerIntegrationTest {
         assertThat(access.getIssuer()).hasToString(ISSUER);
         assertThat(access.getAudience()).containsExactly("admin");
         assertThat(access.getClaimAsStringList("roles")).containsExactly("ADMIN");
+        assertThat(access.getClaimAsBoolean("email_verified")).isTrue();
         assertThat(access.getClaimAsStringList("scope"))
                 .containsExactlyInAnyOrder("openid", "profile", "api");
         assertThat(Duration.between(access.getIssuedAt(), access.getExpiresAt()))
@@ -180,6 +182,7 @@ class AuthorizationServerIntegrationTest {
         String tokens = exchange("shop", "shop-test-secret", authorize(session, "shop", 3000));
         Jwt access = decode(JsonPath.read(tokens, "$.access_token"));
         assertThat(access.getClaimAsStringList("roles")).containsExactly("BUYER");
+        assertThat(access.getClaimAsBoolean("email_verified")).isFalse();
         assertThat(access.getAudience()).containsExactly("shop");
     }
 

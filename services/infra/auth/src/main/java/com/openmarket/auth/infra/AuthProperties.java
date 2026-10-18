@@ -14,6 +14,9 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * @param issuer 토큰 {@code iss}와 discovery 주소. 요청 주소와 상관없이 고정한다(docs/architecture/auth.md "issuer
  *     호스트 이름")
  * @param signingKeySecret 서명 개인 키 암호화 키(Base64 32바이트)
+ * @param emailVerificationUrl 인증 메일 링크의 주소(shop 앱 화면). 뒤에 {@code ?token=}을 붙인다
+ * @param signupUrl 로그인 화면의 가입 링크(shop 앱 화면)
+ * @param loginRateLimit 로그인 시도 IP 단위 한도(NFR-5)
  * @param accessTokenTtl 액세스 토큰 수명
  * @param adminSeed 관리자 시드 계정. 이메일이 비어 있으면 만들지 않는다
  * @param userClients BFF(Next.js 앱)용 기밀 클라이언트. 키가 클라이언트 ID다
@@ -23,10 +26,20 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 public record AuthProperties(
         URI issuer,
         String signingKeySecret,
+        URI emailVerificationUrl,
+        URI signupUrl,
+        @DefaultValue LoginRateLimit loginRateLimit,
         @DefaultValue("10m") Duration accessTokenTtl,
         @DefaultValue AdminSeed adminSeed,
         @DefaultValue Map<String, UserClient> userClients,
         @DefaultValue Map<String, ServiceClient> serviceClients) {
+
+    /**
+     * 로그인 시도 IP 단위 한도. 1분 고정 창으로 센다.
+     *
+     * @param perMinute IP 하나가 1분에 보낼 수 있는 로그인 요청 수
+     */
+    public record LoginRateLimit(@DefaultValue("10") int perMinute) {}
 
     public record AdminSeed(@DefaultValue("") String email, @DefaultValue("") String password) {
 

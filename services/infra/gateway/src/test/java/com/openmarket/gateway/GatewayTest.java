@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.boot.micrometer.tracing.test.autoconfigure.AutoConfigureTracing;
 import org.springframework.boot.test.web.server.LocalManagementPort;
 
@@ -28,6 +29,28 @@ class GatewayTest extends GatewayTestSupport {
         assertThat(response.statusCode()).isEqualTo(200);
         assertThat(upstream.last().method()).isEqualTo("GET");
         assertThat(upstream.last().path()).isEqualTo("/v1/ping");
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @ValueSource(
+            strings = {
+                "/api/auth/v1/accounts",
+                "/api/auth/v1/accounts/email-verification",
+                "/api/auth/v1/accounts/email-verification/resend"
+            })
+    @DisplayName("가입·이메일 인증 API는 토큰 없이 auth로 넘긴다")
+    void routesSignupApisToAuthWithoutToken(String path) throws Exception {
+        HttpResponse<String> response = post(path);
+
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThat(upstream.last().method()).isEqualTo("POST");
+        assertThat(upstream.last().path()).isEqualTo(path.substring("/api/auth".length()));
+    }
+
+    @Test
+    @DisplayName("auth의 다른 경로는 토큰이 있어야 한다")
+    void otherAuthPathsNeedToken() throws Exception {
+        assertThat(post("/api/auth/v1/accounts/someone/roles").statusCode()).isEqualTo(401);
     }
 
     @Test

@@ -29,6 +29,10 @@ openmarket:
   auth:
     # 테스트는 무작위 포트로 뜨지만 issuer는 요청 주소와 상관없이 이 값이어야 한다(R7).
     issuer: http://auth.openmarket.local:9000
+    email-verification-url: http://localhost:3000/verify-email
+    signup-url: http://localhost:3000/signup
+    login-rate-limit:
+      per-minute: 8
     signing-key-secret: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
     admin-seed:
       email: admin@openmarket.local

@@ -12,7 +12,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
-/** gateway를 실제 포트로 띄우고, 뒤의 서비스(member)와 JWK 엔드포인트를 {@link TestUpstream}으로 대신한다. */
+/** gateway를 실제 포트로 띄우고, 뒤의 서비스(auth, member)와 JWK 엔드포인트를 {@link TestUpstream}으로 대신한다. */
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = "management.server.port=0")
@@ -30,6 +30,8 @@ abstract class GatewayTestSupport {
         registry.add(
                 "spring.cloud.discovery.client.simple.instances.member[0].uri", upstream::baseUrl);
         registry.add(
+                "spring.cloud.discovery.client.simple.instances.auth[0].uri", upstream::baseUrl);
+        registry.add(
                 "spring.security.oauth2.resourceserver.jwt.jwk-set-uri",
                 () -> upstream.baseUrl() + "/oauth2/jwks");
     }
@@ -44,6 +46,15 @@ abstract class GatewayTestSupport {
 
     HttpResponse<String> get(String path, Map<String, String> headers) throws Exception {
         return send(port, path, headers);
+    }
+
+    HttpResponse<String> post(String path) throws Exception {
+        HttpRequest request =
+                HttpRequest.newBuilder(URI.create("http://localhost:" + port + path))
+                        .header("Content-Type", "application/json")
+                        .POST(HttpRequest.BodyPublishers.ofString("{}"))
+                        .build();
+        return HTTP.send(request, HttpResponse.BodyHandlers.ofString());
     }
 
     static HttpResponse<String> send(int port, String path, Map<String, String> headers)

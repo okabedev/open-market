@@ -8,6 +8,13 @@ management:
 spring:
   datasource:
     password: ${AUTH_DB_PASSWORD}
+  data:
+    redis:
+      # 로그인 레이트 리밋. Redis가 죽으면 통과시키므로(fail-open) 타임아웃을 짧게 둔다(gateway.yml과 같다).
+      host: ${REDIS_HOST:localhost}
+      port: 6379
+      timeout: 200ms
+      connect-timeout: 500ms
 
 openmarket:
   auth:
@@ -15,6 +22,13 @@ openmarket:
     issuer: http://auth.openmarket.local:9000
     signing-key-secret: ${AUTH_SIGNING_KEY_SECRET}
     access-token-ttl: 10m
+    # 인증 메일 링크(shop 앱 화면). 뒤에 ?token=을 붙인다.
+    email-verification-url: http://localhost:3000/verify-email
+    # 로그인 화면의 가입 링크(shop 앱 화면)
+    signup-url: http://localhost:3000/signup
+    # 로그인 시도 IP 단위 한도(NFR-5). 1분 고정 창. 브라우저가 auth에 직접 오므로 gateway가 아니라 auth가 센다.
+    login-rate-limit:
+      per-minute: 10
     # 운영자가 만드는 관리자 계정(PRD 2절). 이메일이 비어 있으면 만들지 않고, 이미 있으면 바꾸지 않는다.
     admin-seed:
       email: ${ADMIN_SEED_EMAIL:}

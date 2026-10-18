@@ -32,6 +32,7 @@ sequenceDiagram
 - 액세스 토큰이 만료되면 BFF가 리프레시 토큰으로 갱신한다. 리프레시 토큰은 쓸 때마다 새로 발급한다(rotation).
 - 로그아웃하면 BFF 세션을 지우고, 리프레시 토큰을 폐기(revoke)한 뒤, auth의 OIDC 로그아웃 엔드포인트로 보낸다.
 - 가입은 shop의 화면에서 받는다. BFF가 auth 가입 API(`POST /api/auth/v1/accounts`, 공개, 레이트 리밋 적용)를 부른다. 로그인 화면만 auth가 그린다.
+- 가입하면 인증 메일이 나간다(`EmailVerificationRequested` → notification). 링크는 shop 화면(`/verify-email?token=`)이고, BFF가 `POST /api/auth/v1/accounts/email-verification`을 부른다. 인증 전에도 로그인할 수 있지만 주문은 할 수 없다. 재발송은 `POST /api/auth/v1/accounts/email-verification/resend`이고 가입 여부와 상관없이 202다.
 - BFF 구현은 `clients/packages/bff`(openid-client + Redis)다. 라우트, 쿠키, 갱신 락은 [ADR 0014](../adr/0014-bff-session.md)에 있다.
 
 ## 토큰
@@ -42,6 +43,7 @@ sequenceDiagram
 | 리프레시 토큰 수명 | shop·seller 14일, admin 8시간 |
 | `sub` | `accountId` (= `memberId` = 판매자면 `sellerId`) |
 | `roles` | `BUYER`, `SELLER`, `ADMIN` 중 보유한 것 |
+| `email_verified` | 이메일 인증을 마쳤는지(사용자 토큰). 주문은 `true`여야 한다(ACC-1) |
 | `aud` | 클라이언트 ID. 서비스 간 토큰은 `internal` |
 | `scope` | 사용자 토큰 `openid profile api`, 서비스 간 토큰 `internal` |
 
@@ -78,5 +80,9 @@ sequenceDiagram
 - 서명 키: `signing_key` 표. 처음 기동할 때 RSA 2048 키를 만들고, 개인 키는 `AUTH_SIGNING_KEY_SECRET`(.env)으로 AES-256-GCM 암호화해 저장한다. 서명은 가장 최근의 ACTIVE 키로 하고, 헤더에 `kid`를 넣는다. JWK 세트에는 RETIRED가 아닌 키를 모두 싣는다. 회전 작업은 아직 없다.
 - `roles`는 토큰을 만들 때마다 DB에서 읽는다. 그래서 갱신하면 바뀐 역할이 반영된다.
 - 관리자 계정은 `ADMIN_SEED_EMAIL`, `ADMIN_SEED_PASSWORD`(.env)로 기동할 때 한 번 만든다. 이미 있으면 바꾸지 않는다.
-- 로그인 화면은 지금 Spring Security 기본 폼이다. 한국어 화면과 잠금은 가입 기능과 함께 만든다.
+- 로그인 화면은 auth의 Thymeleaf 템플릿(`templates/login.html`)이다. 실패 안내는 계정이 있는지 드러내지 않는다. 잠김(`?locked`)과 시도 초과(`?limited`)는 따로 안내한다.
+- 잠금: 비밀번호가 틀리면(`AuthenticationFailureBadCredentialsEvent`) 입력한 이메일의 계정을 행 잠금으로 읽어 센다. 5회째에 15분 잠근다. 잠긴 계정은 비밀번호를 확인하기 전에 거절하므로 잠긴 동안의 시도는 세지 않는다. 폼 로그인에 성공하면 횟수를 지운다.
+- 로그인 레이트 리밋: `POST /login`을 IP마다 1분에 `login-rate-limit.per-minute`(기본 10)회로 제한한다. Redis 고정 창 카운터이고, Redis가 응답하지 않으면 통과시킨다. 넘으면 인증하지 않고 `/login?limited`로 보낸다.
+- 가입 API(`/v1/**`)는 세션·CSRF 없이 공개 경로 세 개만 연다. 나머지 `/v1` 경로는 막는다. 로컬에서는 auth 포트(9000)로도 닿지만, 운영 배치에서는 auth의 `/v1`을 바깥에 열지 않고 gateway로만 받는다(gateway 레이트 리밋을 우회하지 못하게).
+- 이메일 인증 토큰은 256비트 무작위 값이다. auth는 SHA-256 해시만 저장하고, 원문은 이벤트의 `verificationUrl`에만 들어간다. 24시간 뒤 만료되고 한 번 쓰면 끝난다. outbox 행은 7일 뒤 지워진다.
 - actuator는 관리 포트 9001에만 있다.

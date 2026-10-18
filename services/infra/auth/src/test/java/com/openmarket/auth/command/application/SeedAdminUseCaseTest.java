@@ -66,6 +66,11 @@ class SeedAdminUseCaseTest {
         }
 
         @Override
+        public Optional<Account> findForUpdateByEmail(EmailAddress email) {
+            return findByEmail(email);
+        }
+
+        @Override
         public Account save(Account account) {
             saved.add(account);
             return account;

@@ -265,10 +265,13 @@ services:
         condition: service_healthy
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
       CONFIG_SERVER_URL: http://config:8888
       EUREKA_URL: http://discovery:8761/eureka/
       POSTGRES_HOST: postgres
+      REDIS_HOST: redis
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       OTEL_COLLECTOR_HOST: otel-collector
       LOGGING_STRUCTURED_FORMAT_CONSOLE: ecs # infra/compose/apps.yaml과 같다

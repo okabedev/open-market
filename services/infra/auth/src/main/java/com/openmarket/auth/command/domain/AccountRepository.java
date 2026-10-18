@@ -10,5 +10,8 @@ public interface AccountRepository {
 
     Optional<Account> findByEmail(EmailAddress email);
 
+    /** 로그인 실패를 셀 때 쓴다. 동시에 실패해도 횟수를 잃지 않도록 행을 잠근다. */
+    Optional<Account> findForUpdateByEmail(EmailAddress email);
+
     Account save(Account account);
 }
