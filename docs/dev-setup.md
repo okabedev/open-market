@@ -114,3 +114,18 @@ pnpm --filter @openmarket/shop dev     # http://localhost:3000 (seller 3001, adm
 - 가입 인증 메일은 notification이 보낸다. `./gradlew :infra:notification:bootRun`(또는 `apps` profile)을 띄우면 Mailpit(http://localhost:8025)에 도착한다. notification을 처음 띄우면 그 전에 쌓인 인증 메일도 한꺼번에 나간다.
 - 화면: shop은 가입(`/signup`), 내 정보(`/my`), 배송지(`/my/addresses`), 입점 신청(`/my/seller`), 탈퇴(`/my/withdraw`). admin은 입점 심사(`/seller-applications`)와 판매자(`/sellers`). seller는 첫 화면에서 판매자 정보를 보여 주고, 판매자 역할이 없으면 안내와 "권한 다시 확인"(다시 로그인해서 새 역할을 받는다)을 보여 준다. 다른 앱 주소는 `SHOP_APP_URL`, `SELLER_APP_URL`(기본 localhost:3000, 3001)이다.
 - 세션은 Redis 키 `bff:<앱>:session:*`에 있다. 브라우저에는 `om_sid_<앱>` 쿠키만 있다([ADR 0014](adr/0014-bff-session.md)).
+
+## 8. E2E
+마일스톤 완료 기준([roadmap.md](roadmap.md))을 Playwright로 확인한다. 시나리오는 `clients/e2e/tests/m<n>-*.spec.ts`다.
+
+```bash
+docker compose --profile apps --profile obs --profile search stop   # 개발용 스택을 멈춘다(데이터는 남는다)
+infra/e2e/run.sh m1
+```
+
+- 별도 Compose 프로젝트(`openmarket-e2e`)를 빈 볼륨으로 띄우고(기본·`apps` profile), 앱 3개를 빌드해 `next start`로 띄운 뒤 시나리오를 돌린다. 끝나면 앱을 멈추고 프로젝트를 볼륨째 지운다. 남겨서 보려면 `E2E_KEEP=1 infra/e2e/run.sh m1`.
+- 호스트 포트가 같아서 개발용 스택이나 `pnpm dev`가 떠 있으면 시작하지 않는다.
+- 처음에는 서비스 이미지 빌드로 몇 분 걸린다. 그 뒤에는 시나리오까지 2~3분이다.
+- Playwright 브라우저(Chromium)는 스크립트가 받는다. 브라우저가 쓰는 시스템 라이브러리는 처음 한 번 설치한다: `cd clients && sudo corepack pnpm --filter @openmarket/e2e exec playwright install-deps chromium`.
+- 결과: 터미널 목록과 `clients/e2e/playwright-report`(HTML). 실패한 시나리오는 `clients/e2e/test-results`에 trace와 스크린샷이 남는다(`corepack pnpm --filter @openmarket/e2e exec playwright show-trace <파일>`). 앱 로그는 `infra/e2e/.out`.
+- CI에서는 돌리지 않는다(2026-10-18 결정). 마일스톤 마감과 큰 변경 뒤에 돌린다.

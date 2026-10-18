@@ -12,6 +12,7 @@ infra/
 ├─ kafka/          토픽 선언 topics.txt와 생성 스크립트(kafka-init 컨테이너가 실행). 브로커 자동 생성은 끈다
 ├─ observability/  OTel Collector, Tempo, Loki, Prometheus 설정
 ├─ grafana/        데이터 소스·대시보드 프로비저닝
+├─ e2e/            마일스톤 E2E 실행 스크립트 run.sh(별도 Compose 프로젝트 + 앱 3개 + Playwright). 시나리오는 clients/e2e
 ├─ k6/             부하 테스트 시나리오 (M6)
 └─ elasticsearch/  nori 플러그인 커스텀 이미지 (M2)
 ```
@@ -33,6 +34,7 @@ infra/
 | `docker compose up -d --wait --build discovery config gateway auth` | discovery·config·gateway·auth 코드를 바꾼 뒤 이미지를 다시 빌드한다. config-repo만 바꿨으면 빌드 없이 서비스만 재시작한다 |
 | `docker compose --profile search --profile obs up -d --wait` | Elasticsearch와 관측성 스택까지 띄운다. 멈출 때도 같은 `--profile`을 붙인다 |
 | `docker compose --profile apps up -d --wait --build` | 나머지 Spring 서비스까지 컨테이너로 띄운다(E2E). IDE로 띄울 서비스는 `docker compose stop <서비스>`로 멈춘다 |
+| `infra/e2e/run.sh m1` | 마일스톤 완료 기준 E2E. 빈 볼륨의 별도 프로젝트(`openmarket-e2e`)를 띄워 돌리고 지운다. 개발용 스택과 앱은 먼저 멈춘다 |
 | `docker compose ps` | 상태 확인 |
 | `docker compose down` | 멈춤(데이터 유지) |
 | `docker compose down -v` | 볼륨까지 지운다. `postgres/init`이나 `.env` 비밀번호를 바꾼 뒤 쓴다 |
