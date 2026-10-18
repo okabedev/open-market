@@ -169,7 +169,10 @@ class GatewayTest extends GatewayTestSupport {
     @Test
     @DisplayName("actuator는 관리 포트에만 있고 외부 포트에는 없다")
     void actuatorOnlyOnManagementPort() throws Exception {
-        assertThat(send(managementPort, "/actuator/health", Map.of()).body()).contains("\"UP\"");
+        // 전체 health는 Redis 연결 상태를 포함한다. 느린 러너에서는 첫 연결이 명령 타임아웃(200ms)을 넘겨 DOWN일 수 있다.
+        // 이 테스트는 노출 위치만 보므로 Redis와 상관없는 liveness를 본다.
+        assertThat(send(managementPort, "/actuator/health/liveness", Map.of()).body())
+                .contains("\"UP\"");
         assertThat(send(managementPort, "/actuator/prometheus", Map.of()).statusCode())
                 .isEqualTo(200);
         assertThat(get("/actuator/prometheus").statusCode()).isNotEqualTo(200);

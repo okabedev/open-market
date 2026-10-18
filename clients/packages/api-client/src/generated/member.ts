@@ -289,7 +289,7 @@ export interface components {
             accountHolder?: string;
             accountNumberMasked?: string;
             /** @enum {string} */
-            status?: "SUBMITTED" | "APPROVED" | "REJECTED" | "CANCELED";
+            status?: "SUBMITTED" | "APPROVED" | "REJECTED" | "CANCELLED";
             rejectReason?: string;
             /** Format: date-time */
             submittedAt?: string;
@@ -352,7 +352,7 @@ export interface components {
             accountHolder?: string;
             accountNumberMasked?: string;
             /** @enum {string} */
-            status?: "SUBMITTED" | "APPROVED" | "REJECTED" | "CANCELED";
+            status?: "SUBMITTED" | "APPROVED" | "REJECTED" | "CANCELLED";
             rejectReason?: string;
             /** Format: date-time */
             submittedAt?: string;
@@ -715,7 +715,7 @@ export interface operations {
     applications: {
         parameters: {
             query?: {
-                status?: "SUBMITTED" | "APPROVED" | "REJECTED" | "CANCELED";
+                status?: "SUBMITTED" | "APPROVED" | "REJECTED" | "CANCELLED";
                 page?: number;
                 size?: number;
             };

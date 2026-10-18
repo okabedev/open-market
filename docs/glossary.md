@@ -15,7 +15,7 @@
 | 배송지 | `Address` | member | 회원당 최대 10개, 기본 배송지 1개 |
 | 탈퇴 | `Member.withdraw()` | member | 상태 `ACTIVE` → `WITHDRAWN`. 개인정보를 바로 가명 처리한다(ACC-4). 판매자는 탈퇴할 수 없다 |
 | 판매자 | `Seller` | member | 승인된 입점 판매자. 상호, 사업자 번호, 정산 계좌를 가진다 |
-| 입점 신청 | `SellerApplication` | member | 상호, 사업자 번호, 대표자, 정산 계좌. 상태: `SUBMITTED` → `APPROVED` 또는 `REJECTED`, 신청자가 탈퇴하면 `CANCELED`. 회원당 심사 중인 신청은 하나다 |
+| 입점 신청 | `SellerApplication` | member | 상호, 사업자 번호, 대표자, 정산 계좌. 상태: `SUBMITTED` → `APPROVED` 또는 `REJECTED`, 신청자가 탈퇴하면 `CANCELLED`. 회원당 심사 중인 신청은 하나다 |
 | 정산 계좌 | `SettlementAccount` | member | 은행, 예금주, 계좌 번호. 계좌 번호는 암호화해 저장하고 응답에는 마스킹한 값만 준다 |
 | 판매자 정지 | `Seller.suspend()` | member | 상태: `ACTIVE` ↔ `SUSPENDED` |
 
@@ -65,7 +65,7 @@
 | 정산 대상 | `SettlementItem` | settlement | 구매확정된 하위 주문 하나. 판매가, 수수료, 판매자 쿠폰 부담분을 가진다 |
 | 정산 | `Settlement` | settlement | 판매자별 주 단위 묶음. 상태: `PENDING` → `CONFIRMED` → `PAID_OUT` |
 | 수수료율 | `CommissionRate` | settlement | 카테고리별 요율(정산이 소유) |
-| 알림 | `Notification` | notification | 채널: `EMAIL`, `IN_APP`. 원인 이벤트 ID로 중복을 막는다 |
+| 알림 | `Notification` | notification | 채널: `EMAIL`, `IN_APP`. 상태: `PENDING` → `SENT`, 다섯 번 실패하면 `FAILED`. 원인 이벤트 ID로 중복을 막는다 |
 
 ## 기술 용어
 | 용어 | 코드 이름 | 설명 |

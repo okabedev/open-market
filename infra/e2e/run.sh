@@ -24,8 +24,9 @@ compose() { docker compose -p "$PROJECT" --profile apps "$@"; }
 
 cleanup() {
   local status=$?
+  # 앱마다 프로세스 그룹을 따로 만들었다. pnpm만 죽이면 그 아래 next-server가 남아 포트를 계속 잡는다.
   for pid in "${APP_PIDS[@]}"; do
-    kill "$pid" 2>/dev/null || true
+    kill -- "-$pid" 2>/dev/null || true
   done
   if [[ "${E2E_KEEP:-}" == "1" ]]; then
     log "E2E_KEEP=1: 스택을 남긴다. 지울 때는 docker compose -p $PROJECT --profile apps down -v"
@@ -61,7 +62,7 @@ log "앱 3개를 빌드하고 띄운다"
 (cd clients && corepack pnpm install --frozen-lockfile && corepack pnpm build)
 for app in "${APPS[@]}"; do
   name=${app%%:*}
-  (cd clients && exec corepack pnpm --filter "@openmarket/$name" start >"$OUT/$name.log" 2>&1) &
+  setsid bash -c "cd clients && exec corepack pnpm --filter @openmarket/$name start" >"$OUT/$name.log" 2>&1 &
   APP_PIDS+=($!)
 done
 

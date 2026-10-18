@@ -17,13 +17,13 @@ import { ApplicationForm } from "./application-form";
 
 type StatusView = { label: string; variant: "secondary" | "success" | "destructive" | "outline" };
 
-const CANCELED: StatusView = { label: "취소", variant: "outline" };
+const CANCELLED: StatusView = { label: "취소", variant: "outline" };
 
 const STATUS: Record<string, StatusView> = {
   SUBMITTED: { label: "심사 중", variant: "secondary" },
   APPROVED: { label: "승인", variant: "success" },
   REJECTED: { label: "반려", variant: "destructive" },
-  CANCELED,
+  CANCELLED,
 };
 
 const SELLER_APP_URL = process.env.SELLER_APP_URL ?? "http://localhost:3001";
@@ -80,7 +80,7 @@ export default async function SellerApplicationPage() {
           <section className="grid gap-3">
             <h2 className="text-lg font-semibold">신청 이력</h2>
             {applications.map((application) => {
-              const status = STATUS[application.status ?? ""] ?? CANCELED;
+              const status = STATUS[application.status ?? ""] ?? CANCELLED;
               return (
                 <Card key={application.applicationId}>
                   <CardContent className="grid gap-2 text-sm">

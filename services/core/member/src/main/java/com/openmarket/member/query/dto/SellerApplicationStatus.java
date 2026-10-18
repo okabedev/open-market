@@ -5,5 +5,5 @@ public enum SellerApplicationStatus {
     SUBMITTED,
     APPROVED,
     REJECTED,
-    CANCELED
+    CANCELLED
 }

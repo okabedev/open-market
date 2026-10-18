@@ -21,12 +21,12 @@ import { noticeMessage } from "@/lib/review";
 import { requireSession } from "@/lib/session";
 import { approve, reject } from "./actions";
 
-const STATUSES = ["SUBMITTED", "APPROVED", "REJECTED", "CANCELED"] as const;
+const STATUSES = ["SUBMITTED", "APPROVED", "REJECTED", "CANCELLED"] as const;
 const LABELS: Record<(typeof STATUSES)[number], string> = {
   SUBMITTED: "심사 중",
   APPROVED: "승인",
   REJECTED: "반려",
-  CANCELED: "취소",
+  CANCELLED: "취소",
 };
 
 /** 입점 심사(ADM-1). 개인정보(신청자 이메일, 대표자, 예금주)는 member가 마스킹해서 준다(NFR-7). */
@@ -120,7 +120,7 @@ export default async function SellerApplicationsPage({
                     ) : (
                       <div className="grid gap-1">
                         <Badge variant={item.status === "APPROVED" ? "success" : "outline"}>
-                          {LABELS[item.status ?? "CANCELED"]}
+                          {LABELS[item.status ?? "CANCELLED"]}
                         </Badge>
                         <span className="text-xs text-muted-foreground">
                           {formatDateTime(item.reviewedAt)}

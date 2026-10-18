@@ -140,7 +140,7 @@ class SellerTest {
     class Withdrawal {
 
         @Test
-        @DisplayName("신청자가 탈퇴하면 심사 중인 신청은 CANCELED가 되고, 모든 신청의 대표자·계좌 정보를 가명 처리한다")
+        @DisplayName("신청자가 탈퇴하면 심사 중인 신청은 CANCELLED가 되고, 모든 신청의 대표자·계좌 정보를 가명 처리한다")
         void cancelsAndPseudonymizes() {
             SellerApplication pending = application();
             SellerApplication rejected = application();
@@ -149,7 +149,7 @@ class SellerTest {
             pending.withdrawApplicant(LATER);
             rejected.withdrawApplicant(LATER);
 
-            assertThat(pending.status()).isEqualTo(SellerApplicationStatus.CANCELED);
+            assertThat(pending.status()).isEqualTo(SellerApplicationStatus.CANCELLED);
             assertThat(rejected.status()).isEqualTo(SellerApplicationStatus.REJECTED);
             for (SellerApplication application : java.util.List.of(pending, rejected)) {
                 assertThat(application.business().representativeName())
