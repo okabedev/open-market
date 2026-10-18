@@ -1,0 +1,67 @@
+package com.openmarket.member.query.dao;
+
+import static com.openmarket.member.command.domain.QAddress.address;
+import static com.openmarket.member.command.domain.QMember.member;
+
+import com.openmarket.member.query.dto.AddressView;
+import com.openmarket.member.query.dto.MemberView;
+import com.querydsl.core.types.Projections;
+import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.core.types.dsl.CaseBuilder;
+import com.querydsl.jpa.impl.JPAQueryFactory;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public class MemberQueryDao {
+
+    private final JPAQueryFactory query;
+
+    public MemberQueryDao(JPAQueryFactory query) {
+        this.query = query;
+    }
+
+    public Optional<MemberView> findMember(UUID memberId) {
+        return Optional.ofNullable(
+                query.select(
+                                Projections.constructor(
+                                        MemberView.class,
+                                        member.id,
+                                        member.email,
+                                        member.name,
+                                        member.phone,
+                                        member.emailVerifiedAt,
+                                        member.createdAt))
+                        .from(member)
+                        .where(member.id.eq(memberId))
+                        .fetchOne());
+    }
+
+    /** 기본 배송지가 먼저, 나머지는 최근에 추가한 순서. 회원당 10개까지라 페이징하지 않는다. */
+    public List<AddressView> findAddresses(UUID memberId) {
+        BooleanExpression isDefault =
+                new CaseBuilder()
+                        .when(address.id.eq(member.defaultAddressId))
+                        .then(true)
+                        .otherwise(false);
+        return query.select(
+                        Projections.constructor(
+                                AddressView.class,
+                                address.id,
+                                address.label,
+                                address.recipientName,
+                                address.recipientPhone,
+                                address.zipCode,
+                                address.baseAddress,
+                                address.detailAddress,
+                                isDefault,
+                                address.createdAt))
+                .from(address)
+                .join(address.member, member)
+                .where(member.id.eq(memberId))
+                .orderBy(isDefault.desc(), address.createdAt.desc(), address.id.desc())
+                .fetch();
+    }
+}

@@ -35,7 +35,7 @@ class LoginPageIntegrationTest {
     @Autowired JdbcClient jdbc;
 
     @Test
-    @DisplayName("로그인 화면은 한국어이고 가입 링크와 CSRF 토큰이 있다")
+    @DisplayName("로그인 화면은 한국어이고 가입 링크와 CSRF 토큰 하나가 있다")
     void rendersKoreanLoginPage() throws Exception {
         mockMvc.perform(get("/login"))
                 .andExpect(status().isOk())
@@ -44,7 +44,11 @@ class LoginPageIntegrationTest {
                 .andExpect(content().string(Matchers.containsString("로그인")))
                 .andExpect(
                         content().string(Matchers.containsString("http://localhost:3000/signup")))
-                .andExpect(content().string(Matchers.containsString("name=\"_csrf\"")));
+                .andExpect(
+                        content()
+                                .string(
+                                        Matchers.matchesPattern(
+                                                "(?s)(?!.*name=\"_csrf\".*name=\"_csrf\").*name=\"_csrf\".*")));
     }
 
     @Test

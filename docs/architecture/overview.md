@@ -33,7 +33,7 @@ flowchart LR
 ### core (`services/core/<name>`)
 | 서비스 | 포트 | 스키마 | 책임 | 주요 집계 |
 |---|---|---|---|---|
-| member | 8101 | member | 회원 프로필, 배송지, 입점 신청·심사, 판매자 | `Member`, `SellerApplication`, `Seller` |
+| member | 8101 | member | 회원 프로필, 배송지, 입점 신청·심사, 판매자([member.md](member.md)) | `Member`, `SellerApplication`, `Seller` |
 | catalog | 8102 | catalog | 카테고리, 상품, SKU, 재고와 재고 예약 | `Category`, `Product`, `Stock`, `StockReservation` |
 | order | 8103 | order | 장바구니, 주문과 하위 주문, 주문 만료 | `Cart`, `Order` |
 | payment | 8104 | payment | 토스 결제 승인·취소·환불, 결제 원장 | `Payment` |
@@ -78,6 +78,7 @@ flowchart LR
   - `common-web`: 오류 응답 변환, `@Idempotent` 처리, 요청 로깅 (Boot 자동설정)
   - `common-messaging`: Outbox 기록기, 멱등 소비자, 이벤트 봉투, 리스너 재시도·DLT 오류 처리기
   - `common-observability`: OpenTelemetry 스타터와 Logback 로그를 OpenTelemetry로 넘기는 어펜더
+  - `common-security`: 리소스 서버 설정. 토큰 재검증, 역할·내부 경로 규칙, `roles`·`scope` 권한 변환 (Boot 자동설정)
   - `common-test`: Testcontainers 설정, ArchUnit 규칙, 테스트 픽스처
 - 버전 조합과 근거는 [ADR 0009](../adr/0009-version-matrix.md)에 있다. 실제 값의 원본은 빌드 파일이다. 다른 문서에는 버전 숫자를 적지 않는다.
 
@@ -96,4 +97,4 @@ flowchart LR
 ## 관련 문서
 - [context-map.md](context-map.md): 컨텍스트 관계와 이벤트 목록
 - [conventions.md](conventions.md): 패키지 규약과 명명 규칙
-- [data.md](data.md), [messaging.md](messaging.md), [auth.md](auth.md), [file.md](file.md), [notification.md](notification.md), [observability.md](observability.md), [risks.md](risks.md)
+- [data.md](data.md), [messaging.md](messaging.md), [auth.md](auth.md), [member.md](member.md), [file.md](file.md), [notification.md](notification.md), [observability.md](observability.md), [risks.md](risks.md)

@@ -8,6 +8,7 @@ dependencies {
     implementation(project(":libs:common-web"))
     implementation(project(":libs:common-messaging"))
     implementation(project(":libs:common-observability"))
+    implementation(project(":libs:common-security"))
 
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
     implementation("org.springframework.boot:spring-boot-starter-validation")
@@ -23,6 +24,6 @@ dependencies {
 
     testImplementation(project(":libs:common-test"))
     testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
-    testImplementation("org.springframework.boot:spring-boot-micrometer-tracing-test")
+    testImplementation("org.springframework.boot:spring-boot-starter-security-test")
     testImplementation("org.awaitility:awaitility")
 }

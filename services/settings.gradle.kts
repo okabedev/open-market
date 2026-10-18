@@ -16,6 +16,7 @@ include(":libs:common-core")
 include(":libs:common-web")
 include(":libs:common-messaging")
 include(":libs:common-observability")
+include(":libs:common-security")
 include(":libs:common-test")
 
 include(":core:member")
