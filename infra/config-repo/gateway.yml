@@ -38,6 +38,13 @@ spring:
                 key-resolver: "#{@clientKeyResolver}"
           # 서비스를 추가하면 라우트를 더한다(add-service skill). /api/<service>/** → lb://<service>, 접두어 두 단계를 뗀다.
           routes:
+            # 가입·이메일 인증 API. 로그인 화면과 OAuth2 엔드포인트는 브라우저가 auth(9000)에 직접 간다.
+            - id: auth
+              uri: lb://auth
+              predicates:
+                - Path=/api/auth/**
+              filters:
+                - StripPrefix=2
             - id: member
               uri: lb://member
               predicates:
@@ -49,6 +56,13 @@ openmarket:
   gateway:
     # 토큰 없이 통과시킬 경로. 판매자·관리자·내부 경로는 여기에 넣어도 공개되지 않는다.
     public-paths:
+      # 가입과 이메일 인증(ACC-1). 로그인 전에 부른다.
+      - method: POST
+        pattern: /api/auth/v1/accounts
+      - method: POST
+        pattern: /api/auth/v1/accounts/email-verification
+      - method: POST
+        pattern: /api/auth/v1/accounts/email-verification/resend
       - method: GET
         pattern: /api/member/v1/ping
       # M0 샘플 이벤트 발행. M1에서 샘플 API와 함께 지운다.

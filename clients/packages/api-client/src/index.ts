@@ -7,4 +7,5 @@ export {
   type ServiceClient,
   type ServiceName,
 } from "./client";
+export type { components as AuthComponents, paths as AuthPaths } from "./generated/auth";
 export type { components as MemberComponents, paths as MemberPaths } from "./generated/member";

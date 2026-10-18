@@ -55,8 +55,11 @@ flowchart LR
 | 이벤트 | 시점 | 주요 필드 | 소비자 |
 |---|---|---|---|
 | `AccountRegistered` | 이메일 가입 완료 | accountId, email, name | member(프로필 생성) |
-| `EmailVerificationRequested` | 가입, 재요청 | accountId, email, verificationUrl | notification |
-| `AccountEmailVerified` | 인증 완료 | accountId | member |
+| `EmailVerificationRequested` | 가입, 재요청 | accountId, email, verificationUrl, expiresAt | notification |
+| `AccountEmailVerified` | 인증 완료(처음 한 번) | accountId | member |
+
+- `name`은 auth가 저장하지 않고 member로 넘기기만 한다. 프로필은 member가 갖는다.
+- `verificationUrl`에는 일회용 인증 토큰이 들어 있다. 토큰은 24시간 뒤 만료되고 한 번 쓰면 끝난다. auth는 토큰의 해시만 저장한다. 소비자는 이 값을 로그에 남기지 않는다.
 
 ### member.member
 | 이벤트 | 시점 | 주요 필드 | 소비자 |

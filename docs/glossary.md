@@ -8,6 +8,8 @@
 |---|---|---|---|
 | 계정 | `Account` | auth | 로그인 수단(이메일, 비밀번호 해시)과 역할. 개인정보 프로필은 갖지 않는다 |
 | 역할 | `Role` (`BUYER`, `SELLER`, `ADMIN`) | auth | 토큰의 `roles` 클레임으로 나간다 |
+| 이메일 인증 | `EmailVerification` | auth | 가입 이메일 확인용 일회용 토큰. 24시간 유효. 인증을 마쳐야 주문할 수 있다(ACC-1) |
+| 계정 잠금 | `Account.recordLoginFailure()` | auth | 로그인 5회 연속 실패 시 15분 동안 로그인할 수 없다(ACC-1) |
 | 회원 | `Member` | member | 계정에 딸린 프로필(이름, 연락처). `memberId`는 `accountId`와 같은 값을 쓴다 |
 | 배송지 | `Address` | member | 회원당 최대 10개, 기본 배송지 1개 |
 | 판매자 | `Seller` | member | 승인된 입점 판매자. 상호, 사업자 번호, 정산 계좌를 가진다 |

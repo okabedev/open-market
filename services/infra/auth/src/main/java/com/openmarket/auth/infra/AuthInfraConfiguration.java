@@ -3,6 +3,7 @@ package com.openmarket.auth.infra;
 import com.openmarket.auth.command.application.PasswordHasherPort;
 import com.openmarket.auth.command.application.SeedAdminCommand;
 import com.openmarket.auth.command.application.SeedAdminUseCase;
+import com.openmarket.auth.command.application.VerificationLinkPort;
 import com.openmarket.auth.infra.key.JdbcSigningKeyStore;
 import com.openmarket.auth.infra.key.SigningKeyCipher;
 import com.openmarket.auth.infra.security.RegisteredClientSynchronizer;
@@ -40,6 +41,13 @@ public class AuthInfraConfiguration {
     @Bean
     PasswordHasherPort passwordHasher(PasswordEncoder passwordEncoder) {
         return passwordEncoder::encode;
+    }
+
+    /** 인증 메일 링크: shop 앱의 인증 화면 주소 + {@code ?token=}. 토큰은 Base64URL이라 인코딩할 문자가 없다. */
+    @Bean
+    VerificationLinkPort verificationLink(AuthProperties properties) {
+        String base = properties.emailVerificationUrl().toString();
+        return token -> base + "?token=" + token;
     }
 
     @Bean

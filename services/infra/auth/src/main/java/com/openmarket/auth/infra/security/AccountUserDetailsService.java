@@ -4,6 +4,7 @@ import com.openmarket.auth.command.domain.Account;
 import com.openmarket.auth.command.domain.AccountRepository;
 import com.openmarket.auth.command.domain.EmailAddress;
 import com.openmarket.auth.command.domain.InvalidEmailException;
+import java.time.Clock;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -19,9 +20,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class AccountUserDetailsService implements UserDetailsService {
 
     private final AccountRepository accounts;
+    private final Clock clock;
 
-    public AccountUserDetailsService(AccountRepository accounts) {
+    public AccountUserDetailsService(AccountRepository accounts, Clock clock) {
         this.accounts = accounts;
+        this.clock = clock;
     }
 
     @Override
@@ -40,6 +43,8 @@ public class AccountUserDetailsService implements UserDetailsService {
                 .password(account.passwordHash())
                 .roles(account.roles().stream().map(Enum::name).toArray(String[]::new))
                 .disabled(!account.isActive())
+                // 잠긴 계정은 비밀번호를 확인하기 전에 거절한다(LockedException). 실패 횟수도 늘지 않는다.
+                .accountLocked(account.isLocked(clock.instant()))
                 .build();
     }
 }

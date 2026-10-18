@@ -1,0 +1,6 @@
+{
+  "accountId": "019a0f3c-5e2b-7c41-9d3e-2f6a8b1c4d70",
+  "email": "buyer@example.com",
+  "verificationUrl": "http://localhost:3000/verify-email?token=Xq3oVb1nYw0a8d2Lr5tKpZ7mHc4sJe9uFg6iNy1QwEo",
+  "expiresAt": "2026-10-19T03:04:05.123456Z"
+}
