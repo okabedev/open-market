@@ -44,7 +44,7 @@ gateway가 해야 할 일은 다음과 같다([auth.md](../architecture/auth.md)
   - gateway 코드에서 블로킹 호출을 하면 안 된다.
   - 오류 응답(401, 403, 429)은 본문 없이 상태와 헤더(`WWW-Authenticate`, `X-RateLimit-*`, `X-Request-Id`)만 준다. 서비스의 `ProblemDetail` 형식과 다르다. BFF는 상태 코드로 처리한다.
 - 후속 작업
-  - 로그인·가입·쿠폰 발급의 엄격한 한도는 해당 기능(M1, M5)과 함께 라우트별 리미터로 더한다.
+  - 로그인·가입·쿠폰 발급의 엄격한 한도는 해당 기능(M1, M5)과 함께 라우트별 리미터로 더한다. M1: 가입·이메일 인증 라우트에 `strictRateLimiter`를 걸었고([auth.md](../architecture/auth.md) "auth 구현"), 로그인은 브라우저가 auth에 직접 가므로 auth가 건다.
   - 서킷 브레이커와 재시도는 서비스가 늘어나는 M2 이후에 라우트별로 정한다.
 - 확인한 것: [risks.md](../architecture/risks.md) R4.
 

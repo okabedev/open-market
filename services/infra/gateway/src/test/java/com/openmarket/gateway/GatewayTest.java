@@ -21,16 +21,6 @@ class GatewayTest extends GatewayTestSupport {
 
     @LocalManagementPort int managementPort;
 
-    @Test
-    @DisplayName("공개 경로는 토큰 없이 서비스로 넘기고 /api/<service> 접두어를 뗀다")
-    void routesPublicPathWithoutToken() throws Exception {
-        HttpResponse<String> response = get("/api/member/v1/ping");
-
-        assertThat(response.statusCode()).isEqualTo(200);
-        assertThat(upstream.last().method()).isEqualTo("GET");
-        assertThat(upstream.last().path()).isEqualTo("/v1/ping");
-    }
-
     @ParameterizedTest(name = "{0}")
     @ValueSource(
             strings = {
@@ -38,7 +28,7 @@ class GatewayTest extends GatewayTestSupport {
                 "/api/auth/v1/accounts/email-verification",
                 "/api/auth/v1/accounts/email-verification/resend"
             })
-    @DisplayName("가입·이메일 인증 API는 토큰 없이 auth로 넘긴다")
+    @DisplayName("가입·이메일 인증 API는 토큰 없이 auth로 넘기고 /api/auth 접두어를 뗀다")
     void routesSignupApisToAuthWithoutToken(String path) throws Exception {
         HttpResponse<String> response = post(path);
 
@@ -57,8 +47,9 @@ class GatewayTest extends GatewayTestSupport {
     @DisplayName("바깥에서 들어온 X-Internal-* 헤더는 지우고 나머지 헤더는 넘긴다")
     void removesInternalHeaders() throws Exception {
         get(
-                "/api/member/v1/ping",
+                "/api/member/v1/members/me",
                 Map.of(
+                        "Authorization", "Bearer " + TestJwt.token("account-1", "BUYER"),
                         "X-Internal-Account-Id", "forged",
                         "x-internal-roles", "ADMIN",
                         "X-Custom", "kept"));
@@ -158,7 +149,8 @@ class GatewayTest extends GatewayTestSupport {
     @Test
     @DisplayName("응답의 X-Request-Id는 서비스로 넘긴 traceparent의 trace id다")
     void requestIdIsTraceId() throws Exception {
-        HttpResponse<String> response = get("/api/member/v1/ping");
+        HttpResponse<String> response =
+                getWithToken("/api/member/v1/members/me", TestJwt.token("account-1", "BUYER"));
 
         String requestId = response.headers().firstValue("X-Request-Id").orElseThrow();
         assertThat(requestId).matches("[0-9a-f]{32}");

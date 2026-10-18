@@ -4,61 +4,6 @@
     "title" : "OpenAPI definition",
     "version" : "v0"
   },
-  "paths" : {
-    "/v1/ping" : {
-      "get" : {
-        "tags" : [ "ping-controller" ],
-        "operationId" : "ping",
-        "responses" : {
-          "200" : {
-            "description" : "OK",
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/PingResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post" : {
-        "tags" : [ "ping-controller" ],
-        "operationId" : "send",
-        "responses" : {
-          "202" : {
-            "description" : "Accepted",
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/SendPingResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  },
-  "components" : {
-    "schemas" : {
-      "SendPingResponse" : {
-        "type" : "object",
-        "properties" : {
-          "pingId" : {
-            "type" : "string",
-            "format" : "uuid"
-          }
-        }
-      },
-      "PingResponse" : {
-        "type" : "object",
-        "properties" : {
-          "service" : {
-            "type" : "string"
-          }
-        }
-      }
-    }
-  }
+  "paths" : { },
+  "components" : { }
 }

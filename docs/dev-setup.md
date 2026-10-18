@@ -72,7 +72,7 @@ docker compose --profile search --profile obs --profile apps down
 | Kafka UI | http://localhost:8089 | |
 | discovery (Eureka) | http://localhost:8761 | 등록된 인스턴스 화면. 레지스트리 API는 `/eureka/apps` |
 | config | http://localhost:8888 | 서비스가 받을 설정 확인: `curl localhost:8888/member/default` |
-| gateway | http://localhost:8080 | 외부 진입점. 예: `curl localhost:8080/api/member/v1/ping`(member 실행 필요). 관리 포트 8081은 호스트에 열지 않는다 |
+| gateway | http://localhost:8080 | 외부 진입점. 토큰 없이 부를 수 있는 것은 가입·이메일 인증 API뿐이다(예는 6절). 관리 포트 8081은 호스트에 열지 않는다 |
 | auth | http://auth.openmarket.local:9000 | 인가 서버. 로그인 화면 `/login`, discovery `/.well-known/openid-configuration`. hosts 항목이 필요하다(3절). 관리자 시드 계정은 `.env`의 `ADMIN_SEED_*`. 관리 포트 9001은 호스트에 열지 않는다 |
 | Spring 서비스 (`apps`) | 호스트에 열지 않음 | gateway(8080)로 부른다. 목록은 `infra/compose/apps.yaml` |
 | Elasticsearch (`search`) | http://localhost:9200 | 인증 없음. nori 플러그인은 M2 |
@@ -97,7 +97,7 @@ docker compose --profile search --profile obs --profile apps down
 - `apps` profile을 띄워 둔 상태라면 같은 서비스 컨테이너를 먼저 멈춘다(`docker compose stop member`). 둘 다 Eureka에 등록되면 gateway가 요청을 번갈아 보낸다.
 - DB 비밀번호 같은 비밀 값은 레포 루트 `.env`에서 온다. `bootRun`은 `.env`를 환경 변수로 읽는다. IDE로 실행하면 실행 설정에 `.env` 파일을 환경 변수로 지정한다(IntelliJ: Run Configuration의 Environment variables 또는 EnvFile).
 - 서비스는 WSL IP로 Eureka에 등록된다. 그래서 컨테이너(Prometheus, gateway)가 그 주소로 접속할 수 있다.
-- gateway 경유 호출: `curl localhost:8080/api/member/v1/ping`. 샘플 이벤트 발행은 `curl -X POST localhost:8080/api/member/v1/ping`이고, member 로그에 `샘플 이벤트를 처리했다`가 남는다(M1에서 지운다). 새로 띄운 서비스는 Eureka 등록과 gateway의 인스턴스 캐시 갱신 때문에 몇 초 뒤부터 라우팅된다. 그 전에는 503이다.
+- gateway 경유 호출(가입): `curl -i -X POST localhost:8080/api/auth/v1/accounts -H 'Content-Type: application/json' -d '{"email":"buyer@example.com","password":"buyer-pass-1234","name":"구매자"}'`. 201이면 Mailpit(http://localhost:8025)에 인증 메일이 온다(notification 실행 필요). 가입·인증·재발송은 IP마다 1분에 5회까지다. 새로 띄운 서비스는 Eureka 등록과 gateway의 인스턴스 캐시 갱신 때문에 몇 초 뒤부터 라우팅된다. 그 전에는 503이다.
 - gateway 자체를 IDE로 실행할 때는 컨테이너를 먼저 멈춘다(`docker compose stop gateway`). 호스트에서는 컨테이너 IP에 닿지 못하므로, 이때 뒤의 서비스도 IDE로 띄워야 한다.
 - auth를 IDE로 실행할 때는 컨테이너를 먼저 멈춘다(`docker compose stop auth`). IDE auth도 호스트 포트 9000에서 들으므로 다른 컨테이너는 그대로 둔다.
 - 로그인 없이 쓸 수 있는 것은 공개 경로뿐이다. 토큰이 필요한 API는 앱(BFF)으로 로그인해서 부른다(7절).

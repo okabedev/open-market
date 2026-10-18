@@ -10,9 +10,6 @@ auth.account 3
 auth.account.DLT 3
 member.member 3
 member.member.DLT 3
-# M0 샘플 이벤트(docs/architecture/context-map.md). M1에서 샘플 API와 함께 지운다.
-member.ping 3
-member.ping.DLT 3
 member.seller 3
 member.seller.DLT 3
 catalog.product 3

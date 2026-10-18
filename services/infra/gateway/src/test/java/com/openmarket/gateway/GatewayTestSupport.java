@@ -49,12 +49,16 @@ abstract class GatewayTestSupport {
     }
 
     HttpResponse<String> post(String path) throws Exception {
-        HttpRequest request =
+        return post(path, Map.of());
+    }
+
+    HttpResponse<String> post(String path, Map<String, String> headers) throws Exception {
+        HttpRequest.Builder request =
                 HttpRequest.newBuilder(URI.create("http://localhost:" + port + path))
                         .header("Content-Type", "application/json")
-                        .POST(HttpRequest.BodyPublishers.ofString("{}"))
-                        .build();
-        return HTTP.send(request, HttpResponse.BodyHandlers.ofString());
+                        .POST(HttpRequest.BodyPublishers.ofString("{}"));
+        headers.forEach(request::header);
+        return HTTP.send(request.build(), HttpResponse.BodyHandlers.ofString());
     }
 
     static HttpResponse<String> send(int port, String path, Map<String, String> headers)

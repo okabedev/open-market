@@ -10,64 +10,68 @@ function recordingFetch(body: unknown, status = 200) {
   return { requests, fetch };
 }
 
+const ACCOUNT_ID = "019a0f3c-5e2b-7c41-9d3e-2f6a8b1c4d70";
+const SIGNUP = { email: "buyer@example.com", password: "password-1234", name: "구매자" };
+
 describe("createServiceClient", () => {
   afterEach(() => {
     vi.unstubAllEnvs();
   });
 
   it("gateway의 /api/<서비스> 아래로 요청하고 응답 본문을 data로 돌려준다", async () => {
-    const { requests, fetch } = recordingFetch({ service: "member" });
-    const member = createServiceClient("member", { gatewayUrl: "http://gateway.test/", fetch });
+    const { requests, fetch } = recordingFetch({ accountId: ACCOUNT_ID }, 201);
+    const auth = createServiceClient("auth", { gatewayUrl: "http://gateway.test/", fetch });
 
-    const { data, error } = await member.GET("/v1/ping");
+    const { data, error } = await auth.POST("/v1/accounts", { body: SIGNUP });
 
-    expect(requests[0]?.method).toBe("GET");
-    expect(requests[0]?.url).toBe("http://gateway.test/api/member/v1/ping");
+    expect(requests[0]?.method).toBe("POST");
+    expect(requests[0]?.url).toBe("http://gateway.test/api/auth/v1/accounts");
+    expect(await requests[0]?.json()).toEqual(SIGNUP);
     expect(error).toBeUndefined();
-    expect(data?.service).toBe("member");
+    expect(data?.accountId).toBe(ACCOUNT_ID);
   });
 
   it("2xx가 아닌 응답은 error로 돌려준다", async () => {
-    const { fetch } = recordingFetch({ title: "Not Found" }, 404);
-    const member = createServiceClient("member", { gatewayUrl: "http://gateway.test", fetch });
+    const { fetch } = recordingFetch({ title: "Conflict" }, 409);
+    const auth = createServiceClient("auth", { gatewayUrl: "http://gateway.test", fetch });
 
-    const { data, error, response } = await member.POST("/v1/ping");
+    const { data, error, response } = await auth.POST("/v1/accounts", { body: SIGNUP });
 
-    expect(response.status).toBe(404);
+    expect(response.status).toBe(409);
     expect(data).toBeUndefined();
-    expect(error).toEqual({ title: "Not Found" });
+    expect(error).toEqual({ title: "Conflict" });
   });
 
   it("액세스 토큰을 주면 Authorization 헤더에 Bearer로 붙인다", async () => {
-    const { requests, fetch } = recordingFetch({ service: "member" });
-    const member = createServiceClient("member", {
+    const { requests, fetch } = recordingFetch({ accountId: ACCOUNT_ID }, 201);
+    const auth = createServiceClient("auth", {
       gatewayUrl: "http://gateway.test",
       fetch,
       accessToken: "token-1",
     });
 
-    await member.GET("/v1/ping");
+    await auth.POST("/v1/accounts", { body: SIGNUP });
 
     expect(requests[0]?.headers.get("authorization")).toBe("Bearer token-1");
   });
 
   it("토큰이 없으면 Authorization 헤더를 붙이지 않는다", async () => {
-    const { requests, fetch } = recordingFetch({ service: "member" });
-    const member = createServiceClient("member", { gatewayUrl: "http://gateway.test", fetch });
+    const { requests, fetch } = recordingFetch({ accountId: ACCOUNT_ID }, 201);
+    const auth = createServiceClient("auth", { gatewayUrl: "http://gateway.test", fetch });
 
-    await member.GET("/v1/ping");
+    await auth.POST("/v1/accounts", { body: SIGNUP });
 
     expect(requests[0]?.headers.get("authorization")).toBeNull();
   });
 
   it("주소를 주지 않으면 GATEWAY_URL 환경 변수를 쓴다", async () => {
     vi.stubEnv("GATEWAY_URL", "http://gateway.env:8080");
-    const { requests, fetch } = recordingFetch({ pingId: "019a0f3c-5e2b-7c41-9d3e-2f6a8b1c4d70" });
-    const member = createServiceClient("member", { fetch });
+    const { requests, fetch } = recordingFetch({ accountId: ACCOUNT_ID }, 201);
+    const auth = createServiceClient("auth", { fetch });
 
-    await member.POST("/v1/ping");
+    await auth.POST("/v1/accounts", { body: SIGNUP });
 
-    expect(requests[0]?.url).toBe("http://gateway.env:8080/api/member/v1/ping");
+    expect(requests[0]?.url).toBe("http://gateway.env:8080/api/auth/v1/accounts");
   });
 });
 

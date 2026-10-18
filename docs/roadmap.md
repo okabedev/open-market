@@ -56,7 +56,7 @@
 - [ ] member: 프로필, 배송지, 입점 신청·심사, 판매자 정지, 탈퇴
 - [x] notification: 이메일 발송 기반, 중복 방지, 가입 인증 메일
 - [x] BFF 로그인·로그아웃·토큰 갱신(R8, ADR 0014), 앱 3개 로그인 화면
-- [ ] gateway 공개 경로 등록, 로그인·가입의 엄격한 레이트 리밋(NFR-5). member 샘플 API(`/v1/ping`), 샘플 이벤트(`member.ping` 토픽, `PingSent`, `PingSentListener`)와 그 공개 경로 제거
+- [x] gateway 공개 경로 등록, 로그인·가입의 엄격한 레이트 리밋(NFR-5). member 샘플 API(`/v1/ping`), 샘플 이벤트(`member.ping` 토픽, `PingSent`, `PingSentListener`)와 그 공개 경로 제거
 - 관련 요구사항: ACC-1, ACC-3, ACC-4, SEL-1~3, NTF-1(가입), NTF-2, NFR-5~8
 - 범위 결정(2026-10-18): ACC-2(소셜 로그인)는 제외한다. ACC-4의 진행 중 주문 검사는 M3에서 order에 연결한다.
 - 순서: R7(auth 골격·issuer) → R8(BFF 세션·갱신) → 가입·인증 메일 → gateway 공개 경로·레이트 리밋·샘플 제거 → member 프로필·배송지 → 입점 → 탈퇴 → 화면 → E2E 스크립트
