@@ -1,5 +1,7 @@
 package com.openmarket.common.web;
 
+import com.openmarket.common.core.audit.AuditLog;
+import com.openmarket.common.web.audit.JdbcAuditLog;
 import com.openmarket.common.web.error.GlobalExceptionHandler;
 import com.openmarket.common.web.idempotency.IdempotencyCleanupJob;
 import com.openmarket.common.web.idempotency.IdempotencyFilter;
@@ -7,6 +9,7 @@ import com.openmarket.common.web.idempotency.IdempotencyInterceptor;
 import com.openmarket.common.web.idempotency.IdempotencyStore;
 import com.openmarket.common.web.idempotency.JdbcIdempotencyStore;
 import com.openmarket.common.web.logging.RequestLoggingFilter;
+import io.micrometer.tracing.Tracer;
 import java.time.Clock;
 import net.javacrumbs.shedlock.core.LockingTaskExecutor;
 import org.springframework.beans.factory.ObjectProvider;
@@ -22,7 +25,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-/** Spring MVC 서비스에 공통 오류 응답, 요청 로깅, Idempotency-Key 처리를 붙인다. 서비스는 의존성만 추가하면 된다. */
+/** Spring MVC 서비스에 공통 오류 응답, 요청 로깅, Idempotency-Key 처리, 감사 로그를 붙인다. 서비스는 의존성만 추가하면 된다. */
 @AutoConfiguration(
         afterName = {
             "org.springframework.boot.jdbc.autoconfigure.JdbcClientAutoConfiguration",
@@ -71,6 +74,14 @@ public class CommonWebAutoConfiguration {
                     registry.addInterceptor(new IdempotencyInterceptor(store));
                 }
             };
+        }
+
+        @Bean
+        @ConditionalOnMissingBean
+        AuditLog auditLog(
+                JdbcClient jdbcClient, ObjectProvider<Clock> clock, ObjectProvider<Tracer> tracer) {
+            return new JdbcAuditLog(
+                    jdbcClient, clock.getIfAvailable(Clock::systemUTC), tracer.getIfAvailable());
         }
 
         /** 락 실행기는 common-messaging이 등록한다. */

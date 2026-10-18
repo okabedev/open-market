@@ -46,6 +46,11 @@ final class Fakes {
         }
 
         @Override
+        public Optional<Account> findForUpdateById(UUID id) {
+            return findById(id);
+        }
+
+        @Override
         public Account save(Account account) {
             rows.put(account.id(), account);
             return account;

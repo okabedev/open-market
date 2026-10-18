@@ -30,12 +30,12 @@
 
 | 라이브러리 | Flyway 위치 | 테이블 |
 |---|---|---|
-| `common-web` | `classpath:db/common/web` | `idempotency_record` |
+| `common-web` | `classpath:db/common/web` | `idempotency_record`, `audit_log` |
 | `common-messaging` | `classpath:db/common/messaging` | `outbox_event`, `processed_event`, `shedlock` |
 
 - 서비스는 `spring.flyway.locations`에 자기 `classpath:db/migration`과 위 위치를 함께 적는다.
 - 라이브러리 마이그레이션 버전은 `V0_<n>`이다. 서비스 마이그레이션은 `V1`부터 시작하므로 겹치지 않는다.
-- 라이브러리들이 한 스키마의 Flyway 이력을 같이 쓰므로 `<n>`은 라이브러리 전체에서 이어 매긴다. 지금은 `V0_1` common-web, `V0_2`~`V0_4` common-messaging이다. 다음 번호는 `V0_5`다.
+- 라이브러리들이 한 스키마의 Flyway 이력을 같이 쓰므로 `<n>`은 라이브러리 전체에서 이어 매긴다. 지금은 `V0_1` common-web, `V0_2`~`V0_4` common-messaging, `V0_5` common-web이다. 다음 번호는 `V0_6`이다.
 - 공통 테이블을 바꿀 때는 새 `V0_<n>` 파일을 추가한다. 이미 `V1` 이상이 적용된 서비스에도 들어가도록 config-repo 공통 설정에 `spring.flyway.out-of-order=true`를 둔다.
 
 ### outbox_event
@@ -78,13 +78,28 @@ PK는 `(principal, idempotency_key)`다. 처리 중에 같은 키가 또 오면 
 - `IN_PROGRESS`가 1분 넘게 남아 있으면 앞선 요청이 중단된 것으로 보고 새 요청이 이어받는다.
 - 24시간 지난 기록은 새 요청으로 처리한다. 지난 행은 `common-web`의 정리 작업이 한 시간마다 지운다([messaging.md](messaging.md#시간-기반-작업)).
 
+### audit_log
+관리자 작업 기록(NFR-8, 용어집 "감사 로그"). 유스케이스가 `common-core`의 `AuditLog`로 작업과 같은 트랜잭션에 쓴다. 지우거나 고치지 않는다.
+
+| 컬럼 | 타입 | 설명 |
+|---|---|---|
+| id | uuid | UUID v7 |
+| actor_id | varchar(100) | 작업한 사람(토큰 subject) |
+| action | varchar(100) | 작업. 예: `SELLER_APPLICATION_APPROVED` |
+| target_type, target_id | varchar | 대상. 예: `SELLER_APPLICATION`, 신청 ID |
+| detail | varchar(1000) | 사유 같은 부가 설명. 개인정보를 넣지 않는다 |
+| trace_id | varchar(32) | 요청의 trace id. 요청 로그와 잇는다 |
+| occurred_at | timestamptz | |
+
+인덱스는 `(target_type, target_id)`, `occurred_at`이다. 조회 화면은 ADM-4(M6)에서 만든다.
+
 ## 엔티티 규칙
 - PK는 애플리케이션이 만드는 UUID v7이다. 외부에 노출하는 ID도 같은 값을 쓴다.
 - 금액은 `bigint`(원 단위)다. 도메인에서는 `Money`로 감싼다.
 - 시각은 `timestamptz`, 자바에서는 `Instant`다. 화면 표시만 `Asia/Seoul`로 바꾼다.
 - 동시 수정이 있는 집계(`Stock`, `Coupon`, `Payment` 등)는 `@Version` 낙관적 락을 기본으로 한다. 경쟁이 심한 곳은 서비스 문서에 따로 적는다(예: payment는 비관적 락, 선착순 쿠폰은 Redis).
 - 조회 모델(`query`)은 같은 스키마의 테이블을 QueryDSL로 직접 읽는다. 다른 서비스의 데이터가 필요하면 이벤트로 만든 읽기 모델 테이블을 둔다.
-- 개인정보 컬럼(이름, 전화번호, 주소, 계좌)은 DB에 평문으로 두되, 로그와 응답에서 마스킹한다. 본인에게 본인 정보를 주는 응답은 원문이다(NFR-7). 계좌 번호만 애플리케이션 단에서 암호화한다(키는 환경 변수).
+- 개인정보 컬럼(이름, 전화번호, 주소, 계좌)은 DB에 평문으로 두되, 로그와 응답에서 마스킹한다. 본인에게 본인 정보를 주는 응답은 원문이다(NFR-7). 계좌 번호만 애플리케이션 단에서 암호화한다(`common-core`의 `AesGcmCipher`, 키는 환경 변수 `MEMBER_ACCOUNT_NUMBER_KEY`). 마스킹한 사본을 따로 둬서 조회할 때 복호화하지 않는다.
 
 ## 캐시와 기타 저장소
 | 저장소 | 용도 |

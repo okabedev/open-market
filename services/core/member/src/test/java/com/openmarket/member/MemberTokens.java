@@ -19,6 +19,22 @@ final class MemberTokens {
                 .authorities(new SimpleGrantedAuthority("ROLE_BUYER"));
     }
 
+    static RequestPostProcessor seller(UUID memberId) {
+        return jwt().jwt(
+                        token ->
+                                token.subject(memberId.toString())
+                                        .claim("roles", List.of("BUYER", "SELLER")))
+                .authorities(
+                        new SimpleGrantedAuthority("ROLE_BUYER"),
+                        new SimpleGrantedAuthority("ROLE_SELLER"));
+    }
+
+    static RequestPostProcessor admin(UUID adminId) {
+        return jwt().jwt(
+                        token -> token.subject(adminId.toString()).claim("roles", List.of("ADMIN")))
+                .authorities(new SimpleGrantedAuthority("ROLE_ADMIN"));
+    }
+
     /** 서비스 간 토큰. 역할이 없다. */
     static RequestPostProcessor internal() {
         return jwt().jwt(token -> token.subject("notification").claim("scope", "internal"))

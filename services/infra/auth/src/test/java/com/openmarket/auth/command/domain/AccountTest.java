@@ -106,6 +106,20 @@ class AccountTest {
         assertThat(account.isLocked(NOW)).isFalse();
     }
 
+    @Test
+    @DisplayName("판매자 역할을 붙이고 뗀다. 이미 그 상태면 바뀌지 않는다")
+    void grantsAndRevokesSellerRole() {
+        Account account = register();
+
+        assertThat(account.grantRole(Role.SELLER, NOW)).isTrue();
+        assertThat(account.grantRole(Role.SELLER, NOW)).isFalse();
+        assertThat(account.roles()).containsExactlyInAnyOrder(Role.BUYER, Role.SELLER);
+
+        assertThat(account.revokeRole(Role.SELLER, NOW)).isTrue();
+        assertThat(account.revokeRole(Role.SELLER, NOW)).isFalse();
+        assertThat(account.roles()).containsExactly(Role.BUYER);
+    }
+
     private static Account register() {
         return Account.register(
                 UUID.randomUUID(), EmailAddress.of("buyer@example.com"), "{bcrypt}x", NOW);

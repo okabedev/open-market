@@ -26,4 +26,5 @@ dependencies {
     testImplementation(project(":libs:common-test"))
     testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
     testImplementation("org.springframework.boot:spring-boot-starter-security-test")
+    testImplementation("org.awaitility:awaitility")
 }
