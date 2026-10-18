@@ -103,7 +103,7 @@ class WithdrawalIntegrationTest {
                         .query()
                         .singleRow();
         assertThat(application)
-                .containsEntry("status", "CANCELED")
+                .containsEntry("status", "CANCELLED")
                 .containsEntry("representative_name", "탈퇴회원")
                 .containsEntry("account_holder", "탈퇴회원")
                 .containsEntry("account_number_encrypted", "");

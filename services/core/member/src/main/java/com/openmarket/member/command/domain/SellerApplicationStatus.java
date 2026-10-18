@@ -6,5 +6,5 @@ public enum SellerApplicationStatus {
     APPROVED,
     REJECTED,
     /** 심사 중에 신청자가 탈퇴했다. */
-    CANCELED
+    CANCELLED
 }

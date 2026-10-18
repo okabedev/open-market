@@ -75,7 +75,7 @@ class WithdrawMemberUseCaseTest {
         withdraw.execute(new WithdrawMemberCommand(memberId));
 
         assertThat(applications.rows.get(applicationId).status())
-                .isEqualTo(SellerApplicationStatus.CANCELED);
+                .isEqualTo(SellerApplicationStatus.CANCELLED);
     }
 
     @Test
