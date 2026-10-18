@@ -18,6 +18,7 @@
 | [0012](0012-frontend-toolchain.md) | 프론트 도구와 버전 | 승인 |
 | [0013](0013-auth-issuer-host.md) | auth issuer 고정 이름과 컨테이너의 host-gateway 접근 | 승인 |
 | [0014](0014-bff-session.md) | BFF 세션은 openid-client와 Redis로 직접 만든다 | 승인 |
+| [0015](0015-frontend-ui-stack.md) | 프론트 화면은 Tailwind CSS, shadcn/ui 방식 컴포넌트, Server Action 폼으로 만든다 | 승인 |
 
 
 ## 템플릿

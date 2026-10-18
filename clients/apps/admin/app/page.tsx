@@ -1,23 +1,36 @@
-import { AccountBar, Placeholder } from "@openmarket/ui";
-import { bff } from "@/lib/bff";
-
-// 세션(쿠키)을 읽으므로 요청마다 그린다.
-export const dynamic = "force-dynamic";
+import {
+  Alert,
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  loginErrorMessage,
+} from "@openmarket/ui";
+import { redirect } from "next/navigation";
+import { currentSession } from "@/lib/session";
 
 export default async function HomePage({ searchParams }: PageProps<"/">) {
   const { login_error: loginError } = await searchParams;
-  // 토큰을 먼저 확인한다. 만료가 가까우면 여기서 갱신하고, 갱신이 거절되면 세션이 끝난 것으로 본다.
-  const session = (await bff.getAccessToken()) ? await bff.getSession() : null;
+  if (await currentSession()) {
+    redirect("/seller-applications");
+  }
+  const error = loginErrorMessage(typeof loginError === "string" ? loginError : undefined);
   return (
-    <>
-      <AccountBar
-        roles={session?.roles ?? null}
-        loginError={typeof loginError === "string" ? loginError : undefined}
-      />
-      <Placeholder
-        title="오픈 마켓 관리자"
-        description="판매자 심사와 운영 화면은 M1부터 만든다."
-      />
-    </>
+    <div className="mx-auto grid max-w-md gap-4">
+      {error ? <Alert variant="destructive">{error}</Alert> : null}
+      <Card>
+        <CardHeader>
+          <CardTitle>관리자 로그인</CardTitle>
+          <CardDescription>관리자 역할이 있는 계정만 들어올 수 있습니다.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button asChild>
+            <a href="/auth/login?returnTo=/seller-applications">로그인</a>
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

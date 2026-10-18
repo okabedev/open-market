@@ -1,6 +1,6 @@
 # clients (프론트엔드)
 
-pnpm 모노레포. 결정 근거는 [ADR 0006](../docs/adr/0006-nextjs-bff.md), 도구와 버전은 [ADR 0012](../docs/adr/0012-frontend-toolchain.md), 인증 흐름은 [auth.md](../docs/architecture/auth.md)에 있다.
+pnpm 모노레포. 결정 근거는 [ADR 0006](../docs/adr/0006-nextjs-bff.md), 도구와 버전은 [ADR 0012](../docs/adr/0012-frontend-toolchain.md), 화면 스택(Tailwind, 컴포넌트, 폼)은 [ADR 0015](../docs/adr/0015-frontend-ui-stack.md), 인증 흐름은 [auth.md](../docs/architecture/auth.md)에 있다.
 
 ## 구조
 ```
@@ -10,7 +10,7 @@ clients/
 │  ├─ seller   판매자 (3001)
 │  └─ admin    관리자 (3002)
 └─ packages/
-   ├─ ui          공유 컴포넌트. TypeScript 원본을 내보내고 앱이 `transpilePackages`로 컴파일한다
+   ├─ ui          공유 컴포넌트(shadcn/ui 방식, Radix)와 테마(`theme.css`), 폼 결과(`FormState`). TypeScript 원본을 내보내고 앱이 `transpilePackages`로 컴파일한다
    ├─ api-client  서비스 OpenAPI 문서(openapi/<서비스>.json, 백엔드 테스트가 쓴다)에서 생성한 타입(src/generated)과 서버 전용 클라이언트 `createServiceClient`
    ├─ bff         BFF 세션과 OAuth2 로그인(openid-client + Redis, ADR 0014). 앱은 `@openmarket/bff/next`의 `createNextBff`를 쓴다
    └─ config      TypeScript(tsconfig), ESLint, Prettier 공통 설정
@@ -31,9 +31,19 @@ clients/
 - 파일 업로드는 BFF Route Handler를 거쳐 file 서비스로 보낸다.
 - 화면 문구는 한국어다.
 
+## 화면 (ADR 0015)
+- 스타일은 Tailwind 클래스로 쓴다. 색·반경은 `packages/ui/src/theme.css`의 토큰 이름(`bg-primary`, `text-muted-foreground` …)만 쓰고 색 값을 직접 쓰지 않는다. 앱 `globals.css`는 `tailwindcss`와 `@openmarket/ui/theme.css`만 불러온다.
+- 공유 컴포넌트(`Button`, `TextField`, `Card`, `Table`, `Alert`, `ConfirmSubmit`, `AppShell` …)는 `@openmarket/ui`에서 가져온다. 새 컴포넌트가 두 앱 이상에서 쓰이면 `packages/ui`로 옮긴다.
+- 전역 상태 라이브러리를 쓰지 않는다. 목록 조건(상태, 쪽)은 URL 검색 조건에 둔다.
+- 폼은 `useActionState` + Server Action(`actions.ts`, `"use server"`)이다. 검증은 Server Action 안의 zod 스키마로 하고 `FormState`를 돌려준다. 서비스 오류는 `problemState(error, response.status, values)`로 바꾼다. 비밀번호·계좌 번호는 `values`에 넣지 않는다.
+- 로그인이 필요한 화면은 `requireSession("<현재 경로>")`(`lib/session.ts`)로 시작한다.
+- 공개 API(가입 등)는 `bff.publicClient("<서비스>")`, 사용자 API는 `bff.serviceClient("<서비스>")`로 부른다. 둘 다 브라우저 주소를 `X-Forwarded-For`로 넘긴다.
+- 처리한 행이 목록에서 빠지는 관리자 작업은 성공하면 같은 목록으로 돌아가 `?notice=`로 결과를 보여 준다(`apps/admin/lib/review.ts`).
+
 ## 도구
 - lint: ESLint 9(flat config, `eslint-config-next`의 Core Web Vitals·TypeScript 규칙 + `eslint-config-prettier`). 포매터: Prettier(마크다운은 제외)
 - 단위 테스트: Vitest. 테스트 파일은 대상 옆에 `*.test.ts(x)`로 둔다. Redis가 필요한 테스트(`packages/bff`)는 Testcontainers로 띄우므로 Docker가 있어야 한다
+- 컴포넌트 테스트: Testing Library. 앱은 기본 환경이 node라서 파일 맨 위에 `// @vitest-environment jsdom`을 적고 `@testing-library/jest-dom/vitest`를 불러온다(`packages/ui`는 jsdom이 기본). Server Action은 `vi.mock("@/lib/bff")`로 서비스 호출을 바꿔 함수로 테스트한다
 - 의존성 설치 스크립트는 `pnpm-workspace.yaml`의 `allowBuilds`에 적은 것만 돈다. 새 의존성 때문에 설치가 `ERR_PNPM_IGNORED_BUILDS`로 실패하면 스크립트가 필요한지 보고 `true`나 `false`로 적는다
 
 ## 명령
@@ -50,5 +60,4 @@ clients/
 | `pnpm --filter @openmarket/<앱> dev` | 앱 하나를 개발 모드로 띄운다(shop 3000, seller 3001, admin 3002) |
 
 ## 미정 (M1에서 확정)
-- 스타일링 방식, 컴포넌트 라이브러리, 상태 관리, 폼 라이브러리
-- 컴포넌트 테스트, Playwright E2E
+- Playwright E2E(M1 E2E 스크립트 작업에서 정한다)

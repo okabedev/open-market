@@ -36,8 +36,8 @@ import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ObjectNode;
 
 /**
- * member의 {@code MemberWithdrawn}(Debezium과 같은 형식) → 리스너 → 계정 비활성화, 인가 기록 삭제. 페이로드는 발행자(member)의
- * JSON 예시를 쓰고 memberId만 테스트 계정으로 바꾼다.
+ * member의 {@code MemberWithdrawn}(Debezium과 같은 형식) → 리스너 → 계정 비활성화. 페이로드는 발행자(member)의 JSON 예시를 쓰고
+ * memberId만 테스트 계정으로 바꾼다.
  */
 @SpringBootTest(properties = "spring.kafka.listener.auto-startup=true")
 @Import({
@@ -97,13 +97,6 @@ class MemberEventsIntegrationTest {
         accountId =
                 registerAccount.execute(
                         new RegisterAccountCommand(email, "leaving-pass-1234", "홍길동"));
-        jdbc.sql(
-                        "INSERT INTO oauth2_authorization (id, registered_client_id, principal_name,"
-                                + " authorization_grant_type) VALUES (:id, 'shop', :principal,"
-                                + " 'authorization_code')")
-                .param("id", UUID.randomUUID().toString())
-                .param("principal", accountId.toString())
-                .update();
     }
 
     @AfterEach
@@ -112,7 +105,7 @@ class MemberEventsIntegrationTest {
     }
 
     @Test
-    @DisplayName("탈퇴 이벤트가 오면 계정을 비활성화하고 인가 기록을 지운다. 두 번 와도 한 번만 처리하고, 같은 이메일로 다시 가입할 수 있다")
+    @DisplayName("탈퇴 이벤트가 오면 계정을 비활성화한다. 두 번 와도 한 번만 처리하고, 같은 이메일로 다시 가입할 수 있다")
     void deactivatesAccount() throws Exception {
         UUID eventId = UUID.randomUUID();
 
@@ -120,15 +113,8 @@ class MemberEventsIntegrationTest {
         send(eventId);
 
         await().atMost(Duration.ofSeconds(30)).until(() -> processed(eventId) == 1);
+        // 토큰 갱신·로그인 세션이 막히는지는 AuthorizationServerIntegrationTest가 실제 흐름으로 본다.
         assertThat(accounts.findById(accountId).orElseThrow().isActive()).isFalse();
-        assertThat(
-                        jdbc.sql(
-                                        "SELECT count(*) FROM oauth2_authorization WHERE"
-                                                + " principal_name = :principal")
-                                .param("principal", accountId.toString())
-                                .query(Integer.class)
-                                .single())
-                .isZero();
 
         UUID again =
                 registerAccount.execute(

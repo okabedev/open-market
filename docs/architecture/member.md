@@ -42,7 +42,7 @@ gateway 경로는 `/api/member` + 아래 경로다. 모두 사용자 토큰이 �
 2. 진행 중인 주문·클레임이 있으면 422 `MEMBER_ONGOING_ORDERS`다. 확인은 `OngoingOrderPort`가 한다. M1·M2는 항상 "없음"이라고 답하는 구현(`StubOngoingOrderAdapter`)이고, M3에서 order 내부 API로 바꾼다.
 3. 회원을 가명 처리한다. 이름은 `탈퇴회원`, 이메일은 `withdrawn-<id>@withdrawn.invalid`, 연락처는 비우고 배송지는 모두 지운다. 행은 남긴다(거래 기록이 memberId를 가리킨다).
 4. 그 회원의 입점 신청은 모두 대표자·예금주·계좌 번호를 지운다. 심사 중이던 신청은 `CANCELED`로 닫는다.
-5. `MemberWithdrawn`을 낸다. auth가 계정을 비활성화하고 이메일을 가명으로 바꾸고 인가 기록(리프레시 토큰)을 지운다([auth.md](auth.md)). 같은 이메일로 바로 다시 가입할 수 있다(새 계정, 새 ID).
+5. `MemberWithdrawn`을 낸다. auth가 계정을 비활성화하고 이메일을 가명으로 바꾸고 리프레시 토큰을 무효로 한다([auth.md](auth.md)). shop은 탈퇴 직후 로그아웃해서 BFF 세션과 auth 로그인 세션을 끝낸다. 같은 이메일로 바로 다시 가입할 수 있다(새 계정, 새 ID).
 
 - 탈퇴한 회원은 없는 회원처럼 다룬다. 조회는 404 `MEMBER_NOT_FOUND`이고, 남은 액세스 토큰(최대 10분)으로 프로필·배송지를 바꿀 수 없다.
 - 비밀번호 재확인은 하지 않는다. BFF 세션이 있어야 부를 수 있다. 화면(PR 9)에서 한 번 더 묻는다.

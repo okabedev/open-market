@@ -73,6 +73,19 @@ describe("createServiceClient", () => {
 
     expect(requests[0]?.url).toBe("http://gateway.env:8080/api/auth/v1/accounts");
   });
+
+  it("forwardedFor를 주면 X-Forwarded-For로 붙인다(gateway의 IP별 레이트 리밋)", async () => {
+    const { requests, fetch } = recordingFetch({ accountId: ACCOUNT_ID }, 201);
+    const auth = createServiceClient("auth", {
+      gatewayUrl: "http://gateway.test",
+      fetch,
+      forwardedFor: "203.0.113.7",
+    });
+
+    await auth.POST("/v1/accounts", { body: SIGNUP });
+
+    expect(requests[0]?.headers.get("x-forwarded-for")).toBe("203.0.113.7");
+  });
 });
 
 describe("패키지 진입점", () => {

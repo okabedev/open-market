@@ -6,11 +6,14 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.jayway.jsonpath.JsonPath;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
+import com.openmarket.auth.command.application.DeactivateAccountCommand;
+import com.openmarket.auth.command.application.DeactivateAccountUseCase;
 import com.openmarket.auth.infra.key.JdbcSigningKeyStore;
 import com.openmarket.common.test.container.PostgresContainerConfiguration;
 import com.openmarket.common.test.container.RedisContainerConfiguration;
@@ -58,6 +61,8 @@ class AuthorizationServerIntegrationTest {
     @Autowired PasswordEncoder passwordEncoder;
 
     @Autowired JdbcSigningKeyStore signingKeyStore;
+
+    @Autowired DeactivateAccountUseCase deactivateAccount;
 
     /** 컨테이너 안에서 다른 이름으로 auth에 닿는 경우를 흉내 낸다. */
     static RequestPostProcessor fromHost(String host, int port) {
@@ -239,6 +244,43 @@ class AuthorizationServerIntegrationTest {
 
         assertThat(decode(JsonPath.read(refreshed, "$.access_token")).getClaimAsStringList("roles"))
                 .containsExactlyInAnyOrder("BUYER", "SELLER");
+    }
+
+    @Test
+    @DisplayName("탈퇴로 비활성화한 계정은 토큰을 갱신할 수 없고 남은 로그인 세션으로 인가 코드를 받을 수 없다. 로그아웃은 된다(ACC-4)")
+    void deactivatedAccountLosesTokensAndSession() throws Exception {
+        String email = "leaving-" + UUID.randomUUID() + "@example.com";
+        UUID id = insertBuyer(email, "buyer-pass-1234");
+        MockHttpSession session = login(email, "buyer-pass-1234");
+        String tokens = exchange("shop", "shop-test-secret", authorize(session, "shop", 3000));
+
+        deactivateAccount.execute(new DeactivateAccountCommand(id));
+
+        mockMvc.perform(
+                        post("/oauth2/token")
+                                .with(httpBasic("shop", "shop-test-secret"))
+                                .param("grant_type", "refresh_token")
+                                .param(
+                                        "refresh_token",
+                                        (String) JsonPath.read(tokens, "$.refresh_token")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("invalid_grant"));
+        String redirect =
+                mockMvc.perform(authorizeRequest(session, "shop", 3000))
+                        .andExpect(status().is3xxRedirection())
+                        .andReturn()
+                        .getResponse()
+                        .getRedirectedUrl();
+        assertThat(redirect).endsWith("/login");
+        mockMvc.perform(
+                        get("/connect/logout")
+                                .queryParam(
+                                        "id_token_hint",
+                                        (String) JsonPath.read(tokens, "$.id_token"))
+                                .queryParam("post_logout_redirect_uri", "http://localhost:3000/")
+                                .queryParam("client_id", "shop"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("http://localhost:3000/"));
     }
 
     @Test
