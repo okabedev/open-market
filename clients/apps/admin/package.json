@@ -12,6 +12,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@openmarket/bff": "workspace:*",
     "@openmarket/ui": "workspace:*",
     "next": "catalog:",
     "react": "catalog:",

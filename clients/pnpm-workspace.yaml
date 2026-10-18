@@ -22,8 +22,17 @@ catalog:
   openapi-typescript: 7.13.0
   openapi-fetch: 0.17.0
   server-only: 0.0.1
+  # BFF 세션·OAuth2 클라이언트(ADR 0014)
+  openid-client: 6.8.8
+  redis: 6.3.0
+  testcontainers: 12.2.0
+  "@testcontainers/redis": 12.2.0
 
 # 의존성의 설치 스크립트는 여기서 허용한 것만 실행한다. 없는 패키지가 스크립트를 가지면 설치가 실패한다.
 allowBuilds:
   # 네이티브 바인딩이 없을 때만 받는 대체 설치. 바인딩은 플랫폼별 선택 의존성으로 이미 들어온다.
   unrs-resolver: false
+  # testcontainers(Docker API 클라이언트)의 의존성. 선택적 네이티브 가속과 설치 안내 스크립트라 없어도 동작한다.
+  cpu-features: false
+  ssh2: false
+  protobufjs: false

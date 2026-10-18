@@ -38,6 +38,28 @@ describe("createServiceClient", () => {
     expect(error).toEqual({ title: "Not Found" });
   });
 
+  it("액세스 토큰을 주면 Authorization 헤더에 Bearer로 붙인다", async () => {
+    const { requests, fetch } = recordingFetch({ service: "member" });
+    const member = createServiceClient("member", {
+      gatewayUrl: "http://gateway.test",
+      fetch,
+      accessToken: "token-1",
+    });
+
+    await member.GET("/v1/ping");
+
+    expect(requests[0]?.headers.get("authorization")).toBe("Bearer token-1");
+  });
+
+  it("토큰이 없으면 Authorization 헤더를 붙이지 않는다", async () => {
+    const { requests, fetch } = recordingFetch({ service: "member" });
+    const member = createServiceClient("member", { gatewayUrl: "http://gateway.test", fetch });
+
+    await member.GET("/v1/ping");
+
+    expect(requests[0]?.headers.get("authorization")).toBeNull();
+  });
+
   it("주소를 주지 않으면 GATEWAY_URL 환경 변수를 쓴다", async () => {
     vi.stubEnv("GATEWAY_URL", "http://gateway.env:8080");
     const { requests, fetch } = recordingFetch({ pingId: "019a0f3c-5e2b-7c41-9d3e-2f6a8b1c4d70" });

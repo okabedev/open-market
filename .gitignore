@@ -22,6 +22,9 @@ node_modules/
 coverage/
 *.tsbuildinfo
 next-env.d.ts
+# next dev가 앱 디렉터리에 만드는 에이전트 안내 파일. 레포 규칙은 루트와 clients/의 CLAUDE.md에 있다.
+clients/apps/*/AGENTS.md
+clients/apps/*/CLAUDE.md
 
 # 로컬 실행 산출물
 infra/compose/data/
