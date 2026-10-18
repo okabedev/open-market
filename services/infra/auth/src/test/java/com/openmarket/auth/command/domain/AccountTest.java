@@ -120,6 +120,20 @@ class AccountTest {
         assertThat(account.roles()).containsExactly(Role.BUYER);
     }
 
+    @Test
+    @DisplayName("비활성화하면 로그인할 수 없고 이메일과 비밀번호 해시를 가명 값으로 바꾼다. 다시 해도 그대로다")
+    void deactivates() {
+        Account account = register();
+
+        assertThat(account.deactivate("{bcrypt}random", NOW)).isTrue();
+        assertThat(account.deactivate("{bcrypt}other", NOW)).isFalse();
+
+        assertThat(account.isActive()).isFalse();
+        assertThat(account.email().value())
+                .isEqualTo("withdrawn-" + account.id() + "@withdrawn.invalid");
+        assertThat(account.passwordHash()).isEqualTo("{bcrypt}random");
+    }
+
     private static Account register() {
         return Account.register(
                 UUID.randomUUID(), EmailAddress.of("buyer@example.com"), "{bcrypt}x", NOW);

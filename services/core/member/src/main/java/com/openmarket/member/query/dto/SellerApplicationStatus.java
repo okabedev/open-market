@@ -4,5 +4,6 @@ package com.openmarket.member.query.dto;
 public enum SellerApplicationStatus {
     SUBMITTED,
     APPROVED,
-    REJECTED
+    REJECTED,
+    CANCELED
 }

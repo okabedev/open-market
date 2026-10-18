@@ -17,6 +17,9 @@ import org.springframework.stereotype.Repository;
 @Repository
 public class MemberQueryDao {
 
+    /** 탈퇴한 회원은 없는 회원처럼 404다. */
+    private static final String ACTIVE = "ACTIVE";
+
     private final JPAQueryFactory query;
 
     public MemberQueryDao(JPAQueryFactory query) {
@@ -35,7 +38,7 @@ public class MemberQueryDao {
                                         member.emailVerifiedAt,
                                         member.createdAt))
                         .from(member)
-                        .where(member.id.eq(memberId))
+                        .where(member.id.eq(memberId), member.status.stringValue().eq(ACTIVE))
                         .fetchOne());
     }
 

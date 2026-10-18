@@ -90,6 +90,17 @@
         }
       }
     },
+    "/v1/members/me/withdraw" : {
+      "post" : {
+        "tags" : [ "member-command-controller" ],
+        "operationId" : "withdraw",
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        }
+      }
+    },
     "/v1/members/me/seller-applications" : {
       "get" : {
         "tags" : [ "seller-application-query-controller" ],
@@ -381,7 +392,7 @@
           "schema" : {
             "type" : "string",
             "default" : "SUBMITTED",
-            "enum" : [ "SUBMITTED", "APPROVED", "REJECTED" ]
+            "enum" : [ "SUBMITTED", "APPROVED", "REJECTED", "CANCELED" ]
           }
         }, {
           "name" : "page",
@@ -626,7 +637,7 @@
           },
           "status" : {
             "type" : "string",
-            "enum" : [ "SUBMITTED", "APPROVED", "REJECTED" ]
+            "enum" : [ "SUBMITTED", "APPROVED", "REJECTED", "CANCELED" ]
           },
           "rejectReason" : {
             "type" : "string"
@@ -784,7 +795,7 @@
           },
           "status" : {
             "type" : "string",
-            "enum" : [ "SUBMITTED", "APPROVED", "REJECTED" ]
+            "enum" : [ "SUBMITTED", "APPROVED", "REJECTED", "CANCELED" ]
           },
           "rejectReason" : {
             "type" : "string"

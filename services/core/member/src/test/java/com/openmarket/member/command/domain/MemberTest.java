@@ -233,6 +233,41 @@ class MemberTest {
         }
     }
 
+    @Nested
+    class Withdrawal {
+
+        @Test
+        @DisplayName("탈퇴하면 이름·이메일·연락처를 가명으로 바꾸고 배송지를 지운다. 다시 탈퇴해도 그대로다")
+        void pseudonymizes() {
+            Member member = member();
+            member.changeProfile("홍길동", "010-1234-5678", NOW);
+            member.addAddress(UUID.randomUUID(), details("집"), false, NOW);
+
+            assertThat(member.withdraw(LATER)).isTrue();
+            assertThat(member.withdraw(LATER)).isFalse();
+
+            assertThat(member.isWithdrawn()).isTrue();
+            assertThat(member.name()).isEqualTo(Member.WITHDRAWN_NAME);
+            assertThat(member.email()).isEqualTo("withdrawn-" + member.id() + "@withdrawn.invalid");
+            assertThat(member.phone()).isNull();
+            assertThat(member.addresses()).isEmpty();
+            assertThat(member.defaultAddressId()).isNull();
+        }
+
+        @Test
+        @DisplayName("탈퇴한 회원은 프로필과 배송지를 바꿀 수 없다")
+        void withdrawnMemberIsGone() {
+            Member member = member();
+            member.withdraw(NOW);
+
+            assertThatThrownBy(() -> member.changeProfile("김철수", null, LATER))
+                    .isInstanceOf(MemberNotFoundException.class);
+            assertThatThrownBy(
+                            () -> member.addAddress(UUID.randomUUID(), details("집"), false, LATER))
+                    .isInstanceOf(MemberNotFoundException.class);
+        }
+    }
+
     private static void assertInvalid(org.assertj.core.api.ThrowableAssert.ThrowingCallable call) {
         assertThatThrownBy(call)
                 .isInstanceOf(InvalidMemberInputException.class)

@@ -108,6 +108,19 @@ public class SellerApplication {
         return true;
     }
 
+    /**
+     * 신청자가 탈퇴했다(ACC-4). 심사 중이면 {@code CANCELED}로 닫고, 상태와 상관없이 대표자와 계좌 정보를 가명 처리한다. 상호와 사업자 번호는 공개
+     * 정보라 남긴다.
+     */
+    public void withdrawApplicant(Instant now) {
+        if (status == SellerApplicationStatus.SUBMITTED) {
+            status = SellerApplicationStatus.CANCELED;
+            reviewedAt = now;
+        }
+        representativeName = Member.WITHDRAWN_NAME;
+        settlementAccount = SettlementAccount.erased();
+    }
+
     public UUID id() {
         return id;
     }
