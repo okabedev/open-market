@@ -83,6 +83,7 @@ sequenceDiagram
 - 로그인 화면은 auth의 Thymeleaf 템플릿(`templates/login.html`)이다. 실패 안내는 계정이 있는지 드러내지 않는다. 잠김(`?locked`)과 시도 초과(`?limited`)는 따로 안내한다.
 - 잠금: 비밀번호가 틀리면(`AuthenticationFailureBadCredentialsEvent`) 입력한 이메일의 계정을 행 잠금으로 읽어 센다. 5회째에 15분 잠근다. 잠긴 계정은 비밀번호를 확인하기 전에 거절하므로 잠긴 동안의 시도는 세지 않는다. 폼 로그인에 성공하면 횟수를 지운다.
 - 로그인 레이트 리밋: `POST /login`을 IP마다 1분에 `login-rate-limit.per-minute`(기본 10)회로 제한한다. Redis 고정 창 카운터이고, Redis가 응답하지 않으면 통과시킨다. 넘으면 인증하지 않고 `/login?limited`로 보낸다.
+- 가입 레이트 리밋: gateway의 `auth-signup` 라우트(가입, 인증, 인증 메일 재발송)에 기본 한도와 함께 엄격한 한도를 건다. IP마다 1분에 `openmarket.gateway.strict-rate-limit.requests-per-minute`(5)회이고 세 API가 한 버킷을 쓴다. 넘으면 본문 없는 429다. Redis 키는 `strict:` 접두어로 기본 한도와 나눈다.
 - 가입 API(`/v1/**`)는 세션·CSRF 없이 공개 경로 세 개만 연다. 나머지 `/v1` 경로는 막는다. 로컬에서는 auth 포트(9000)로도 닿지만, 운영 배치에서는 auth의 `/v1`을 바깥에 열지 않고 gateway로만 받는다(gateway 레이트 리밋을 우회하지 못하게).
 - 이메일 인증 토큰은 256비트 무작위 값이다. auth는 SHA-256 해시만 저장하고, 원문은 이벤트의 `verificationUrl`에만 들어간다. 24시간 뒤 만료되고 한 번 쓰면 끝난다. outbox 행은 7일 뒤 지워진다.
 - actuator는 관리 포트 9001에만 있다.

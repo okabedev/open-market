@@ -16,12 +16,15 @@ import org.springframework.test.context.TestPropertySource;
 @TestPropertySource(
         properties = {
             "openmarket.gateway.rate-limit.replenish-rate=1",
-            "openmarket.gateway.rate-limit.burst-capacity=2"
+            "openmarket.gateway.rate-limit.burst-capacity=2",
+            // 기본 한도만 받는 익명 경로가 아직 없어서(공개 조회 API는 M2) 테스트에서 하나 연다. 목록 전체를 이것으로 바꾼다.
+            "openmarket.gateway.public-paths[0].method=GET",
+            "openmarket.gateway.public-paths[0].pattern=" + RateLimitTest.PUBLIC
         })
 class RateLimitTest extends GatewayTestSupport {
 
     private static final String PROTECTED = "/api/member/v1/members/me";
-    private static final String PUBLIC = "/api/member/v1/ping";
+    static final String PUBLIC = "/api/member/v1/public-sample";
 
     @Test
     @DisplayName("한도를 넘으면 429와 남은 토큰 헤더를 돌려주고 서비스까지 가지 않는다")

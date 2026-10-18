@@ -61,7 +61,7 @@ flowchart LR
 ```bash
 cp .env.example .env
 docker compose --profile obs --profile apps up -d --wait --build
-curl -X POST localhost:8080/api/member/v1/ping   # 샘플 이벤트 발행(M1에서 제거)
+curl -i -X POST localhost:8080/api/auth/v1/accounts -H 'Content-Type: application/json' -d '{"email":"buyer@example.com","password":"buyer-pass-1234","name":"구매자"}'   # gateway 경유 가입. 인증 메일은 Mailpit(http://localhost:8025)
 ```
 
 포트, 화면 주소, 서비스를 IDE로 띄우는 방법은 [개발 환경](docs/dev-setup.md)의 "실행" 절에 있습니다.

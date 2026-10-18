@@ -34,7 +34,7 @@ flowchart LR
 ## Kafka 구간 트레이스
 - 발행: outbox에 이벤트를 넣을 때 현재 트레이스 컨텍스트를 `traceparent` 컬럼에 담는다. Debezium이 헤더로 옮긴다.
 - 소비: Spring Kafka 리스너 관측(`spring.kafka.listener.observation-enabled=true`, config-repo 공통 설정)이 `traceparent` 헤더로 자식 스팬을 연다. 핸들러가 그 안에서 outbox에 쌓은 이벤트에도 같은 트레이스가 들어가 다음 소비자까지 이어진다. 헤더 값이 비어 있으면 새 트레이스로 시작한다. `common-messaging`은 같은 값을 `EventEnvelope.traceparent`로도 넘긴다. 이 동작은 `common-messaging`의 Kafka 통합 테스트가 확인한다.
-- 확인(M0-d, 샘플 이벤트 `PingSent`): gateway `POST /api/member/v1/ping` 요청 하나가 Tempo에서 트레이스 하나로 보인다. gateway 서버 스팬 → 레이트 리밋(Redis) → member 서버 스팬 → member `member.ping process`(소비) 순서이고, 응답 헤더 `X-Request-Id`가 그 trace id다. 같은 레코드를 다시 소비한 스팬도 같은 트레이스에 붙는다. 그 trace id로 Loki를 거르면 member의 요청 로그와 리스너 처리 로그가 각 스팬 id와 함께 나온다.
+- 확인(M0-d, 샘플 이벤트 `PingSent`. 샘플은 M1에서 지웠다): gateway `POST /api/member/v1/ping` 요청 하나가 Tempo에서 트레이스 하나로 보인다. gateway 서버 스팬 → 레이트 리밋(Redis) → member 서버 스팬 → member `member.ping process`(소비) 순서이고, 응답 헤더 `X-Request-Id`가 그 trace id다. 같은 레코드를 다시 소비한 스팬도 같은 트레이스에 붙는다. 그 trace id로 Loki를 거르면 member의 요청 로그와 리스너 처리 로그가 각 스팬 id와 함께 나온다.
 - 결과: 주문 생성 요청 하나에서 `OrderPlaced` → 재고 예약 → `StockReserved` → 결제 대기까지 한 트레이스로 보인다.
 
 ## 대시보드와 알림

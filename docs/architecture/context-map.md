@@ -66,13 +66,6 @@ flowchart LR
 |---|---|---|---|
 | `MemberWithdrawn` | 탈퇴 | memberId | auth(계정 비활성화) |
 
-### member.ping (M0 샘플, M1에서 제거)
-이벤트 파이프라인(outbox → Debezium → Kafka → 멱등 소비)과 트레이스 연결을 확인하는 임시 이벤트다. 위 컨텍스트 관계에는 넣지 않는다.
-
-| 이벤트 | 시점 | 주요 필드 | 소비자 |
-|---|---|---|---|
-| `PingSent` | 샘플 API 호출(`POST /v1/ping`) | pingId | member(로그만 남긴다) |
-
 ### member.seller
 | 이벤트 | 시점 | 주요 필드 | 소비자 |
 |---|---|---|---|

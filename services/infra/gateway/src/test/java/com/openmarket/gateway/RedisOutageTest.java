@@ -18,16 +18,19 @@ import org.testcontainers.containers.GenericContainer;
 @DirtiesContext
 class RedisOutageTest extends GatewayTestSupport {
 
+    private static final String PATH = "/api/member/v1/members/me";
+
     @Autowired GenericContainer<?> redis;
 
     @Test
     @DisplayName("Redis가 응답하지 않으면 레이트 리밋 없이 요청을 통과시키고 Redis 타임아웃 안에 응답한다")
     void passesThroughQuicklyWhenRedisHangs() throws Exception {
-        get("/api/member/v1/ping"); // Redis 연결을 미리 맺는다
+        String token = TestJwt.token("account-1", "BUYER");
+        getWithToken(PATH, token); // Redis 연결을 미리 맺는다
         redis.getDockerClient().pauseContainerCmd(redis.getContainerId()).exec();
 
         long start = System.nanoTime();
-        HttpResponse<String> response = get("/api/member/v1/ping");
+        HttpResponse<String> response = getWithToken(PATH, token);
         Duration elapsed = Duration.ofNanos(System.nanoTime() - start);
 
         assertThat(response.statusCode()).isEqualTo(200);
