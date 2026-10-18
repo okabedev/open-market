@@ -3,6 +3,8 @@ package com.openmarket.member.command.domain;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
@@ -30,6 +32,9 @@ public class Member {
 
     public static final int MAX_ADDRESSES = 10;
 
+    /** 탈퇴한 회원과 그 입점 신청의 이름 자리에 넣는 값(ACC-4). */
+    public static final String WITHDRAWN_NAME = "탈퇴회원";
+
     @Id private UUID id;
 
     @Column(nullable = false)
@@ -42,6 +47,13 @@ public class Member {
 
     @Column(name = "email_verified_at")
     private @Nullable Instant emailVerifiedAt;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private MemberStatus status;
+
+    @Column(name = "withdrawn_at")
+    private @Nullable Instant withdrawnAt;
 
     @Column(name = "default_address_id")
     private @Nullable UUID defaultAddressId;
@@ -64,6 +76,7 @@ public class Member {
         this.id = id;
         this.email = email;
         this.name = ContactRules.name(name);
+        this.status = MemberStatus.ACTIVE;
         this.createdAt = now;
         this.updatedAt = now;
     }
@@ -75,7 +88,7 @@ public class Member {
 
     /** 이메일 인증을 기록한다. 처음 바뀌었으면 {@code true}다. */
     public boolean verifyEmail(Instant now) {
-        if (emailVerifiedAt != null) {
+        if (emailVerifiedAt != null || isWithdrawn()) {
             return false;
         }
         emailVerifiedAt = now;
@@ -85,6 +98,7 @@ public class Member {
 
     /** 이름과 연락처를 바꾼다. 연락처는 {@code null}이나 빈 값이면 지운다. */
     public void changeProfile(String name, @Nullable String phone, Instant now) {
+        ensureActive();
         this.name = ContactRules.name(name);
         this.phone = ContactRules.optionalPhone(phone);
         updatedAt = now;
@@ -93,6 +107,7 @@ public class Member {
     /** 배송지를 더한다. 첫 배송지이거나 {@code asDefault}면 기본 배송지가 된다. */
     public Address addAddress(
             UUID addressId, Address.Details details, boolean asDefault, Instant now) {
+        ensureActive();
         if (addresses.size() >= MAX_ADDRESSES) {
             throw new AddressLimitExceededException();
         }
@@ -106,11 +121,13 @@ public class Member {
     }
 
     public void changeAddress(UUID addressId, Address.Details details, Instant now) {
+        ensureActive();
         address(addressId).change(details, now);
         updatedAt = now;
     }
 
     public void makeDefaultAddress(UUID addressId, Instant now) {
+        ensureActive();
         address(addressId);
         if (!addressId.equals(defaultAddressId)) {
             defaultAddressId = addressId;
@@ -120,6 +137,7 @@ public class Member {
 
     /** 배송지를 지운다. 기본 배송지였으면 남은 것 중 가장 최근에 추가한 배송지가 기본이 된다. 없는 배송지면 아무것도 하지 않는다. */
     public void removeAddress(UUID addressId, Instant now) {
+        ensureActive();
         if (!addresses.removeIf(address -> address.id().equals(addressId))) {
             return;
         }
@@ -127,6 +145,32 @@ public class Member {
             defaultAddressId = addresses.isEmpty() ? null : addresses.getLast().id();
         }
         updatedAt = now;
+    }
+
+    /**
+     * 탈퇴한다(ACC-4). 이름·이메일·연락처를 가명으로 바꾸고 배송지를 모두 지운다. 처음 탈퇴했으면 {@code true}다. 진행 중 주문과 판매자 여부는
+     * 유스케이스가 먼저 확인한다.
+     */
+    public boolean withdraw(Instant now) {
+        if (isWithdrawn()) {
+            return false;
+        }
+        status = MemberStatus.WITHDRAWN;
+        withdrawnAt = now;
+        name = WITHDRAWN_NAME;
+        email = "withdrawn-" + id + "@withdrawn.invalid";
+        phone = null;
+        defaultAddressId = null;
+        addresses.clear();
+        updatedAt = now;
+        return true;
+    }
+
+    /** 탈퇴한 회원은 없는 회원처럼 다룬다. */
+    private void ensureActive() {
+        if (isWithdrawn()) {
+            throw new MemberNotFoundException();
+        }
     }
 
     private Address address(UUID addressId) {
@@ -150,6 +194,10 @@ public class Member {
 
     public @Nullable String phone() {
         return phone;
+    }
+
+    public boolean isWithdrawn() {
+        return status == MemberStatus.WITHDRAWN;
     }
 
     public boolean isEmailVerified() {

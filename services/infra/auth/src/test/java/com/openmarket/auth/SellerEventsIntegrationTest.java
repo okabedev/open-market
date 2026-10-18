@@ -65,6 +65,12 @@ class SellerEventsIntegrationTest {
         NewTopic memberSellerDlt() {
             return TopicBuilder.name(TOPIC + ".DLT").partitions(1).build();
         }
+
+        // 같은 컨텍스트의 탈퇴 리스너가 구독하는 토픽. 없으면 그 리스너가 오류를 남긴다.
+        @Bean
+        NewTopic memberMember() {
+            return TopicBuilder.name("member.member").partitions(1).build();
+        }
     }
 
     @Autowired AccountRepository accounts;

@@ -13,6 +13,8 @@ import com.openmarket.member.command.application.RemoveAddressCommand;
 import com.openmarket.member.command.application.RemoveAddressUseCase;
 import com.openmarket.member.command.application.SetDefaultAddressCommand;
 import com.openmarket.member.command.application.SetDefaultAddressUseCase;
+import com.openmarket.member.command.application.WithdrawMemberCommand;
+import com.openmarket.member.command.application.WithdrawMemberUseCase;
 import jakarta.validation.Valid;
 import java.security.Principal;
 import java.util.UUID;
@@ -39,18 +41,21 @@ public class MemberCommandController {
     private final ChangeAddressUseCase changeAddress;
     private final SetDefaultAddressUseCase setDefaultAddress;
     private final RemoveAddressUseCase removeAddress;
+    private final WithdrawMemberUseCase withdraw;
 
     public MemberCommandController(
             ChangeProfileUseCase changeProfile,
             AddAddressUseCase addAddress,
             ChangeAddressUseCase changeAddress,
             SetDefaultAddressUseCase setDefaultAddress,
-            RemoveAddressUseCase removeAddress) {
+            RemoveAddressUseCase removeAddress,
+            WithdrawMemberUseCase withdraw) {
         this.changeProfile = changeProfile;
         this.addAddress = addAddress;
         this.changeAddress = changeAddress;
         this.setDefaultAddress = setDefaultAddress;
         this.removeAddress = removeAddress;
+        this.withdraw = withdraw;
     }
 
     /** 이름과 연락처를 바꾼다. 연락처를 비우면 지운다. */
@@ -115,5 +120,15 @@ public class MemberCommandController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void removeAddress(Principal principal, @PathVariable UUID addressId) {
         removeAddress.execute(new RemoveAddressCommand(memberId(principal), addressId));
+    }
+
+    /**
+     * 탈퇴한다(ACC-4). 개인정보를 바로 가명 처리하고 auth가 계정을 비활성화한다. 이미 탈퇴했어도 204다. 판매자면 422 {@code
+     * MEMBER_SELLER_CANNOT_WITHDRAW}, 진행 중인 주문이 있으면 422 {@code MEMBER_ONGOING_ORDERS}.
+     */
+    @PostMapping("/withdraw")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void withdraw(Principal principal) {
+        withdraw.execute(new WithdrawMemberCommand(memberId(principal)));
     }
 }

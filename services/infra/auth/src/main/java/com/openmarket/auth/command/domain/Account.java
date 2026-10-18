@@ -144,6 +144,23 @@ public class Account {
         return true;
     }
 
+    /**
+     * 탈퇴로 비활성화한다(ACC-4, docs/glossary.md "계정 비활성화"). 로그인할 수 없고, 같은 이메일로 다시 가입할 수 있도록 이메일을 가명으로 바꾼다.
+     * 비밀번호 해시는 무작위 값의 해시로 바꾼다. 처음 비활성화했으면 {@code true}다.
+     */
+    public boolean deactivate(String unusablePasswordHash, Instant now) {
+        if (status == AccountStatus.DEACTIVATED) {
+            return false;
+        }
+        status = AccountStatus.DEACTIVATED;
+        email = EmailAddress.of("withdrawn-" + id + "@withdrawn.invalid");
+        passwordHash = unusablePasswordHash;
+        failedLoginCount = 0;
+        lockedUntil = null;
+        updatedAt = now;
+        return true;
+    }
+
     public void recordLoginSuccess() {
         failedLoginCount = 0;
         lockedUntil = null;

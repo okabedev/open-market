@@ -64,7 +64,7 @@ flowchart LR
 ### member.member
 | 이벤트 | 시점 | 주요 필드 | 소비자 |
 |---|---|---|---|
-| `MemberWithdrawn` | 탈퇴 | memberId | auth(계정 비활성화) |
+| `MemberWithdrawn` | 탈퇴 | memberId | auth(계정 비활성화, 이메일 가명 처리, 인가·리프레시 토큰 삭제) |
 
 ### member.seller
 | 이벤트 | 시점 | 주요 필드 | 소비자 |

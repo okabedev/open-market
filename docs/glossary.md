@@ -10,10 +10,12 @@
 | 역할 | `Role` (`BUYER`, `SELLER`, `ADMIN`) | auth | 토큰의 `roles` 클레임으로 나간다 |
 | 이메일 인증 | `EmailVerification` | auth | 가입 이메일 확인용 일회용 토큰. 24시간 유효. 인증을 마쳐야 주문할 수 있다(ACC-1) |
 | 계정 잠금 | `Account.recordLoginFailure()` | auth | 로그인 5회 연속 실패 시 15분 동안 로그인할 수 없다(ACC-1) |
+| 계정 비활성화 | `Account.deactivate()` | auth | 탈퇴한 계정. 상태 `ACTIVE` → `DEACTIVATED`. 로그인할 수 없고, 이메일은 가명으로 바꿔 같은 이메일로 다시 가입할 수 있다 |
 | 회원 | `Member` | member | 계정에 딸린 프로필(이름, 연락처). `memberId`는 `accountId`와 같은 값을 쓴다 |
 | 배송지 | `Address` | member | 회원당 최대 10개, 기본 배송지 1개 |
+| 탈퇴 | `Member.withdraw()` | member | 상태 `ACTIVE` → `WITHDRAWN`. 개인정보를 바로 가명 처리한다(ACC-4). 판매자는 탈퇴할 수 없다 |
 | 판매자 | `Seller` | member | 승인된 입점 판매자. 상호, 사업자 번호, 정산 계좌를 가진다 |
-| 입점 신청 | `SellerApplication` | member | 상호, 사업자 번호, 대표자, 정산 계좌. 상태: `SUBMITTED` → `APPROVED` 또는 `REJECTED`. 회원당 심사 중인 신청은 하나다 |
+| 입점 신청 | `SellerApplication` | member | 상호, 사업자 번호, 대표자, 정산 계좌. 상태: `SUBMITTED` → `APPROVED` 또는 `REJECTED`, 신청자가 탈퇴하면 `CANCELED`. 회원당 심사 중인 신청은 하나다 |
 | 정산 계좌 | `SettlementAccount` | member | 은행, 예금주, 계좌 번호. 계좌 번호는 암호화해 저장하고 응답에는 마스킹한 값만 준다 |
 | 판매자 정지 | `Seller.suspend()` | member | 상태: `ACTIVE` ↔ `SUSPENDED` |
 

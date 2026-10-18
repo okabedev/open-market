@@ -35,6 +35,11 @@ final class SellerFakes {
         }
 
         @Override
+        public List<SellerApplication> findAllByMemberId(UUID memberId) {
+            return rows.values().stream().filter(a -> a.memberId().equals(memberId)).toList();
+        }
+
+        @Override
         public SellerApplication save(SellerApplication application) {
             rows.put(application.id(), application);
             return application;

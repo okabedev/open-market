@@ -53,6 +53,16 @@ public class SettlementAccount {
         return digits;
     }
 
+    /** 탈퇴한 신청자의 계좌. 예금주와 번호를 지운다. */
+    static SettlementAccount erased() {
+        SettlementAccount account = new SettlementAccount();
+        account.bankName = "-";
+        account.accountHolder = Member.WITHDRAWN_NAME;
+        account.accountNumberEncrypted = "";
+        account.accountNumberMasked = "****";
+        return account;
+    }
+
     SettlementAccount copy() {
         return new SettlementAccount(
                 bankName, accountHolder, accountNumberEncrypted, accountNumberMasked);

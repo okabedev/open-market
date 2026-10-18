@@ -1,6 +1,6 @@
 # 회원 (member 서비스)
 
-회원 프로필과 배송지(ACC-3), 입점 신청·심사와 판매자(SEL-1~3)를 갖는다. 탈퇴(ACC-4)는 [roadmap.md](../roadmap.md) M1의 다음 작업에서 더한다.
+회원 프로필과 배송지(ACC-3), 탈퇴(ACC-4), 입점 신청·심사와 판매자(SEL-1~3)를 갖는다.
 자격 증명과 역할은 auth가 갖는다([auth.md](auth.md)). 두 서비스는 같은 ID(`memberId` = `accountId`)를 쓴다.
 
 ## 회원 생성
@@ -27,6 +27,7 @@ gateway 경로는 `/api/member` + 아래 경로다. 모두 사용자 토큰이 �
 |---|---|---|
 | GET | `/v1/members/me` | 본인 프로필 |
 | PUT | `/v1/members/me` | 이름, 연락처 변경. 연락처를 비우면 지운다 |
+| POST | `/v1/members/me/withdraw` | 탈퇴. 아래 "탈퇴" |
 | GET | `/v1/members/me/addresses` | 배송지 목록. 기본 배송지가 먼저, 나머지는 최근 순 |
 | POST | `/v1/members/me/addresses` | 배송지 추가. `Idempotency-Key` 필수. 10개를 넘으면 422 `MEMBER_ADDRESS_LIMIT` |
 | PUT | `/v1/members/me/addresses/{id}` | 배송지 수정 |
@@ -34,6 +35,17 @@ gateway 경로는 `/api/member` + 아래 경로다. 모두 사용자 토큰이 �
 | DELETE | `/v1/members/me/addresses/{id}` | 배송지 삭제. 이미 없어도 204 |
 
 다른 회원의 배송지는 404 `MEMBER_ADDRESS_NOT_FOUND`다(삭제는 204이고 아무것도 지우지 않는다).
+
+## 탈퇴 (ACC-4)
+`POST /v1/members/me/withdraw`(204). 이미 탈퇴했어도 204다.
+1. 판매자면 422 `MEMBER_SELLER_CANNOT_WITHDRAW`다(2026-10-18 결정). 판매자 정리(폐점·미정산 처리)는 정산이 생기는 M5에서 정한다.
+2. 진행 중인 주문·클레임이 있으면 422 `MEMBER_ONGOING_ORDERS`다. 확인은 `OngoingOrderPort`가 한다. M1·M2는 항상 "없음"이라고 답하는 구현(`StubOngoingOrderAdapter`)이고, M3에서 order 내부 API로 바꾼다.
+3. 회원을 가명 처리한다. 이름은 `탈퇴회원`, 이메일은 `withdrawn-<id>@withdrawn.invalid`, 연락처는 비우고 배송지는 모두 지운다. 행은 남긴다(거래 기록이 memberId를 가리킨다).
+4. 그 회원의 입점 신청은 모두 대표자·예금주·계좌 번호를 지운다. 심사 중이던 신청은 `CANCELED`로 닫는다.
+5. `MemberWithdrawn`을 낸다. auth가 계정을 비활성화하고 이메일을 가명으로 바꾸고 인가 기록(리프레시 토큰)을 지운다([auth.md](auth.md)). 같은 이메일로 바로 다시 가입할 수 있다(새 계정, 새 ID).
+
+- 탈퇴한 회원은 없는 회원처럼 다룬다. 조회는 404 `MEMBER_NOT_FOUND`이고, 남은 액세스 토큰(최대 10분)으로 프로필·배송지를 바꿀 수 없다.
+- 비밀번호 재확인은 하지 않는다. BFF 세션이 있어야 부를 수 있다. 화면(PR 9)에서 한 번 더 묻는다.
 
 ## 입점과 판매자 (SEL-1~3)
 1. 회원이 사업자 정보(상호, 사업자 등록 번호, 대표자)와 정산 계좌(은행, 예금주, 계좌 번호)로 신청한다. 이메일 인증을 마쳐야 하고, 판매자이거나 심사 중인 신청이 있으면 409다.

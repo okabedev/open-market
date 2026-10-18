@@ -50,13 +50,14 @@
 **완료 기준 E2E**: `docker compose up` 후 gateway 경유로 샘플 API를 호출한다. 샘플 이벤트가 outbox → Kafka → 소비자까지 가고, 같은 이벤트를 다시 넣어도 한 번만 처리된다. Grafana에서 그 요청의 트레이스 하나가 보인다.
 
 ## M1 — 회원·인증·판매자 입점
-- [ ] auth
+- [x] auth
   - [x] 골격, OAuth2 클라이언트 3개, `client_credentials`, 서명 키 저장, 관리자 시드, issuer 확인(R7, ADR 0013)
   - [x] 가입, 이메일 인증, 로그인 화면, 잠금, 로그인 IP 레이트 리밋
-- [ ] member
+  - [x] 판매자 역할 반영(`member.seller`), 탈퇴 계정 비활성화(`member.member`)
+- [x] member
   - [x] 프로필, 배송지, 가입·인증 이벤트 소비, 서비스 토큰 재검증(`common-security`)
   - [x] 입점 신청·심사, 판매자 정지·해제, auth 판매자 역할 반영, 관리자 감사 로그(NFR-8)
-  - [ ] 탈퇴
+  - [x] 탈퇴(가명 처리, auth 계정 비활성화, 진행 중 주문 확인 포트)
 - [x] notification: 이메일 발송 기반, 중복 방지, 가입 인증 메일
 - [x] BFF 로그인·로그아웃·토큰 갱신(R8, ADR 0014), 앱 3개 로그인 화면
 - [x] gateway 공개 경로 등록, 로그인·가입의 엄격한 레이트 리밋(NFR-5). member 샘플 API(`/v1/ping`), 샘플 이벤트(`member.ping` 토픽, `PingSent`, `PingSentListener`)와 그 공개 경로 제거

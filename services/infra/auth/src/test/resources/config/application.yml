@@ -11,8 +11,11 @@ spring:
     schemas: auth
     default-schema: auth
   kafka:
+    consumer:
+      # config-repo 공통 설정과 같다. 없으면 리스너가 파티션을 받기 전에 보낸 레코드를 건너뛴다.
+      auto-offset-reset: earliest
     listener:
-      # 대부분의 테스트는 Kafka 없이 돈다. 리스너 테스트(SellerEventsIntegrationTest)만 켠다.
+      # 대부분의 테스트는 Kafka 없이 돈다. 리스너 테스트(*EventsIntegrationTest)만 켠다.
       auto-startup: false
   jpa:
     open-in-view: false

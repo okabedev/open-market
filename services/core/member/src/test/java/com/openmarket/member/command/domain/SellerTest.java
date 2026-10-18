@@ -136,6 +136,42 @@ class SellerTest {
         }
     }
 
+    @Nested
+    class Withdrawal {
+
+        @Test
+        @DisplayName("신청자가 탈퇴하면 심사 중인 신청은 CANCELED가 되고, 모든 신청의 대표자·계좌 정보를 가명 처리한다")
+        void cancelsAndPseudonymizes() {
+            SellerApplication pending = application();
+            SellerApplication rejected = application();
+            rejected.reject(ADMIN, "서류 미비", NOW);
+
+            pending.withdrawApplicant(LATER);
+            rejected.withdrawApplicant(LATER);
+
+            assertThat(pending.status()).isEqualTo(SellerApplicationStatus.CANCELED);
+            assertThat(rejected.status()).isEqualTo(SellerApplicationStatus.REJECTED);
+            for (SellerApplication application : java.util.List.of(pending, rejected)) {
+                assertThat(application.business().representativeName())
+                        .isEqualTo(Member.WITHDRAWN_NAME);
+                assertThat(application.settlementAccount().accountHolder())
+                        .isEqualTo(Member.WITHDRAWN_NAME);
+                assertThat(application.settlementAccount().accountNumberEncrypted()).isEmpty();
+                assertThat(application.settlementAccount().accountNumberMasked()).isEqualTo("****");
+            }
+        }
+
+        @Test
+        @DisplayName("취소된 신청은 승인할 수 없다")
+        void canceledCannotBeApproved() {
+            SellerApplication application = application();
+            application.withdrawApplicant(LATER);
+
+            assertThatThrownBy(() -> application.approve(ADMIN, LATER))
+                    .isInstanceOf(ApplicationAlreadyReviewedException.class);
+        }
+    }
+
     @Test
     @DisplayName("정산 계좌 번호는 숫자 10~16자리이고 하이픈은 지운다")
     void normalizesAccountNumber() {
