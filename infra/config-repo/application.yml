@@ -38,6 +38,16 @@ spring:
     template:
       # DLT 전송 스팬. 서비스는 Kafka로 직접 발행하지 않으므로 이 템플릿은 DLT 전송에만 쓴다.
       observation-enabled: true
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # 토큰 검증(common-security, gateway). 브라우저·IDE·컨테이너가 같은 issuer로 auth에 닿는다(auth.md "issuer 호스트 이름").
+          # 키는 처음 검증할 때 가져온다. 리소스 서버 의존성이 없는 서비스에서는 무시된다.
+          issuer-uri: http://auth.openmarket.local:9000
+          jwk-set-uri: http://auth.openmarket.local:9000/oauth2/jwks
+          # 사용자 토큰(클라이언트 ID)과 서비스 간 토큰(internal). gateway는 사용자 토큰만 받도록 gateway.yml에서 줄인다.
+          audiences: [shop, seller, admin, internal]
   jpa:
     open-in-view: false
     hibernate:

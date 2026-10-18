@@ -17,9 +17,7 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          # 브라우저·IDE·컨테이너가 같은 issuer로 auth에 닿는다(auth.md "issuer 호스트 이름"). 키는 처음 검증할 때 가져온다.
-          issuer-uri: http://auth.openmarket.local:9000
-          jwk-set-uri: http://auth.openmarket.local:9000/oauth2/jwks
+          # issuer와 JWK 주소는 공통 application.yml에 있다.
           # 사용자 토큰만 받는다. 서비스 간 토큰(aud=internal)은 gateway를 지나지 않는다.
           audiences: [shop, seller, admin]
           authorities-claim-name: roles
