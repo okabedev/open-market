@@ -51,7 +51,7 @@ flowchart LR
 | config | 8888 | — | Spring Cloud Config 서버. 저장소는 `infra/config-repo` (native 백엔드) |
 | auth | 9000 (관리 9001) | auth | Spring Authorization Server. 계정, 자격 증명, 역할, OAuth2 클라이언트, 토큰, 서명 키. issuer는 `http://auth.openmarket.local:9000`([ADR 0013](../adr/0013-auth-issuer-host.md)) |
 | file | 8201 | file | 업로드, 로컬 볼륨 저장, 썸네일, 정적 제공, 미첨부 파일 정리 |
-| notification | 8202 | notification | 이메일(Mailpit SMTP), 인앱 알림, 중복 방지 |
+| notification | 8202 | notification | 이메일(Mailpit SMTP), 인앱 알림, 중복 방지([notification.md](notification.md)) |
 
 ### clients (`clients/apps/<name>`)
 | 앱 | 포트 | 사용자 | OAuth2 클라이언트 ID |
@@ -96,4 +96,4 @@ flowchart LR
 ## 관련 문서
 - [context-map.md](context-map.md): 컨텍스트 관계와 이벤트 목록
 - [conventions.md](conventions.md): 패키지 규약과 명명 규칙
-- [data.md](data.md), [messaging.md](messaging.md), [auth.md](auth.md), [file.md](file.md), [observability.md](observability.md), [risks.md](risks.md)
+- [data.md](data.md), [messaging.md](messaging.md), [auth.md](auth.md), [file.md](file.md), [notification.md](notification.md), [observability.md](observability.md), [risks.md](risks.md)

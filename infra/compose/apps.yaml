@@ -43,3 +43,29 @@ services:
       interval: 5s
       timeout: 3s
       retries: 30
+
+  notification:
+    <<: *spring-service
+    build:
+      context: ../../services
+      args:
+        MODULE: infra/notification
+    image: openmarket/notification:local
+    depends_on:
+      config:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      mailpit:
+        condition: service_healthy
+    environment:
+      <<: *spring-env
+      NOTIFICATION_DB_PASSWORD: ${NOTIFICATION_DB_PASSWORD:?}
+      MAIL_HOST: mailpit
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:8202/actuator/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
