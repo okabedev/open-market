@@ -1,0 +1,55 @@
+# 테스트 설정. config 서버와 Eureka 없이 뜨게 하고, config-repo(application.yml, auth.yml)가 줄 값을 대신한다.
+# classpath:config/ 아래에 두어 main의 application.yml을 가리지 않고 그 위에 덮는다.
+spring:
+  cloud:
+    config:
+      enabled: false
+  datasource:
+    hikari:
+      schema: auth
+  flyway:
+    schemas: auth
+    default-schema: auth
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: auth
+management:
+  otlp:
+    metrics:
+      export:
+        enabled: false
+eureka:
+  client:
+    enabled: false
+openmarket:
+  auth:
+    # 테스트는 무작위 포트로 뜨지만 issuer는 요청 주소와 상관없이 이 값이어야 한다(R7).
+    issuer: http://auth.openmarket.local:9000
+    signing-key-secret: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+    admin-seed:
+      email: admin@openmarket.local
+      password: admin-test-pass-1
+    user-clients:
+      shop:
+        secret: shop-test-secret
+        redirect-uri: http://localhost:3000/auth/callback
+        post-logout-redirect-uri: http://localhost:3000/
+        refresh-token-ttl: 14d
+      seller:
+        secret: seller-test-secret
+        redirect-uri: http://localhost:3001/auth/callback
+        post-logout-redirect-uri: http://localhost:3001/
+        refresh-token-ttl: 14d
+      admin:
+        secret: admin-test-secret
+        redirect-uri: http://localhost:3002/auth/callback
+        post-logout-redirect-uri: http://localhost:3002/
+        refresh-token-ttl: 8h
+        required-role: ADMIN
+    service-clients:
+      notification:
+        secret: notification-test-secret

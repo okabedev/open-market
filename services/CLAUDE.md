@@ -16,7 +16,7 @@ services/
 │  ├─ common-observability OpenTelemetry 스타터, Logback → OpenTelemetry 로그 어펜더 (자동설정). OTel을 쓰는 서비스는 스타터 대신 이 모듈을 쓴다
 │  └─ common-test      Testcontainers 설정, ArchUnit 규칙, OpenAPI 문서 비교(OpenApiSnapshot), 픽스처
 ├─ core/<service>
-└─ infra/<service>     discovery(Eureka), config(Config 서버), gateway(WebFlux, ADR 0011) …
+└─ infra/<service>     discovery(Eureka), config(Config 서버), gateway(WebFlux, ADR 0011), auth(Authorization Server) …
 ```
 
 ## 꼭 지킬 것

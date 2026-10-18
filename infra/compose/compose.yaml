@@ -1,6 +1,6 @@
 # 로컬 인프라. profile 구성은 docs/architecture/overview.md의 "로컬 실행 구성"을 따른다.
 # 이 파일은 기본 profile(profile 없음)이다. search는 search.yaml, obs는 obs.yaml, apps는 apps.yaml에 있다.
-# discovery, config, gateway는 IDE로 띄우는 서비스도 항상 쓰므로 기본 profile에 둔다. 처음 up할 때 services/Dockerfile로 이미지를 빌드한다.
+# discovery, config, gateway, auth는 IDE로 띄우는 서비스도 항상 쓰므로 기본 profile에 둔다. 처음 up할 때 services/Dockerfile로 이미지를 빌드한다.
 # 이미지 태그는 버전을 고정한다. JVM 컨테이너의 메모리 상한(mem_limit)은 R6 실측 값이다(docs/architecture/risks.md).
 services:
   postgres:
@@ -236,11 +236,55 @@ services:
       REDIS_HOST: redis
       OTEL_COLLECTOR_HOST: otel-collector
       LOGGING_STRUCTURED_FORMAT_CONSOLE: ecs # infra/compose/apps.yaml과 같다
+    # JWK를 issuer 주소로 받는다. auth가 컨테이너든 IDE든 호스트 포트 9000에 있다(ADR 0013).
+    extra_hosts:
+      - "auth.openmarket.local:host-gateway"
     ports:
       - "8080:8080"
       # 관리 포트(8081)는 호스트에 열지 않는다. Prometheus는 컨테이너 네트워크로 스크레이프한다.
     healthcheck:
       test: ["CMD", "curl", "-fs", "http://localhost:8081/actuator/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  # 인가 서버. 로그인이 필요한 모든 흐름(BFF, gateway의 JWK 조회)이 쓰므로 기본 profile에 둔다.
+  # issuer(http://auth.openmarket.local:9000)를 브라우저·IDE·컨테이너가 모두 호스트 포트 9000으로 닿는다(ADR 0013, R7).
+  # - 브라우저·IDE: hosts 파일의 127.0.0.1 auth.openmarket.local
+  # - 컨테이너: extra_hosts의 auth.openmarket.local → host-gateway (gateway, apps.yaml의 서비스)
+  # auth 자체를 IDE로 띄울 때는 `docker compose stop auth` 후 bootRun한다. 다른 컨테이너는 고칠 것이 없다(docs/dev-setup.md).
+  auth:
+    build:
+      context: ../../services
+      args:
+        MODULE: infra/auth
+    image: openmarket/auth:local
+    mem_limit: 512m # 힙 비율은 services/Dockerfile(R6)
+    depends_on:
+      config:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    environment:
+      CONFIG_SERVER_URL: http://config:8888
+      EUREKA_URL: http://discovery:8761/eureka/
+      POSTGRES_HOST: postgres
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      OTEL_COLLECTOR_HOST: otel-collector
+      LOGGING_STRUCTURED_FORMAT_CONSOLE: ecs # infra/compose/apps.yaml과 같다
+      AUTH_DB_PASSWORD: ${AUTH_DB_PASSWORD:?}
+      AUTH_SIGNING_KEY_SECRET: ${AUTH_SIGNING_KEY_SECRET:?.env에 AUTH_SIGNING_KEY_SECRET이 필요하다}
+      SHOP_CLIENT_SECRET: ${SHOP_CLIENT_SECRET:?}
+      SELLER_CLIENT_SECRET: ${SELLER_CLIENT_SECRET:?}
+      ADMIN_CLIENT_SECRET: ${ADMIN_CLIENT_SECRET:?}
+      NOTIFICATION_CLIENT_SECRET: ${NOTIFICATION_CLIENT_SECRET:?}
+      ADMIN_SEED_EMAIL: ${ADMIN_SEED_EMAIL:-}
+      ADMIN_SEED_PASSWORD: ${ADMIN_SEED_PASSWORD:-}
+    ports:
+      - "9000:9000"
+      # 관리 포트(9001)는 호스트에 열지 않는다.
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:9001/actuator/health"]
       interval: 5s
       timeout: 3s
       retries: 30
