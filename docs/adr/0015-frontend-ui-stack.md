@@ -16,7 +16,7 @@
 | 상태 관리 | 라이브러리를 쓰지 않는다. 서버 상태는 서버 컴포넌트가 읽고, 화면 조건은 URL 검색 조건(`?status=&page=`)에 둔다 |
 | 폼 | React 19 `useActionState` + Server Action. 검증은 Server Action 안에서 zod로 한다. 결과는 `packages/ui`의 `FormState`(문구, 필드 오류, 다시 채울 값)로 돌려준다. 서비스 오류(ProblemDetail의 `detail`, `errors`)도 같은 모양으로 바꾼다(`problemState`) |
 | 컴포넌트 테스트 | Vitest + Testing Library(jsdom). 기본 환경은 node이고 컴포넌트 테스트 파일만 `// @vitest-environment jsdom`을 적는다. Server Action은 `@/lib/bff`를 가짜로 바꿔 함수로 테스트한다 |
-| Playwright E2E | M1 마지막 작업(E2E 스크립트)에서 정한다 |
+| Playwright E2E | 마일스톤 완료 기준 시나리오(`clients/e2e`)를 로컬 스크립트 `infra/e2e/run.sh`로만 돌린다. CI에서는 돌리지 않는다(PR 검사가 수십 분 늘어난다) |
 
 버전은 ADR 0012와 같은 기준(배포된 지 2주가 지난 안정 버전 중 최신, 2026-10-04 이전)으로 `clients/pnpm-workspace.yaml`의 `catalog`에 적는다. Radix 1.5·2.1.17 등 그 뒤에 나온 버전은 쓰지 않는다.
 

@@ -9,6 +9,7 @@ clients/
 │  ├─ shop     구매자 (3000)
 │  ├─ seller   판매자 (3001)
 │  └─ admin    관리자 (3002)
+├─ e2e/        마일스톤 E2E 시나리오(Playwright, tests/m<n>-*.spec.ts). infra/e2e/run.sh가 띄운 스택에서 돈다
 └─ packages/
    ├─ ui          공유 컴포넌트(shadcn/ui 방식, Radix)와 테마(`theme.css`), 폼 결과(`FormState`). TypeScript 원본을 내보내고 앱이 `transpilePackages`로 컴파일한다
    ├─ api-client  서비스 OpenAPI 문서(openapi/<서비스>.json, 백엔드 테스트가 쓴다)에서 생성한 타입(src/generated)과 서버 전용 클라이언트 `createServiceClient`
@@ -44,6 +45,7 @@ clients/
 - lint: ESLint 9(flat config, `eslint-config-next`의 Core Web Vitals·TypeScript 규칙 + `eslint-config-prettier`). 포매터: Prettier(마크다운은 제외)
 - 단위 테스트: Vitest. 테스트 파일은 대상 옆에 `*.test.ts(x)`로 둔다. Redis가 필요한 테스트(`packages/bff`)는 Testcontainers로 띄우므로 Docker가 있어야 한다
 - 컴포넌트 테스트: Testing Library. 앱은 기본 환경이 node라서 파일 맨 위에 `// @vitest-environment jsdom`을 적고 `@testing-library/jest-dom/vitest`를 불러온다(`packages/ui`는 jsdom이 기본). Server Action은 `vi.mock("@/lib/bff")`로 서비스 호출을 바꿔 함수로 테스트한다
+- E2E: Playwright(`e2e`). 마일스톤 완료 기준 시나리오를 `tests/m<n>-*.spec.ts`로 둔다. 로컬에서 `infra/e2e/run.sh m<n>`으로만 돌리고 CI에서는 돌리지 않는다(2026-10-18 결정). `pnpm test`에 들어가지 않는다. 화면으로 볼 수 없는 확인(API 403/200)은 `support/oauth.ts`로 토큰을 받아 HTTP로 한다
 - 의존성 설치 스크립트는 `pnpm-workspace.yaml`의 `allowBuilds`에 적은 것만 돈다. 새 의존성 때문에 설치가 `ERR_PNPM_IGNORED_BUILDS`로 실패하면 스크립트가 필요한지 보고 `true`나 `false`로 적는다
 
 ## 명령
@@ -57,7 +59,6 @@ clients/
 | `pnpm build` | 앱 프로덕션 빌드 |
 | `pnpm format` / `pnpm format:check` | Prettier로 고치기 / 검사 |
 | `pnpm --filter @openmarket/api-client generate` / `generate:check` | OpenAPI 문서에서 타입 다시 만들기 / 최신인지 검사 |
+| `../infra/e2e/run.sh m1` | 마일스톤 E2E(레포 루트에서 `infra/e2e/run.sh m1`). [dev-setup.md](../docs/dev-setup.md) "E2E" |
 | `pnpm --filter @openmarket/<앱> dev` | 앱 하나를 개발 모드로 띄운다(shop 3000, seller 3001, admin 3002) |
 
-## 미정 (M1에서 확정)
-- Playwright E2E(M1 E2E 스크립트 작업에서 정한다)

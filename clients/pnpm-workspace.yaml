@@ -3,6 +3,7 @@
 packages:
   - apps/*
   - packages/*
+  - e2e
 
 catalog:
   next: 16.3.8
@@ -43,6 +44,8 @@ catalog:
   "@testing-library/user-event": 14.6.7
   "@testing-library/jest-dom": 7.0.1
   jsdom: 30.1.1
+  # 마일스톤 E2E(clients/e2e, infra/e2e/run.sh)
+  "@playwright/test": 1.63.0
 
 # 의존성의 설치 스크립트는 여기서 허용한 것만 실행한다. 없는 패키지가 스크립트를 가지면 설치가 실패한다.
 allowBuilds:

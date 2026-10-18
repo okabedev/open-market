@@ -98,7 +98,7 @@ com.openmarket.<service>
 | 메시징 | outbox 기록, 리스너 멱등성, 이벤트 JSON 예시 호환 | Testcontainers Kafka 또는 리스너 직접 호출 |
 | 웹 | 컨트롤러, 권한, 오류 응답 | MockMvc |
 | 아키텍처 | 위 의존 방향과 이름 규칙 | ArchUnit (`common-test`) |
-| E2E | 마일스톤 완료 시나리오 | Compose 전체 스택 + Playwright(화면)·HTTP 스크립트 |
+| E2E | 마일스톤 완료 시나리오 | Compose 전체 스택 + Playwright(`clients/e2e`, 화면과 HTTP). `infra/e2e/run.sh m<n>`으로 로컬에서만 돌린다 |
 
 - 기능은 테스트 먼저 작성한다(add-usecase skill).
 - 테스트 이름은 한국어 `@DisplayName`으로 쓴다. 메서드 이름은 영어로 쓴다(Error Prone `UnicodeInCode`가 코드의 한글 식별자를 막는다).
