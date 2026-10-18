@@ -54,7 +54,7 @@
   - [x] 골격, OAuth2 클라이언트 3개, `client_credentials`, 서명 키 저장, 관리자 시드, issuer 확인(R7, ADR 0013)
   - [x] 가입, 이메일 인증, 로그인 화면, 잠금, 로그인 IP 레이트 리밋
 - [ ] member: 프로필, 배송지, 입점 신청·심사, 판매자 정지, 탈퇴
-- [ ] notification: 이메일 발송 기반, 중복 방지
+- [x] notification: 이메일 발송 기반, 중복 방지, 가입 인증 메일
 - [x] BFF 로그인·로그아웃·토큰 갱신(R8, ADR 0014), 앱 3개 로그인 화면
 - [ ] gateway 공개 경로 등록, 로그인·가입의 엄격한 레이트 리밋(NFR-5). member 샘플 API(`/v1/ping`), 샘플 이벤트(`member.ping` 토픽, `PingSent`, `PingSentListener`)와 그 공개 경로 제거
 - 관련 요구사항: ACC-1, ACC-3, ACC-4, SEL-1~3, NTF-1(가입), NTF-2, NFR-5~8

@@ -1,0 +1,35 @@
+# 테스트 설정. config 서버와 Eureka 없이 뜨게 하고, config-repo(application.yml, notification.yml)가 줄 값을 대신한다.
+# classpath:config/ 아래에 두어 main의 application.yml을 가리지 않고 그 위에 덮는다.
+spring:
+  cloud:
+    config:
+      enabled: false
+  datasource:
+    hikari:
+      schema: notification
+  flyway:
+    schemas: notification
+    default-schema: notification
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: notification
+  # 아래 Kafka 값은 infra/config-repo/application.yml과 같게 둔다. 브로커 주소는 KafkaContainerConfiguration이 넣는다.
+  kafka:
+    consumer:
+      auto-offset-reset: earliest
+management:
+  otlp:
+    metrics:
+      export:
+        enabled: false
+eureka:
+  client:
+    enabled: false
+openmarket:
+  notification:
+    mail-from: "오픈 마켓 <no-reply@openmarket.local>"
+    dispatch-interval: 200ms

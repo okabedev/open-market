@@ -11,5 +11,7 @@ public final class TestImages {
 
     public static final DockerImageName KAFKA = DockerImageName.parse("apache/kafka:4.2.2");
 
+    public static final DockerImageName MAILPIT = DockerImageName.parse("axllent/mailpit:v1.31.6");
+
     private TestImages() {}
 }
