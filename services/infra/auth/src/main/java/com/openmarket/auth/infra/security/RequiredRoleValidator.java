@@ -2,6 +2,7 @@ package com.openmarket.auth.infra.security;
 
 import java.util.function.Consumer;
 import org.jspecify.annotations.Nullable;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.core.OAuth2ErrorCodes;
@@ -13,7 +14,8 @@ import org.springframework.security.oauth2.server.authorization.authentication.O
  * 클라이언트 설정 {@value #SETTING}에 적힌 역할이 없는 계정의 인가 요청을 {@code access_denied}로 돌려보낸다. admin 클라이언트가
  * ADMIN을 요구한다(docs/architecture/auth.md "토큰").
  *
- * <p>인가 엔드포인트는 로그인 전에도 이 검사를 부른다. 그때는 통과시키고, 로그인 뒤 다시 들어올 때 검사한다.
+ * <p>인가 엔드포인트는 로그인 전에도 이 검사를 부른다. 그때는 통과시켜 로그인 화면으로 가게 하고, 로그인 뒤 다시 들어올 때 검사한다. 익명 사용자({@link
+ * AnonymousAuthenticationToken})도 {@code isAuthenticated()}가 true이므로 따로 거른다.
  */
 public class RequiredRoleValidator
         implements Consumer<OAuth2AuthorizationCodeRequestAuthenticationContext> {
@@ -27,6 +29,7 @@ public class RequiredRoleValidator
         OAuth2AuthorizationCodeRequestAuthenticationToken request = context.getAuthentication();
         if (requiredRole == null
                 || !(request.getPrincipal() instanceof Authentication principal)
+                || principal instanceof AnonymousAuthenticationToken
                 || !principal.isAuthenticated()) {
             return;
         }

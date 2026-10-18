@@ -12,6 +12,7 @@ clients/
 └─ packages/
    ├─ ui          공유 컴포넌트. TypeScript 원본을 내보내고 앱이 `transpilePackages`로 컴파일한다
    ├─ api-client  서비스 OpenAPI 문서(openapi/<서비스>.json, 백엔드 테스트가 쓴다)에서 생성한 타입(src/generated)과 서버 전용 클라이언트 `createServiceClient`
+   ├─ bff         BFF 세션과 OAuth2 로그인(openid-client + Redis, ADR 0014). 앱은 `@openmarket/bff/next`의 `createNextBff`를 쓴다
    └─ config      TypeScript(tsconfig), ESLint, Prettier 공통 설정
 ```
 - 앱마다 `app/api/health`(Route Handler)가 `{"status":"UP","app":"<앱>"}`을 돌려준다.
@@ -20,17 +21,19 @@ clients/
 ## 꼭 지킬 것
 - Next.js App Router를 쓴다. 기본은 서버 컴포넌트이고, 상호작용이 필요한 곳만 클라이언트 컴포넌트로 만든다.
 - **브라우저 코드는 gateway를 직접 부르지 않는다.** 데이터 읽기는 서버 컴포넌트에서, 변경은 Server Action이나 Route Handler에서 한다.
-- 토큰은 서버 세션(Redis)에만 둔다. 브라우저에는 HttpOnly 세션 쿠키 `om_sid`만 간다. 토큰을 props나 클라이언트 상태로 넘기지 않는다.
+- 토큰은 서버 세션(Redis)에만 둔다. 브라우저에는 HttpOnly 세션 쿠키 `om_sid_<앱>`만 간다. 토큰을 props나 클라이언트 상태로 넘기지 않는다.
+- 세션은 앱의 `lib/bff.ts`(`createNextBff("<앱>")`)로 쓴다. 로그인 사용자는 `bff.getSession()`(역할만, 토큰 없음), 사용자 API는 `await bff.serviceClient("<서비스>")`. 로그인·콜백·로그아웃은 `app/auth/{login,callback,logout}/route.ts`가 `bff.handlers`를 내보낸다. 로그아웃은 같은 Origin의 폼 POST(`/auth/logout`)로 한다.
+- 비밀 값(`<APP>_CLIENT_SECRET`)과 `REDIS_URL` 등은 레포 루트 `.env`에서 읽는다. 앱 디렉터리에 `.env`를 따로 두지 않는다.
 - `packages/api-client`는 서버 전용이다(`server-only`). 클라이언트 컴포넌트에서 import하지 않는다.
 - API 타입은 손으로 쓰지 않고 OpenAPI에서 생성한다. `openapi/*.json`과 `src/generated`는 고치지 않는다. 백엔드 API가 바뀌면 백엔드 테스트로 문서를 고친 뒤 `generate`로 다시 만든다([conventions.md](../docs/architecture/conventions.md) "REST API").
-- 서비스 호출은 `createServiceClient("<서비스>")`를 쓴다. gateway 주소는 서버 환경 변수 `GATEWAY_URL`(기본 `http://localhost:8080`)이다.
+- 서비스 호출은 로그인 사용자면 `bff.serviceClient("<서비스>")`, 공개 경로만 부르면 `createServiceClient("<서비스>")`를 쓴다. gateway 주소는 서버 환경 변수 `GATEWAY_URL`(기본 `http://localhost:8080`)이다.
 - 상태 변경 요청 중 중복되면 안 되는 것(주문, 결제 승인, 쿠폰 발급, 클레임)은 BFF가 `Idempotency-Key`를 붙인다.
 - 파일 업로드는 BFF Route Handler를 거쳐 file 서비스로 보낸다.
 - 화면 문구는 한국어다.
 
 ## 도구
 - lint: ESLint 9(flat config, `eslint-config-next`의 Core Web Vitals·TypeScript 규칙 + `eslint-config-prettier`). 포매터: Prettier(마크다운은 제외)
-- 단위 테스트: Vitest. 테스트 파일은 대상 옆에 `*.test.ts(x)`로 둔다
+- 단위 테스트: Vitest. 테스트 파일은 대상 옆에 `*.test.ts(x)`로 둔다. Redis가 필요한 테스트(`packages/bff`)는 Testcontainers로 띄우므로 Docker가 있어야 한다
 - 의존성 설치 스크립트는 `pnpm-workspace.yaml`의 `allowBuilds`에 적은 것만 돈다. 새 의존성 때문에 설치가 `ERR_PNPM_IGNORED_BUILDS`로 실패하면 스크립트가 필요한지 보고 `true`나 `false`로 적는다
 
 ## 명령
@@ -48,5 +51,4 @@ clients/
 
 ## 미정 (M1에서 확정)
 - 스타일링 방식, 컴포넌트 라이브러리, 상태 관리, 폼 라이브러리
-- BFF 세션·OAuth2 클라이언트 구현 라이브러리
 - 컴포넌트 테스트, Playwright E2E

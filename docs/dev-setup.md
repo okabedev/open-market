@@ -100,4 +100,15 @@ docker compose --profile search --profile obs --profile apps down
 - gateway 경유 호출: `curl localhost:8080/api/member/v1/ping`. 샘플 이벤트 발행은 `curl -X POST localhost:8080/api/member/v1/ping`이고, member 로그에 `샘플 이벤트를 처리했다`가 남는다(M1에서 지운다). 새로 띄운 서비스는 Eureka 등록과 gateway의 인스턴스 캐시 갱신 때문에 몇 초 뒤부터 라우팅된다. 그 전에는 503이다.
 - gateway 자체를 IDE로 실행할 때는 컨테이너를 먼저 멈춘다(`docker compose stop gateway`). 호스트에서는 컨테이너 IP에 닿지 못하므로, 이때 뒤의 서비스도 IDE로 띄워야 한다.
 - auth를 IDE로 실행할 때는 컨테이너를 먼저 멈춘다(`docker compose stop auth`). IDE auth도 호스트 포트 9000에서 들으므로 다른 컨테이너는 그대로 둔다.
-- 로그인 없이 쓸 수 있는 것은 공개 경로뿐이다. 토큰이 필요한 API는 auth(M1) 이후 BFF를 거쳐 호출한다.
+- 로그인 없이 쓸 수 있는 것은 공개 경로뿐이다. 토큰이 필요한 API는 앱(BFF)으로 로그인해서 부른다(7절).
+
+## 7. 앱 실행과 로그인
+인프라(기본 profile, auth 포함)와 hosts 항목(3절)이 있어야 한다. `clients/`에서 실행한다.
+
+```bash
+pnpm --filter @openmarket/shop dev     # http://localhost:3000 (seller 3001, admin 3002)
+```
+
+- 앱 서버는 레포 루트 `.env`에서 클라이언트 시크릿(`SHOP_CLIENT_SECRET` 등)과 `REDIS_URL`(기본 `redis://localhost:6379`)을 읽는다.
+- 화면의 "로그인"을 누르면 auth 로그인 화면(`auth.openmarket.local:9000/login`)으로 갔다가 돌아온다. 관리자 시드 계정(`.env`의 `ADMIN_SEED_*`)으로 세 앱 모두 로그인할 수 있다. admin 앱은 `ADMIN` 역할이 없으면 "이 앱을 쓸 권한이 없습니다."를 보여 준다.
+- 세션은 Redis 키 `bff:<앱>:session:*`에 있다. 브라우저에는 `om_sid_<앱>` 쿠키만 있다([ADR 0014](adr/0014-bff-session.md)).

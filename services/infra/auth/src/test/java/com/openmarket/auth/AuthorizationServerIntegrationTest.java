@@ -26,6 +26,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -180,6 +181,30 @@ class AuthorizationServerIntegrationTest {
         Jwt access = decode(JsonPath.read(tokens, "$.access_token"));
         assertThat(access.getClaimAsStringList("roles")).containsExactly("BUYER");
         assertThat(access.getAudience()).containsExactly("shop");
+    }
+
+    @Test
+    @DisplayName("로그인하지 않은 브라우저가 admin 클라이언트로 인가 요청하면 거절하지 않고 로그인 화면으로 보낸다")
+    void adminClientSendsAnonymousUserToLogin() throws Exception {
+        String redirect =
+                mockMvc.perform(
+                                get("/oauth2/authorize")
+                                        .accept(MediaType.TEXT_HTML)
+                                        .queryParam("response_type", "code")
+                                        .queryParam("client_id", "admin")
+                                        .queryParam("scope", "openid profile api")
+                                        .queryParam(
+                                                "redirect_uri",
+                                                "http://localhost:3002/auth/callback")
+                                        .queryParam("state", "state-1")
+                                        .queryParam("code_challenge", challenge(VERIFIER))
+                                        .queryParam("code_challenge_method", "S256"))
+                        .andExpect(status().is3xxRedirection())
+                        .andReturn()
+                        .getResponse()
+                        .getRedirectedUrl();
+
+        assertThat(redirect).endsWith("/login");
     }
 
     @Test

@@ -24,7 +24,7 @@ sequenceDiagram
   N->>A: POST /oauth2/token (code, verifier, client secret)
   A-->>N: access token, refresh token, id token
   N-->>N: Redis 세션에 토큰 저장
-  N-->>U: Set-Cookie om_sid (HttpOnly, SameSite=Lax)
+  N-->>U: Set-Cookie om_sid_<앱> (HttpOnly, SameSite=Lax)
   U->>N: 페이지 요청·Server Action
   N->>G: Authorization: Bearer access token
 ```
@@ -32,7 +32,7 @@ sequenceDiagram
 - 액세스 토큰이 만료되면 BFF가 리프레시 토큰으로 갱신한다. 리프레시 토큰은 쓸 때마다 새로 발급한다(rotation).
 - 로그아웃하면 BFF 세션을 지우고, 리프레시 토큰을 폐기(revoke)한 뒤, auth의 OIDC 로그아웃 엔드포인트로 보낸다.
 - 가입은 shop의 화면에서 받는다. BFF가 auth 가입 API(`POST /api/auth/v1/accounts`, 공개, 레이트 리밋 적용)를 부른다. 로그인 화면만 auth가 그린다.
-- BFF 구현 방식(라이브러리 선택)은 M1에서 정한다.
+- BFF 구현은 `clients/packages/bff`(openid-client + Redis)다. 라우트, 쿠키, 갱신 락은 [ADR 0014](../adr/0014-bff-session.md)에 있다.
 
 ## 토큰
 | 항목 | 값 |

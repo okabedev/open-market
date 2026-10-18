@@ -1,0 +1,35 @@
+{
+  "name": "@openmarket/bff",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./next": "./src/next.ts"
+  },
+  "scripts": {
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@openmarket/api-client": "workspace:*",
+    "openid-client": "catalog:",
+    "redis": "catalog:",
+    "server-only": "catalog:"
+  },
+  "peerDependencies": {
+    "next": "catalog:"
+  },
+  "devDependencies": {
+    "@openmarket/config": "workspace:*",
+    "@testcontainers/redis": "catalog:",
+    "@types/node": "catalog:",
+    "eslint": "catalog:",
+    "next": "catalog:",
+    "testcontainers": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:"
+  }
+}
