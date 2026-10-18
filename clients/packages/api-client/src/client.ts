@@ -17,6 +17,11 @@ export type ClientOptions = {
   gatewayUrl?: string;
   /** 사용자 액세스 토큰. BFF 세션에서 받는다(`@openmarket/bff`). 없으면 공개 경로만 부를 수 있다 */
   accessToken?: string;
+  /**
+   * 브라우저 주소. `X-Forwarded-For`로 붙인다. gateway가 익명 요청(가입 등)의 레이트 리밋을 이 값으로 센다(ADR 0011).
+   * 없으면 모든 요청이 BFF 주소 하나로 세어진다
+   */
+  forwardedFor?: string;
   /** 테스트에서 요청을 가로챌 때 쓴다 */
   fetch?: (request: Request) => Promise<Response>;
 };
@@ -34,9 +39,16 @@ export function createServiceClient<S extends ServiceName>(
   options: ClientOptions = {},
 ): ServiceClient<S> {
   const gatewayUrl = options.gatewayUrl ?? process.env.GATEWAY_URL ?? DEFAULT_GATEWAY_URL;
+  const headers: Record<string, string> = {};
+  if (options.accessToken) {
+    headers.Authorization = `Bearer ${options.accessToken}`;
+  }
+  if (options.forwardedFor) {
+    headers["X-Forwarded-For"] = options.forwardedFor;
+  }
   return createClient<ServicePaths[S]>({
     baseUrl: `${gatewayUrl.replace(/\/+$/, "")}/api/${service}`,
-    ...(options.accessToken ? { headers: { Authorization: `Bearer ${options.accessToken}` } } : {}),
+    headers,
     ...(options.fetch ? { fetch: options.fetch } : {}),
   });
 }

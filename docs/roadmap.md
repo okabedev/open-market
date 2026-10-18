@@ -60,6 +60,7 @@
   - [x] 탈퇴(가명 처리, auth 계정 비활성화, 진행 중 주문 확인 포트)
 - [x] notification: 이메일 발송 기반, 중복 방지, 가입 인증 메일
 - [x] BFF 로그인·로그아웃·토큰 갱신(R8, ADR 0014), 앱 3개 로그인 화면
+- [x] 화면(ADR 0015): shop 가입·이메일 인증·내 정보·배송지·입점 신청·탈퇴, admin 입점 심사·판매자 정지, seller 첫 화면과 판매자가 아닐 때 안내
 - [x] gateway 공개 경로 등록, 로그인·가입의 엄격한 레이트 리밋(NFR-5). member 샘플 API(`/v1/ping`), 샘플 이벤트(`member.ping` 토픽, `PingSent`, `PingSentListener`)와 그 공개 경로 제거
 - 관련 요구사항: ACC-1, ACC-3, ACC-4, SEL-1~3, NTF-1(가입), NTF-2, NFR-5~8
 - 범위 결정(2026-10-18): ACC-2(소셜 로그인)는 제외한다. ACC-4의 진행 중 주문 검사는 M3에서 order에 연결한다.

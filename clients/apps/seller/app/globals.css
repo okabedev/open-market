@@ -1,0 +1,3 @@
+/* Tailwind CSS와 공유 테마(packages/ui/src/theme.css, ADR 0015). 앱 전용 스타일은 되도록 두지 않는다. */
+@import "tailwindcss";
+@import "@openmarket/ui/theme.css";

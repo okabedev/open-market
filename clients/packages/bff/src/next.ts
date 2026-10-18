@@ -3,11 +3,12 @@ import "server-only";
 
 import path from "node:path";
 import { createServiceClient, type ServiceClient, type ServiceName } from "@openmarket/api-client";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { createClient, type RedisClientType } from "redis";
 import { createBff, type Bff } from "./bff";
 import { loadConfig, type AppName } from "./config";
 import { sessionCookieName } from "./cookies";
+import { clientAddress } from "./forwarded";
 import { createOidcClient } from "./oidc";
 import type { SessionView } from "./session";
 import { RedisSessionStore } from "./store";
@@ -78,7 +79,15 @@ export type NextBff = {
   getAccessToken(): Promise<string | null>;
   /** 사용자 토큰을 붙인 서비스 클라이언트. 로그인하지 않았으면 토큰 없이 만든다(공개 경로만 부를 수 있다) */
   serviceClient<S extends ServiceName>(service: S): Promise<ServiceClient<S>>;
+  /** 토큰 없는 서비스 클라이언트. 가입처럼 로그인 전에 부르는 공개 경로용 */
+  publicClient<S extends ServiceName>(service: S): Promise<ServiceClient<S>>;
 };
+
+/** 두 클라이언트 모두 브라우저 주소를 `X-Forwarded-For`로 넘긴다. gateway가 IP별 레이트 리밋을 그 값으로 센다. */
+async function forwardedFor(): Promise<{ forwardedFor?: string }> {
+  const address = clientAddress((await headers()).get("x-forwarded-for"));
+  return address ? { forwardedFor: address } : {};
+}
 
 /** 앱 하나의 BFF. 앱의 `lib/bff.ts`에서 한 번 만든다. */
 export function createNextBff(app: AppName): NextBff {
@@ -94,7 +103,13 @@ export function createNextBff(app: AppName): NextBff {
     getAccessToken,
     async serviceClient(service) {
       const accessToken = await getAccessToken();
-      return createServiceClient(service, accessToken ? { accessToken } : {});
+      return createServiceClient(service, {
+        ...(await forwardedFor()),
+        ...(accessToken ? { accessToken } : {}),
+      });
+    },
+    async publicClient(service) {
+      return createServiceClient(service, await forwardedFor());
     },
   };
 }

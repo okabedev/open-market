@@ -38,7 +38,7 @@ ESLint 9
 ## 결과
 - 좋아지는 점: 버전이 한 파일에 모여 앱 사이에 어긋나지 않는다. Next.js 공식 lint 규칙을 그대로 쓴다.
 - 감수하는 점: 지원이 끝난 ESLint 9를 쓴다. TypeScript 7의 빠른 타입 검사를 아직 쓰지 못한다.
-- 후속 작업: ESLint 10, TypeScript 7은 typescript-eslint와 eslint-config-next가 지원하면 올린다. 컴포넌트 테스트(Testing Library)와 Playwright E2E는 화면이 생기는 M1에서 정한다.
+- 후속 작업: ESLint 10, TypeScript 7은 typescript-eslint와 eslint-config-next가 지원하면 올린다. 컴포넌트 테스트(Testing Library)와 Playwright E2E는 화면이 생기는 M1에서 정한다. 스타일링·컴포넌트·상태 관리·폼·컴포넌트 테스트는 [ADR 0015](0015-frontend-ui-stack.md), BFF 세션은 [ADR 0014](0014-bff-session.md)로 정했다.
 
 ## 검토한 대안
 - Biome(lint와 포맷을 하나로): 빠르지만 Next.js 전용 규칙(Core Web Vitals)을 대신하지 못한다. 사용자 결정으로 ESLint + Prettier를 쓴다.

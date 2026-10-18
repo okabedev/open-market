@@ -45,12 +45,13 @@ import org.springframework.security.oauth2.server.authorization.token.OAuth2Toke
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.context.SecurityContextHolderFilter;
 import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
 
 /**
  * Spring Authorization Server 구성(docs/architecture/auth.md). 클라이언트, 인가, 동의는 auth 스키마에 JDBC로 저장한다.
  *
- * <p>필터 체인은 셋이다.
+ * <p>필터 체인은 셋이다. 로그인 세션을 쓰는 두 체인(1, 3)은 비활성화된 계정의 세션을 끝낸다({@link DeactivatedAccountSessionFilter}).
  *
  * <ol>
  *   <li>OAuth2·OIDC 엔드포인트
@@ -63,8 +64,12 @@ public class AuthorizationServerConfiguration {
 
     @Bean
     @Order(1)
-    SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http) {
-        http.oauth2AuthorizationServer(
+    SecurityFilterChain authorizationServerSecurityFilterChain(
+            HttpSecurity http, AccountRepository accounts) {
+        http.addFilterAfter(
+                        new DeactivatedAccountSessionFilter(accounts),
+                        SecurityContextHolderFilter.class)
+                .oauth2AuthorizationServer(
                         server -> {
                             http.securityMatcher(server.getEndpointsMatcher());
                             server.authorizationEndpoint(
@@ -115,8 +120,13 @@ public class AuthorizationServerConfiguration {
     @Bean
     @Order(3)
     SecurityFilterChain defaultSecurityFilterChain(
-            HttpSecurity http, LoginRateLimitFilter loginRateLimitFilter) {
-        http.authorizeHttpRequests(
+            HttpSecurity http,
+            LoginRateLimitFilter loginRateLimitFilter,
+            AccountRepository accounts) {
+        http.addFilterAfter(
+                        new DeactivatedAccountSessionFilter(accounts),
+                        SecurityContextHolderFilter.class)
+                .authorizeHttpRequests(
                         authorize ->
                                 authorize
                                         // actuator는 관리 포트(9001)에만 있고 호스트에 열지 않는다.

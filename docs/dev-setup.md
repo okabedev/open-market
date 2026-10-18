@@ -112,4 +112,5 @@ pnpm --filter @openmarket/shop dev     # http://localhost:3000 (seller 3001, adm
 - 앱 서버는 레포 루트 `.env`에서 클라이언트 시크릿(`SHOP_CLIENT_SECRET` 등)과 `REDIS_URL`(기본 `redis://localhost:6379`)을 읽는다.
 - 화면의 "로그인"을 누르면 auth 로그인 화면(`auth.openmarket.local:9000/login`)으로 갔다가 돌아온다. 관리자 시드 계정(`.env`의 `ADMIN_SEED_*`)으로 세 앱 모두 로그인할 수 있다. admin 앱은 `ADMIN` 역할이 없으면 "이 앱을 쓸 권한이 없습니다."를 보여 준다.
 - 가입 인증 메일은 notification이 보낸다. `./gradlew :infra:notification:bootRun`(또는 `apps` profile)을 띄우면 Mailpit(http://localhost:8025)에 도착한다. notification을 처음 띄우면 그 전에 쌓인 인증 메일도 한꺼번에 나간다.
+- 화면: shop은 가입(`/signup`), 내 정보(`/my`), 배송지(`/my/addresses`), 입점 신청(`/my/seller`), 탈퇴(`/my/withdraw`). admin은 입점 심사(`/seller-applications`)와 판매자(`/sellers`). seller는 첫 화면에서 판매자 정보를 보여 주고, 판매자 역할이 없으면 안내와 "권한 다시 확인"(다시 로그인해서 새 역할을 받는다)을 보여 준다. 다른 앱 주소는 `SHOP_APP_URL`, `SELLER_APP_URL`(기본 localhost:3000, 3001)이다.
 - 세션은 Redis 키 `bff:<앱>:session:*`에 있다. 브라우저에는 `om_sid_<앱>` 쿠키만 있다([ADR 0014](adr/0014-bff-session.md)).
