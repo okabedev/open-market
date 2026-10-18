@@ -49,7 +49,7 @@ flowchart LR
 | gateway | 8080 (관리 8081) | — | 라우팅, JWT 검증, 경로별 역할 검사, 레이트 리밋(Redis), 내부 헤더 제거, 요청 ID. WebFlux 구현([ADR 0011](../adr/0011-gateway-webflux.md)). CORS는 열지 않는다 |
 | discovery | 8761 | — | Eureka 서버 |
 | config | 8888 | — | Spring Cloud Config 서버. 저장소는 `infra/config-repo` (native 백엔드) |
-| auth | 9000 | auth | Spring Authorization Server. 계정, 자격 증명, 역할, OAuth2 클라이언트, 토큰 |
+| auth | 9000 (관리 9001) | auth | Spring Authorization Server. 계정, 자격 증명, 역할, OAuth2 클라이언트, 토큰, 서명 키. issuer는 `http://auth.openmarket.local:9000`([ADR 0013](../adr/0013-auth-issuer-host.md)) |
 | file | 8201 | file | 업로드, 로컬 볼륨 저장, 썸네일, 정적 제공, 미첨부 파일 정리 |
 | notification | 8202 | notification | 이메일(Mailpit SMTP), 인앱 알림, 중복 방지 |
 
@@ -82,14 +82,14 @@ flowchart LR
 - 버전 조합과 근거는 [ADR 0009](../adr/0009-version-matrix.md)에 있다. 실제 값의 원본은 빌드 파일이다. 다른 문서에는 버전 숫자를 적지 않는다.
 
 ## 로컬 실행 구성 (Docker Compose)
-`infra/compose`에 profile별로 나눈다. 개발할 때는 인프라만 Compose로 띄우고, 작업 중인 서비스는 IDE나 `bootRun`으로 실행한다. discovery와 config는 어느 서비스든 먼저 필요하므로 기본 profile에 둔다. gateway도 기본 profile에 둔다. 컨테이너 안의 gateway는 IDE로 띄운 서비스(WSL IP)와 컨테이너 서비스 양쪽에 닿지만, 호스트에서는 컨테이너 IP에 닿지 못하기 때문이다. Spring 서비스 이미지는 `services/Dockerfile` 하나로 만든다. 전체 E2E는 `apps` profile로 모두 띄운다.
+`infra/compose`에 profile별로 나눈다. 개발할 때는 인프라만 Compose로 띄우고, 작업 중인 서비스는 IDE나 `bootRun`으로 실행한다. discovery와 config는 어느 서비스든 먼저 필요하므로 기본 profile에 둔다. gateway와 auth도 기본 profile에 둔다. auth는 로그인과 토큰 검증에 늘 필요하다. 컨테이너 안의 gateway는 IDE로 띄운 서비스(WSL IP)와 컨테이너 서비스 양쪽에 닿지만, 호스트에서는 컨테이너 IP에 닿지 못하기 때문이다. Spring 서비스 이미지는 `services/Dockerfile` 하나로 만든다. 전체 E2E는 `apps` profile로 모두 띄운다.
 
 | profile | 구성 요소 |
 |---|---|
-| (기본) | PostgreSQL(`wal_level=logical`), Kafka(KRaft 단일 노드, 토픽은 일회성 `kafka-init`이 만든다), Debezium Connect(기동 때 outbox 커넥터 등록), Redis, Mailpit, Kafka UI, discovery, config, gateway |
+| (기본) | PostgreSQL(`wal_level=logical`), Kafka(KRaft 단일 노드, 토픽은 일회성 `kafka-init`이 만든다), Debezium Connect(기동 때 outbox 커넥터 등록), Redis, Mailpit, Kafka UI, discovery, config, gateway, auth |
 | `search` | Elasticsearch(+ nori 플러그인, M2) |
 | `obs` | OpenTelemetry Collector, Prometheus, Tempo, Loki, Grafana |
-| `apps` | discovery, config, gateway를 뺀 Spring 서비스(빌드 이미지) |
+| `apps` | discovery, config, gateway, auth를 뺀 Spring 서비스(빌드 이미지) |
 
 메모리 예산(WSL 할당 기준)과 profile 조합의 실측은 [risks.md](risks.md)에서 관리한다.
 

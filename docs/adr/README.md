@@ -16,6 +16,7 @@
 | [0010](0010-code-style-tools.md) | 코드 스타일과 정적 분석 도구 | 승인 |
 | [0011](0011-gateway-webflux.md) | Gateway는 Spring Cloud Gateway WebFlux | 승인 |
 | [0012](0012-frontend-toolchain.md) | 프론트 도구와 버전 | 승인 |
+| [0013](0013-auth-issuer-host.md) | auth issuer 고정 이름과 컨테이너의 host-gateway 접근 | 승인 |
 
 
 ## 템플릿

@@ -61,8 +61,20 @@ sequenceDiagram
 - 세션 쿠키는 운영 기준과 같게 `HttpOnly`를 켠다. `Secure`는 로컬 HTTP에서 끄고 설정으로 바꿀 수 있게 한다.
 
 ## issuer 호스트 이름
-토큰의 `iss`는 브라우저와 컨테이너 양쪽에서 같은 주소로 보여야 한다.
-- issuer를 `http://auth.openmarket.local:9000`으로 고정한다.
-- 호스트 PC의 hosts 파일에서 `auth.openmarket.local`을 `127.0.0.1`로 보낸다([dev-setup.md](../dev-setup.md)).
-- Compose 네트워크에서는 auth 컨테이너에 같은 이름의 네트워크 별칭을 준다.
-- 이 방식이 IDE 실행, Compose 실행, Testcontainers에서 모두 동작하는지는 M0에서 확인한다([risks.md](risks.md)).
+토큰의 `iss`는 브라우저, IDE, 컨테이너 모두에서 같은 주소로 보여야 한다. 근거와 실측은 [ADR 0013](../adr/0013-auth-issuer-host.md)에 있다.
+- issuer를 `http://auth.openmarket.local:9000`으로 고정한다. auth는 요청 주소와 상관없이 이 값을 쓴다.
+- auth는 컨테이너든 IDE든 호스트 포트 9000에 있다.
+- 브라우저와 IDE는 hosts 파일로 `auth.openmarket.local`을 `127.0.0.1`로 보낸다([dev-setup.md](../dev-setup.md) 3절).
+- 컨테이너는 `extra_hosts: auth.openmarket.local:host-gateway`로 호스트에 닿는다(gateway, `apps.yaml`).
+
+## auth 구현
+코드는 `services/infra/auth`에 있다. 설정은 config-repo `auth.yml`(`openmarket.auth`)이다.
+- 클라이언트: `user-clients`(shop, seller, admin)와 `service-clients`(서비스 이름)를 기동할 때마다 DB(`oauth2_registered_client`)에 맞춘다. 행 ID는 클라이언트 ID이고, 시크릿은 바뀌었을 때만 다시 해시한다. 설정에서 빼도 행은 지우지 않는다.
+  - 사용자 클라이언트: Authorization Code + PKCE 필수, 동의 화면 없음, 리프레시 토큰 rotation. `required-role`이 있으면 그 역할이 없는 계정의 인가 요청을 `access_denied`로 돌려보낸다(admin은 `ADMIN`).
+  - 서비스 클라이언트: `client_credentials`만, scope `internal`. 다른 서비스를 동기 호출하는 서비스만 등록한다.
+- 인가·동의: `oauth2_authorization`, `oauth2_authorization_consent`(JDBC). 로그인 세션은 auth 인스턴스의 HTTP 세션이다.
+- 서명 키: `signing_key` 표. 처음 기동할 때 RSA 2048 키를 만들고, 개인 키는 `AUTH_SIGNING_KEY_SECRET`(.env)으로 AES-256-GCM 암호화해 저장한다. 서명은 가장 최근의 ACTIVE 키로 하고, 헤더에 `kid`를 넣는다. JWK 세트에는 RETIRED가 아닌 키를 모두 싣는다. 회전 작업은 아직 없다.
+- `roles`는 토큰을 만들 때마다 DB에서 읽는다. 그래서 갱신하면 바뀐 역할이 반영된다.
+- 관리자 계정은 `ADMIN_SEED_EMAIL`, `ADMIN_SEED_PASSWORD`(.env)로 기동할 때 한 번 만든다. 이미 있으면 바꾸지 않는다.
+- 로그인 화면은 지금 Spring Security 기본 폼이다. 한국어 화면과 잠금은 가입 기능과 함께 만든다.
+- actuator는 관리 포트 9001에만 있다.

@@ -28,17 +28,22 @@ processors=6
 - Spring 서비스 컨테이너는 `mem_limit` 512MB, 힙은 그 50%다(`services/Dockerfile`).
 
 ## 3. hosts
-auth의 issuer 주소를 브라우저와 컨테이너가 같게 보도록 이름을 등록한다([auth.md](architecture/auth.md)).
-브라우저가 Windows에서 돌면 **Windows hosts 파일**(`C:\Windows\System32\drivers\etc\hosts`)에 추가한다. WSL 안에서 서비스를 IDE로 실행하면 WSL의 `/etc/hosts`에도 추가한다.
+auth의 issuer 주소(`http://auth.openmarket.local:9000`)를 브라우저와 IDE가 쓰도록 이름을 등록한다. 컨테이너는 Compose의 `extra_hosts`가 처리하므로 할 것이 없다([ADR 0013](adr/0013-auth-issuer-host.md)).
 
 ```
 127.0.0.1 auth.openmarket.local
 ```
 
+- 브라우저(Windows): **Windows hosts 파일**(`C:\Windows\System32\drivers\etc\hosts`, 관리자 권한)에 추가한다.
+- IDE·`bootRun`(WSL): WSL은 기본으로 Windows hosts에서 `/etc/hosts`를 만든다(`/etc/wsl.conf`의 `generateHosts`). Windows hosts에 추가한 뒤 PowerShell에서 `wsl --shutdown`으로 WSL을 다시 띄우면 반영된다. 바로 쓰려면 `echo "127.0.0.1 auth.openmarket.local" | sudo tee -a /etc/hosts`(다음 WSL 재시작 때 다시 만들어진다).
+- 확인: `getent hosts auth.openmarket.local`, `curl -s http://auth.openmarket.local:9000/.well-known/openid-configuration`.
+- IDE로 띄운 gateway는 Reactor Netty DNS 리졸버를 쓴다. 이 리졸버는 `/etc/hosts`만 읽으므로, 항목이 없으면 토큰 검증이 `Could not obtain the keys`(500)로 실패한다.
+
 ## 4. 환경 변수
 ```bash
 cp .env.example .env
 ```
+- auth 값(`AUTH_SIGNING_KEY_SECRET`, `*_CLIENT_SECRET`, `ADMIN_SEED_*`)은 예시 값 그대로 써도 된다. `AUTH_SIGNING_KEY_SECRET`을 바꾸면 저장된 서명 키를 읽지 못해 auth가 뜨지 않는다. 이때는 볼륨을 지우거나 `auth.signing_key` 행을 지운다.
 - 토스페이먼츠 테스트 키는 [토스페이먼츠 개발자센터](https://developers.tosspayments.com)에서 발급받아 `TOSS_CLIENT_KEY`, `TOSS_SECRET_KEY`에 넣는다. `test_`로 시작하는 키만 쓴다.
 - `.env`는 커밋하지 않는다.
 
@@ -68,6 +73,7 @@ docker compose --profile search --profile obs --profile apps down
 | discovery (Eureka) | http://localhost:8761 | 등록된 인스턴스 화면. 레지스트리 API는 `/eureka/apps` |
 | config | http://localhost:8888 | 서비스가 받을 설정 확인: `curl localhost:8888/member/default` |
 | gateway | http://localhost:8080 | 외부 진입점. 예: `curl localhost:8080/api/member/v1/ping`(member 실행 필요). 관리 포트 8081은 호스트에 열지 않는다 |
+| auth | http://auth.openmarket.local:9000 | 인가 서버. 로그인 화면 `/login`, discovery `/.well-known/openid-configuration`. hosts 항목이 필요하다(3절). 관리자 시드 계정은 `.env`의 `ADMIN_SEED_*`. 관리 포트 9001은 호스트에 열지 않는다 |
 | Spring 서비스 (`apps`) | 호스트에 열지 않음 | gateway(8080)로 부른다. 목록은 `infra/compose/apps.yaml` |
 | Elasticsearch (`search`) | http://localhost:9200 | 인증 없음. nori 플러그인은 M2 |
 | OTel Collector (`obs`) | OTLP gRPC `localhost:4317`, HTTP `localhost:4318` | 서비스가 트레이스와 로그를 보낸다. `obs`를 띄우지 않으면 서비스 로그에 `Failed to export` ERROR가 가끔 남는다(OTel이 빈도를 제한한다). 무시해도 된다 |
@@ -78,7 +84,7 @@ docker compose --profile search --profile obs --profile apps down
 - connect가 unhealthy면 outbox 커넥터 태스크가 RUNNING이 아니다. 원인은 커넥터 상태(`curl localhost:8083/connectors/outbox/status`)의 `trace`와 `docker compose logs connect`로 본다. 대처는 [messaging.md](architecture/messaging.md)의 "장애 때 동작"에 있다.
 - 멈춤: `docker compose down`. 데이터는 볼륨에 남는다.
 - 초기화: `docker compose down -v`. Postgres 초기화 스크립트(`infra/postgres/init`)는 빈 볼륨에서만 실행되므로, 스크립트나 `.env` 비밀번호를 바꾸면 볼륨을 지우고 다시 띄운다.
-- 처음 `up`은 discovery, config, gateway 이미지를 빌드하므로 몇 분 걸린다. 이후에는 캐시를 쓴다. 이 서비스들의 코드를 바꾸면 `docker compose up -d --wait --build <서비스>`로 다시 빌드한다. `apps` 서비스도 같다(예: `docker compose --profile apps up -d --wait --build member`).
+- 처음 `up`은 discovery, config, gateway, auth 이미지를 빌드하므로 몇 분 걸린다. 이후에는 캐시를 쓴다. 이 서비스들의 코드를 바꾸면 `docker compose up -d --wait --build <서비스>`로 다시 빌드한다. `apps` 서비스도 같다(예: `docker compose --profile apps up -d --wait --build member`).
 
 ## 6. 서비스 실행
 인프라(기본 profile)를 띄운 뒤 `services/`에서 실행한다.
@@ -93,4 +99,5 @@ docker compose --profile search --profile obs --profile apps down
 - 서비스는 WSL IP로 Eureka에 등록된다. 그래서 컨테이너(Prometheus, gateway)가 그 주소로 접속할 수 있다.
 - gateway 경유 호출: `curl localhost:8080/api/member/v1/ping`. 샘플 이벤트 발행은 `curl -X POST localhost:8080/api/member/v1/ping`이고, member 로그에 `샘플 이벤트를 처리했다`가 남는다(M1에서 지운다). 새로 띄운 서비스는 Eureka 등록과 gateway의 인스턴스 캐시 갱신 때문에 몇 초 뒤부터 라우팅된다. 그 전에는 503이다.
 - gateway 자체를 IDE로 실행할 때는 컨테이너를 먼저 멈춘다(`docker compose stop gateway`). 호스트에서는 컨테이너 IP에 닿지 못하므로, 이때 뒤의 서비스도 IDE로 띄워야 한다.
+- auth를 IDE로 실행할 때는 컨테이너를 먼저 멈춘다(`docker compose stop auth`). IDE auth도 호스트 포트 9000에서 들으므로 다른 컨테이너는 그대로 둔다.
 - 로그인 없이 쓸 수 있는 것은 공개 경로뿐이다. 토큰이 필요한 API는 auth(M1) 이후 BFF를 거쳐 호출한다.
