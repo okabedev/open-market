@@ -1,0 +1,43 @@
+# auth 실행 설정. 공통 설정은 application.yml에 있다. 정책은 docs/architecture/auth.md.
+server:
+  port: 9000
+management:
+  server:
+    # 브라우저가 9000에 직접 오므로 actuator는 별도 포트에 둔다. 호스트에 열지 않는다. Prometheus는 Eureka 메타데이터로 찾는다.
+    port: 9001
+spring:
+  datasource:
+    password: ${AUTH_DB_PASSWORD}
+
+openmarket:
+  auth:
+    # 브라우저·IDE·컨테이너가 같은 주소로 닿는다(hosts + 네트워크 별칭). 요청 주소와 상관없이 토큰 iss는 이 값이다(R7).
+    issuer: http://auth.openmarket.local:9000
+    signing-key-secret: ${AUTH_SIGNING_KEY_SECRET}
+    access-token-ttl: 10m
+    # 운영자가 만드는 관리자 계정(PRD 2절). 이메일이 비어 있으면 만들지 않고, 이미 있으면 바꾸지 않는다.
+    admin-seed:
+      email: ${ADMIN_SEED_EMAIL:}
+      password: ${ADMIN_SEED_PASSWORD:}
+    # BFF(Next.js 서버)용 기밀 클라이언트. Authorization Code + PKCE, 리프레시 토큰 rotation.
+    user-clients:
+      shop:
+        secret: ${SHOP_CLIENT_SECRET}
+        redirect-uri: http://localhost:3000/auth/callback
+        post-logout-redirect-uri: http://localhost:3000/
+        refresh-token-ttl: 14d
+      seller:
+        secret: ${SELLER_CLIENT_SECRET}
+        redirect-uri: http://localhost:3001/auth/callback
+        post-logout-redirect-uri: http://localhost:3001/
+        refresh-token-ttl: 14d
+      admin:
+        secret: ${ADMIN_CLIENT_SECRET}
+        redirect-uri: http://localhost:3002/auth/callback
+        post-logout-redirect-uri: http://localhost:3002/
+        refresh-token-ttl: 8h
+        required-role: ADMIN
+    # 서비스 간 호출용 client_credentials 클라이언트(aud=internal, scope=internal). 다른 서비스를 동기 호출하는 서비스만 더한다(add-service skill).
+    service-clients:
+      notification:
+        secret: ${NOTIFICATION_CLIENT_SECRET}

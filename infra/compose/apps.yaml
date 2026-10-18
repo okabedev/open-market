@@ -1,4 +1,4 @@
-# apps profile: discovery, config, gateway를 뺀 Spring 서비스. `docker compose --profile apps up -d --wait`로 띄운다.
+# apps profile: discovery, config, gateway, auth를 뺀 Spring 서비스. `docker compose --profile apps up -d --wait`로 띄운다.
 # 전체 E2E용이다. 개발할 때는 작업 중인 서비스를 IDE로 띄우고, 같은 서비스 컨테이너는 멈춘다(docs/dev-setup.md).
 # 이미지는 services/Dockerfile 하나로 만든다. 서비스를 추가하면 여기에 더한다(add-service skill).
 # 메모리 상한과 힙 비율은 R6 실측 값이다(docs/architecture/risks.md).
@@ -7,6 +7,9 @@
 x-spring-service: &spring-service
   profiles: [apps]
   mem_limit: 512m
+  # 서비스는 issuer 주소(auth.openmarket.local:9000)로 JWK를 받고 client_credentials 토큰을 요청한다. auth는 컨테이너든 IDE든 호스트 포트 9000에 있다(ADR 0013).
+  extra_hosts:
+    - "auth.openmarket.local:host-gateway"
   environment: &spring-env
     CONFIG_SERVER_URL: http://config:8888
     EUREKA_URL: http://discovery:8761/eureka/

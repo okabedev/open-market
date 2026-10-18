@@ -60,6 +60,6 @@ infra/       compose/, config-repo/, postgres/, debezium/, kafka/, elasticsearch
 
 ## 명령
 - 백엔드: `services/`에서 `./gradlew build` (포맷 고치기 `./gradlew spotlessApply`). 자세한 것은 [services/CLAUDE.md](services/CLAUDE.md).
-- 로컬 인프라: 레포 루트에서 `cp .env.example .env`(처음 한 번), `docker compose up -d --wait`(discovery·config·gateway 포함). 검색·관측성은 `--profile search --profile obs`, 서비스 전체 컨테이너(E2E)는 `--profile apps`를 더한다. 포트와 초기화는 [dev-setup.md](docs/dev-setup.md).
+- 로컬 인프라: 레포 루트에서 `cp .env.example .env`(처음 한 번), `docker compose up -d --wait`(discovery·config·gateway·auth 포함). 검색·관측성은 `--profile search --profile obs`, 서비스 전체 컨테이너(E2E)는 `--profile apps`를 더한다. 포트와 초기화는 [dev-setup.md](docs/dev-setup.md).
 - 서비스 실행: `services/`에서 `./gradlew :core:<service>:bootRun`. 루트 `.env`를 환경 변수로 읽는다.
 - 프론트: `clients/`에서 `pnpm install`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`(pnpm 버전은 corepack이 맞춘다). 앱 하나만 띄우려면 `pnpm --filter @openmarket/shop dev`. 자세한 것은 [clients/CLAUDE.md](clients/CLAUDE.md).

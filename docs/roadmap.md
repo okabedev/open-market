@@ -50,7 +50,9 @@
 **완료 기준 E2E**: `docker compose up` 후 gateway 경유로 샘플 API를 호출한다. 샘플 이벤트가 outbox → Kafka → 소비자까지 가고, 같은 이벤트를 다시 넣어도 한 번만 처리된다. Grafana에서 그 요청의 트레이스 하나가 보인다.
 
 ## M1 — 회원·인증·판매자 입점
-- [ ] auth: 가입, 이메일 인증, 로그인 화면, 잠금, OAuth2 클라이언트 3개, `client_credentials`, 키 저장(R7)
+- [ ] auth
+  - [x] 골격, OAuth2 클라이언트 3개, `client_credentials`, 서명 키 저장, 관리자 시드, issuer 확인(R7, ADR 0013)
+  - [ ] 가입, 이메일 인증, 로그인 화면, 잠금
 - [ ] member: 프로필, 배송지, 입점 신청·심사, 판매자 정지, 탈퇴
 - [ ] notification: 이메일 발송 기반, 중복 방지
 - [ ] BFF 로그인·로그아웃·토큰 갱신(R8), 앱 3개 로그인 화면
