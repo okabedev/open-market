@@ -1,8 +1,10 @@
 # search profile: Elasticsearch. `docker compose --profile search up -d --wait`로 띄운다.
-# 지금은 공식 이미지다. nori 플러그인을 넣은 커스텀 이미지는 M2(R10)에서 infra/elasticsearch로 바꾼다.
+# 공식 이미지에 nori 플러그인을 더한 커스텀 이미지다(infra/elasticsearch, R10).
 services:
   elasticsearch:
-    image: elasticsearch:9.4.6
+    build:
+      context: ../elasticsearch
+    image: openmarket/elasticsearch:9.4.6
     profiles: [search]
     environment:
       cluster.name: openmarket
