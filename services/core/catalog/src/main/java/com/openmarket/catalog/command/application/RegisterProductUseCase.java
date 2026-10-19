@@ -3,6 +3,7 @@ package com.openmarket.catalog.command.application;
 import com.openmarket.catalog.command.domain.CategoryRepository;
 import com.openmarket.catalog.command.domain.InvalidProductException;
 import com.openmarket.catalog.command.domain.Product;
+import com.openmarket.catalog.command.domain.ProductAvailabilityCalculator;
 import com.openmarket.catalog.command.domain.ProductRepository;
 import com.openmarket.catalog.command.domain.ProductSnapshot;
 import com.openmarket.catalog.command.domain.ProductSnapshotFactory;
@@ -24,8 +25,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 상품을 {@code DRAFT}로 등록하고 SKU별 재고를 초기 수량으로 만든다(CAT-1). {@code ProductRegistered}를 낸다(file이 이미지 첨부를
- * 확정한다).
+ * 상품을 {@code DRAFT}로 등록하고 SKU별 재고를 초기 수량으로, 판매 가능 여부를 리비전 1로 만든다(CAT-1). {@code ProductRegistered}를
+ * 낸다(file이 이미지 첨부를 확정한다).
  */
 @Service
 public class RegisterProductUseCase {
@@ -36,6 +37,7 @@ public class RegisterProductUseCase {
     private final StockRepository stocks;
     private final CategoryRepository categories;
     private final SellerRepository sellers;
+    private final ProductAvailabilityCalculator availability;
     private final ProductSnapshotFactory snapshots;
     private final Outbox outbox;
     private final Clock clock;
@@ -45,6 +47,7 @@ public class RegisterProductUseCase {
             StockRepository stocks,
             CategoryRepository categories,
             SellerRepository sellers,
+            ProductAvailabilityCalculator availability,
             ProductSnapshotFactory snapshots,
             Outbox outbox,
             Clock clock) {
@@ -52,6 +55,7 @@ public class RegisterProductUseCase {
         this.stocks = stocks;
         this.categories = categories;
         this.sellers = sellers;
+        this.availability = availability;
         this.snapshots = snapshots;
         this.outbox = outbox;
         this.clock = clock;
@@ -92,6 +96,7 @@ public class RegisterProductUseCase {
                             command.skus().get(i).initialStock(),
                             now));
         }
+        availability.create(product.id(), now);
         publish(outbox, ProductSnapshot.REGISTERED, snapshots.next(product));
         return product.id();
     }

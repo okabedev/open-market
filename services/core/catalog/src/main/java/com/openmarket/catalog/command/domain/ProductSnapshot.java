@@ -14,6 +14,8 @@ import org.jspecify.annotations.Nullable;
  * @param categoryPath 대분류부터 상품 카테고리까지의 ID
  * @param minPrice SKU 가격 중 가장 낮은 값(원)
  * @param inStock 판매 가능한 SKU가 하나라도 있는가
+ * @param availabilityRevision {@code inStock}의 판매 가능 리비전. {@code StockAvailabilityChanged}와 비교해 큰
+ *     쪽을 쓴다
  * @param publishedAt 판매를 시작한 시각. 시작한 적이 없으면 null
  */
 public record ProductSnapshot(
@@ -31,6 +33,7 @@ public record ProductSnapshot(
         List<SkuSnapshot> skus,
         long minPrice,
         boolean inStock,
+        long availabilityRevision,
         @Nullable Instant publishedAt) {
 
     public static final String REGISTERED = "ProductRegistered";
@@ -40,7 +43,7 @@ public record ProductSnapshot(
     /**
      * SKU 하나.
      *
-     * @param inStock 판매 가능 수량이 있는가. 수량 자체는 내보내지 않는다
+     * @param inStock 스냅샷을 만든 시점에 판매 가능 수량이 있었는가. 수량 자체는 내보내지 않는다
      */
     public record SkuSnapshot(UUID skuId, List<String> optionValues, long price, boolean inStock) {}
 }

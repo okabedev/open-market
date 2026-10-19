@@ -8,10 +8,7 @@ import jakarta.persistence.Version;
 import java.time.Instant;
 import java.util.UUID;
 
-/**
- * 재고(docs/glossary.md "재고"). SKU마다 하나다. 판매 가능 수량은 {@code onHand - reserved}다. 조정과 이력은 재고 조정 기능에서,
- * 예약은 M3에서 더한다.
- */
+/** 재고(docs/glossary.md "재고"). SKU마다 하나다. 판매 가능 수량은 {@code onHand - reserved}다. 예약은 M3에서 더한다. */
 @Entity
 @Table(name = "stock")
 public class Stock {
@@ -53,6 +50,24 @@ public class Stock {
             throw new InvalidProductException("재고는 0부터 999,999까지입니다.");
         }
         return new Stock(skuId, productId, onHand, now);
+    }
+
+    /**
+     * 판매자가 실재고를 늘리거나 줄인다(CAT-3). 이력은 {@link StockAdjustment}로 따로 남긴다.
+     *
+     * @param delta 0이 아닌 -999,999~999,999. 어기면 400
+     * @throws StockOutOfRangeException 조정 뒤 실재고가 예약 수량보다 작거나 999,999보다 크다
+     */
+    public void adjust(int delta, Instant now) {
+        if (delta == 0 || Math.abs(delta) > MAX_ON_HAND) {
+            throw new InvalidProductException("증감 수량은 0이 아닌 -999,999~999,999입니다.");
+        }
+        long after = (long) onHand + delta;
+        if (after < reserved || after > MAX_ON_HAND) {
+            throw new StockOutOfRangeException();
+        }
+        this.onHand = (int) after;
+        this.updatedAt = now;
     }
 
     public int available() {

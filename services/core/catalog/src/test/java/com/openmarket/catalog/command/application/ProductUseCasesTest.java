@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.openmarket.catalog.command.domain.Product;
+import com.openmarket.catalog.command.domain.ProductAvailabilityCalculator;
 import com.openmarket.catalog.command.domain.ProductSnapshot;
 import com.openmarket.catalog.command.domain.ProductSnapshotFactory;
 import com.openmarket.catalog.command.domain.ProductStatus;
@@ -31,14 +32,18 @@ class ProductUseCasesTest {
     final CatalogFakes.Sellers sellers = new CatalogFakes.Sellers();
     final CatalogFakes.RecordingOutbox outbox = new CatalogFakes.RecordingOutbox();
     final Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
+    final CatalogFakes.Availabilities availabilities = new CatalogFakes.Availabilities();
     final ProductSnapshotFactory snapshots =
-            new ProductSnapshotFactory(categories, sellers, stocks);
+            new ProductSnapshotFactory(categories, sellers, stocks, availabilities);
+    final ProductAvailabilityCalculator availability =
+            new ProductAvailabilityCalculator(stocks, availabilities);
 
     final RegisterProductUseCase register =
             new RegisterProductUseCase(
-                    products, stocks, categories, sellers, snapshots, outbox, clock);
+                    products, stocks, categories, sellers, availability, snapshots, outbox, clock);
     final UpdateProductUseCase update =
-            new UpdateProductUseCase(products, stocks, categories, snapshots, outbox, clock);
+            new UpdateProductUseCase(
+                    products, stocks, categories, availability, snapshots, outbox, clock);
     final PublishProductUseCase publish =
             new PublishProductUseCase(products, sellers, snapshots, outbox, clock);
 
@@ -72,6 +77,7 @@ class ProductUseCasesTest {
                 .extracting(ProductSnapshot.SkuSnapshot::inStock)
                 .containsExactly(true, false);
         assertThat(snapshot.inStock()).isTrue();
+        assertThat(snapshot.availabilityRevision()).isEqualTo(1);
         assertThat(snapshot.publishedAt()).isNull();
     }
 
