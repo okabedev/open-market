@@ -49,7 +49,7 @@ Spring Authorization Server는 Spring Security 7.x에 포함되어 Boot BOM이 �
 | redis | 8.10.2-alpine | |
 | axllent/mailpit | v1.31.6 | |
 | kafbat/kafka-ui | v1.5.0 | provectuslabs/kafka-ui는 유지보수가 멈춰 후속 포크를 쓴다 |
-| elasticsearch | 9.4.6 | `search` profile. Boot BOM의 Elasticsearch 클라이언트(9.4.x)와 같은 라인. nori 커스텀 이미지(M2)도 이 태그를 기반으로 한다 |
+| elasticsearch | 9.4.6 | `search` profile. Boot BOM의 Elasticsearch 클라이언트(9.4.x)와 같은 라인. nori 커스텀 이미지(`infra/elasticsearch/Dockerfile`, [ADR 0016](0016-elasticsearch-nori.md))의 기반 태그다 |
 | otel/opentelemetry-collector-contrib | 0.161.0 | `obs` profile |
 | prom/prometheus | v3.13.4 | `obs` profile |
 | grafana/tempo | 3.1.0 | `obs` profile. 3.x 단일 바이너리 모드는 Kafka 없이 동작한다 |
