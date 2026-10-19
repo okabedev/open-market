@@ -134,6 +134,46 @@
         }
       }
     },
+    "/v1/seller/products/{productId}/stop" : {
+      "post" : {
+        "tags" : [ "seller-product-command-controller" ],
+        "operationId" : "stop",
+        "parameters" : [ {
+          "name" : "productId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        }
+      }
+    },
+    "/v1/seller/products/{productId}/resume" : {
+      "post" : {
+        "tags" : [ "seller-product-command-controller" ],
+        "operationId" : "resume",
+        "parameters" : [ {
+          "name" : "productId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        }
+      }
+    },
     "/v1/seller/products/{productId}/publish" : {
       "post" : {
         "tags" : [ "seller-product-command-controller" ],
@@ -147,6 +187,36 @@
             "format" : "uuid"
           }
         } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        }
+      }
+    },
+    "/v1/admin/products/{productId}/ban" : {
+      "post" : {
+        "tags" : [ "admin-product-command-controller" ],
+        "operationId" : "ban",
+        "parameters" : [ {
+          "name" : "productId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/BanProductRequest"
+              }
+            }
+          },
+          "required" : true
+        },
         "responses" : {
           "204" : {
             "description" : "No Content"
@@ -195,6 +265,62 @@
                   "items" : {
                     "$ref" : "#/components/schemas/CategoryView"
                   }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/products" : {
+      "get" : {
+        "tags" : [ "admin-product-query-controller" ],
+        "operationId" : "list_1",
+        "parameters" : [ {
+          "name" : "status",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "enum" : [ "DRAFT", "ON_SALE", "STOPPED", "BANNED" ]
+          }
+        }, {
+          "name" : "sellerId",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "page",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 0,
+            "minimum" : 0
+          }
+        }, {
+          "name" : "size",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 20,
+            "maximum" : 100,
+            "minimum" : 1
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PageViewAdminProductSummaryView"
                 }
               }
             }
@@ -302,6 +428,15 @@
           }
         }
       },
+      "BanProductRequest" : {
+        "type" : "object",
+        "properties" : {
+          "reason" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "reason" ]
+      },
       "PageViewSellerProductSummaryView" : {
         "type" : "object",
         "properties" : {
@@ -383,6 +518,13 @@
           "status" : {
             "type" : "string",
             "enum" : [ "DRAFT", "ON_SALE", "STOPPED", "BANNED" ]
+          },
+          "stopReason" : {
+            "type" : "string",
+            "enum" : [ "SELLER", "SELLER_SUSPENDED" ]
+          },
+          "banReason" : {
+            "type" : "string"
           },
           "name" : {
             "type" : "string"
@@ -506,6 +648,67 @@
             "items" : {
               "$ref" : "#/components/schemas/CategoryView"
             }
+          }
+        }
+      },
+      "AdminProductSummaryView" : {
+        "type" : "object",
+        "properties" : {
+          "productId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string",
+            "enum" : [ "DRAFT", "ON_SALE", "STOPPED", "BANNED" ]
+          },
+          "sellerId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "storeName" : {
+            "type" : "string"
+          },
+          "thumbnailFileId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "minPrice" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "banReason" : {
+            "type" : "string"
+          },
+          "updatedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "PageViewAdminProductSummaryView" : {
+        "type" : "object",
+        "properties" : {
+          "items" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/AdminProductSummaryView"
+            }
+          },
+          "totalCount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "page" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "size" : {
+            "type" : "integer",
+            "format" : "int32"
           }
         }
       }

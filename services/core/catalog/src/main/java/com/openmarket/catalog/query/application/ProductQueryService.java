@@ -1,6 +1,7 @@
 package com.openmarket.catalog.query.application;
 
 import com.openmarket.catalog.query.dao.ProductQueryDao;
+import com.openmarket.catalog.query.dto.AdminProductSummaryView;
 import com.openmarket.catalog.query.dto.PageView;
 import com.openmarket.catalog.query.dto.ProductDetailView;
 import com.openmarket.catalog.query.dto.ProductStatus;
@@ -36,6 +37,12 @@ public class ProductQueryService {
     public PageView<SellerProductSummaryView> sellerProducts(
             UUID sellerId, @Nullable ProductStatus status, int page, int size) {
         return dao.findSellerProducts(sellerId, status, page, size);
+    }
+
+    @Transactional(readOnly = true)
+    public PageView<AdminProductSummaryView> adminProducts(
+            @Nullable ProductStatus status, @Nullable UUID sellerId, int page, int size) {
+        return dao.findAdminProducts(status, sellerId, page, size);
     }
 
     private static NotFoundException notFound() {

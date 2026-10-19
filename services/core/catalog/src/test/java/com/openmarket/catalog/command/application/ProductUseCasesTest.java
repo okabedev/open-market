@@ -40,7 +40,7 @@ class ProductUseCasesTest {
     final UpdateProductUseCase update =
             new UpdateProductUseCase(products, stocks, categories, snapshots, outbox, clock);
     final PublishProductUseCase publish =
-            new PublishProductUseCase(products, snapshots, outbox, clock);
+            new PublishProductUseCase(products, sellers, snapshots, outbox, clock);
 
     @BeforeEach
     void givenSeller() {

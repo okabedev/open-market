@@ -46,6 +46,37 @@ public class Seller {
         return new Seller(id, storeName, now);
     }
 
+    /**
+     * 판매자 정지(SEL-3)를 반영한다.
+     *
+     * @return 상태가 바뀌었으면 true
+     */
+    public boolean suspend(Instant now) {
+        return changeStatus(SellerStatus.SUSPENDED, now);
+    }
+
+    /**
+     * 정지 해제를 반영한다.
+     *
+     * @return 상태가 바뀌었으면 true
+     */
+    public boolean reinstate(Instant now) {
+        return changeStatus(SellerStatus.ACTIVE, now);
+    }
+
+    public boolean isActive() {
+        return status == SellerStatus.ACTIVE;
+    }
+
+    private boolean changeStatus(SellerStatus next, Instant now) {
+        if (status == next) {
+            return false;
+        }
+        status = next;
+        updatedAt = now;
+        return true;
+    }
+
     public UUID id() {
         return id;
     }

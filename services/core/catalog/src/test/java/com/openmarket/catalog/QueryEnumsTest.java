@@ -10,11 +10,13 @@ import org.junit.jupiter.api.Test;
 class QueryEnumsTest {
 
     @Test
-    @DisplayName("상품 상태의 조회용 상수는 도메인과 같다")
+    @DisplayName("상품 상태와 판매 중지 사유의 조회용 상수는 도메인과 같다")
     void sameConstants() {
         assertThat(names(com.openmarket.catalog.query.dto.ProductStatus.values()))
                 .containsExactly(
                         names(com.openmarket.catalog.command.domain.ProductStatus.values()));
+        assertThat(names(com.openmarket.catalog.query.dto.StopReason.values()))
+                .containsExactly(names(com.openmarket.catalog.command.domain.StopReason.values()));
     }
 
     private static String[] names(Enum<?>[] values) {

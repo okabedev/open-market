@@ -51,7 +51,7 @@ gateway 경로는 `/api/member` + 아래 경로다. 모두 사용자 토큰이 �
 1. 회원이 사업자 정보(상호, 사업자 등록 번호, 대표자)와 정산 계좌(은행, 예금주, 계좌 번호)로 신청한다. 이메일 인증을 마쳐야 하고, 판매자이거나 심사 중인 신청이 있으면 409다.
 2. 관리자가 승인하면 판매자(`Seller`, ID = memberId)가 생기고 `SellerApproved`가 나간다. auth가 `SELLER` 역할을 붙이고, 다음 토큰 갱신부터 판매자 앱에 들어갈 수 있다.
 3. 반려에는 사유가 꼭 있어야 하고 `SellerRejected`가 나간다. 반려된 회원은 새로 신청할 수 있다.
-4. 관리자가 정지하면(사유 필수) `SellerSuspended`가 나가고 auth가 `SELLER`를 뗀다. 상품 판매 중지는 catalog가 받는다(M2 판매 상태 기능, [catalog.md](catalog.md)). 해제하면 `SellerReinstated`가 나가고 역할이 돌아온다.
+4. 관리자가 정지하면(사유 필수) `SellerSuspended`가 나가고 auth가 `SELLER`를 뗀다. 상품 판매 중지는 catalog가 받는다([catalog.md](catalog.md) "판매 상태"). 해제하면 `SellerReinstated`가 나가고 역할이 돌아온다.
 
 - 심사·정지·해제는 같은 결과로 다시 하면 아무것도 바꾸지 않고 204다(이벤트·감사 로그도 다시 남지 않는다). 이미 다른 결과로 심사한 신청은 409 `MEMBER_APPLICATION_ALREADY_REVIEWED`다.
 - 동시성: 신청은 회원 행, 심사는 신청 행, 정지·해제는 판매자 행을 잠그고 한다. 회원당 심사 중인 신청 하나는 부분 유니크 인덱스로도 막는다.

@@ -6,6 +6,8 @@ import com.openmarket.catalog.command.domain.Product;
 import com.openmarket.catalog.command.domain.ProductRepository;
 import com.openmarket.catalog.command.domain.ProductSnapshot;
 import com.openmarket.catalog.command.domain.ProductSnapshotFactory;
+import com.openmarket.catalog.command.domain.ProductStateException;
+import com.openmarket.catalog.command.domain.Seller;
 import com.openmarket.catalog.command.domain.SellerNotReadyException;
 import com.openmarket.catalog.command.domain.SellerRepository;
 import com.openmarket.catalog.command.domain.Sku;
@@ -57,9 +59,7 @@ public class RegisterProductUseCase {
 
     @Transactional
     public UUID execute(RegisterProductCommand command) {
-        if (sellers.findById(command.sellerId()).isEmpty()) {
-            throw new SellerNotReadyException();
-        }
+        requireActiveSeller(sellers, command.sellerId());
         checkLeafCategory(categories, command.categoryId());
         Instant now = clock.instant();
         // ID를 정해 만든 엔티티라 save가 merge로 저장하고 관리되는 사본을 돌려준다. 이후 변경(revision)은 그 사본에 한다.
@@ -94,6 +94,14 @@ public class RegisterProductUseCase {
         }
         publish(outbox, ProductSnapshot.REGISTERED, snapshots.next(product));
         return product.id();
+    }
+
+    /** 판매자 사본이 있고 정지 중이 아닌지 본다. */
+    static void requireActiveSeller(SellerRepository sellers, UUID sellerId) {
+        Seller seller = sellers.findById(sellerId).orElseThrow(SellerNotReadyException::new);
+        if (!seller.isActive()) {
+            throw ProductStateException.sellerSuspended();
+        }
     }
 
     /** 카테고리가 있고 소분류(자식이 없는 카테고리)인지 본다. */

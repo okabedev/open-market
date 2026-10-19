@@ -49,6 +49,7 @@ public class Product {
     static final long PRICE_MIN = 100;
     static final long PRICE_MAX = 100_000_000;
     static final long PRICE_UNIT = 10;
+    static final int BAN_REASON_MAX = 500;
 
     @Id private UUID id;
 
@@ -67,6 +68,16 @@ public class Product {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private ProductStatus status;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "stop_reason")
+    private @Nullable StopReason stopReason;
+
+    @Column(name = "ban_reason")
+    private @Nullable String banReason;
+
+    @Column(name = "banned_at")
+    private @Nullable Instant bannedAt;
 
     @Column(name = "option_name_1")
     private @Nullable String optionName1;
@@ -146,6 +157,9 @@ public class Product {
      * @return 새로 만든 SKU. 입력 순서대로다. 호출한 쪽이 재고를 만든다
      */
     public List<Sku> update(UUID categoryId, Details details, List<SkuInput> skus, Instant now) {
+        if (status == ProductStatus.BANNED) {
+            throw ProductStateException.banned();
+        }
         checkSkus(skus);
         Map<UUID, Sku> existing =
                 this.skus.stream().collect(Collectors.toMap(Sku::id, Function.identity()));
@@ -187,6 +201,9 @@ public class Product {
         if (status == ProductStatus.ON_SALE) {
             return false;
         }
+        if (status == ProductStatus.BANNED) {
+            throw ProductStateException.banned();
+        }
         if (status != ProductStatus.DRAFT) {
             throw new ProductNotPublishableException("등록 중인 상품만 판매를 시작할 수 있습니다.");
         }
@@ -197,6 +214,94 @@ public class Product {
         publishedAt = now;
         updatedAt = now;
         return true;
+    }
+
+    /**
+     * 판매를 멈춘다. 판매자가 직접 멈춘 상품에 판매자 정지가 와도 사유는 {@code SELLER}로 둔다(정지가 풀려도 그대로 멈춰 있게).
+     *
+     * @return 상태가 바뀌었으면 true
+     */
+    public boolean stop(StopReason reason, Instant now) {
+        boolean bySuspension = reason == StopReason.SELLER_SUSPENDED;
+        return switch (status) {
+            case ON_SALE -> {
+                status = ProductStatus.STOPPED;
+                stopReason = reason;
+                updatedAt = now;
+                yield true;
+            }
+            case STOPPED -> false;
+            // 판매자 정지는 판매 중인 상품만 멈춘다. 제재·등록 중인 상품은 그대로 둔다.
+            case BANNED -> {
+                if (bySuspension) {
+                    yield false;
+                }
+                throw ProductStateException.banned();
+            }
+            case DRAFT -> {
+                if (bySuspension) {
+                    yield false;
+                }
+                throw ProductStateException.invalidStatus("판매 중인 상품만 판매를 멈출 수 있습니다.");
+            }
+        };
+    }
+
+    /**
+     * 판매자가 직접 멈춘 상품의 판매를 다시 연다.
+     *
+     * @return 상태가 바뀌었으면 true. 이미 판매 중이면 false
+     */
+    public boolean resume(Instant now) {
+        return switch (status) {
+            case ON_SALE -> false;
+            case STOPPED -> {
+                if (stopReason == StopReason.SELLER_SUSPENDED) {
+                    throw ProductStateException.sellerSuspended();
+                }
+                reopen(now);
+                yield true;
+            }
+            case BANNED -> throw ProductStateException.banned();
+            case DRAFT -> throw ProductStateException.invalidStatus("멈춘 상품만 판매를 다시 열 수 있습니다.");
+        };
+    }
+
+    /**
+     * 판매자 정지가 풀렸을 때, 정지 때문에 멈춘 상품만 다시 연다.
+     *
+     * @return 상태가 바뀌었으면 true
+     */
+    public boolean resumeAfterReinstatement(Instant now) {
+        if (status != ProductStatus.STOPPED || stopReason != StopReason.SELLER_SUSPENDED) {
+            return false;
+        }
+        reopen(now);
+        return true;
+    }
+
+    /**
+     * 관리자가 제재한다(CAT-5). 상태와 상관없이 {@code BANNED}가 되고 판매자는 풀 수 없다.
+     *
+     * @return 상태가 바뀌었으면 true. 이미 제재했으면 false(사유를 바꾸지 않는다)
+     */
+    public boolean ban(String reason, Instant now) {
+        String text = checkText(reason, BAN_REASON_MAX, "제재 사유는 1~500자입니다.");
+        if (status == ProductStatus.BANNED) {
+            return false;
+        }
+        status = ProductStatus.BANNED;
+        stopReason = null;
+        banReason = text;
+        bannedAt = now;
+        updatedAt = now;
+        return true;
+    }
+
+    private void reopen(Instant now) {
+        status = ProductStatus.ON_SALE;
+        stopReason = null;
+        updatedAt = now;
     }
 
     /** 이벤트를 낼 때 부른다. 올린 revision을 돌려준다. */
@@ -331,6 +436,14 @@ public class Product {
 
     public long minPrice() {
         return skus.stream().mapToLong(Sku::price).min().orElse(0);
+    }
+
+    public @Nullable StopReason stopReason() {
+        return stopReason;
+    }
+
+    public @Nullable String banReason() {
+        return banReason;
     }
 
     public long revision() {

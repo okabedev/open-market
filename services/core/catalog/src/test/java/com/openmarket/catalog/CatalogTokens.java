@@ -28,4 +28,10 @@ final class CatalogTokens {
                         new SimpleGrantedAuthority("ROLE_BUYER"),
                         new SimpleGrantedAuthority("ROLE_SELLER"));
     }
+
+    static RequestPostProcessor admin(UUID adminId) {
+        return jwt().jwt(
+                        token -> token.subject(adminId.toString()).claim("roles", List.of("ADMIN")))
+                .authorities(new SimpleGrantedAuthority("ROLE_ADMIN"));
+    }
 }

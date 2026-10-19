@@ -3,6 +3,7 @@ package com.openmarket.catalog.infra.persistence;
 import com.openmarket.catalog.command.domain.Product;
 import com.openmarket.catalog.command.domain.ProductRepository;
 import jakarta.persistence.LockModeType;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.Lock;
@@ -15,4 +16,8 @@ public interface JpaProductRepository extends Repository<Product, UUID>, Product
     @Override
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<Product> findForUpdateById(UUID id);
+
+    @Override
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    List<Product> findForUpdateBySellerId(UUID sellerId);
 }

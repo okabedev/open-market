@@ -9,6 +9,8 @@ import com.openmarket.catalog.command.domain.Seller;
 import com.openmarket.catalog.command.domain.SellerRepository;
 import com.openmarket.catalog.command.domain.Stock;
 import com.openmarket.catalog.command.domain.StockRepository;
+import com.openmarket.common.core.audit.AuditEntry;
+import com.openmarket.common.core.audit.AuditLog;
 import com.openmarket.common.messaging.outbox.Outbox;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -40,6 +42,11 @@ final class CatalogFakes {
         @Override
         public Optional<Product> findForUpdateById(UUID id) {
             return Optional.ofNullable(rows.get(id));
+        }
+
+        @Override
+        public List<Product> findForUpdateBySellerId(UUID sellerId) {
+            return rows.values().stream().filter(p -> p.sellerId().equals(sellerId)).toList();
         }
     }
 
@@ -113,6 +120,15 @@ final class CatalogFakes {
 
         ProductSnapshot lastSnapshot() {
             return (ProductSnapshot) events.getLast().payload();
+        }
+    }
+
+    static final class RecordingAuditLog implements AuditLog {
+        final List<AuditEntry> entries = new ArrayList<>();
+
+        @Override
+        public void record(AuditEntry entry) {
+            entries.add(entry);
         }
     }
 
