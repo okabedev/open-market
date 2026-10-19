@@ -52,6 +52,13 @@
   - 25%·50%·60%와 512m·768m을 member로 비교했다. 부하 중 사용량은 325~345MB로 비슷했고, OOM이나 재시작은 없었다.
   - 2GB 미만 컨테이너라 JVM이 SerialGC를 고른다. 20,000건에 minor GC 41회, 합계 0.2s로 이 크기 힙에는 충분하다. 바꿀 필요가 생기면 서비스별로 `JDK_JAVA_OPTIONS`를 덮어쓴다.
 - Kafka, Connect, Elasticsearch는 이미지 설정으로 힙을 고정했으므로 `mem_limit`을 두지 않는다. 나머지는 사용량이 작아 두지 않는다.
+- 예외: file은 `mem_limit: 768m`, 힙 40%(약 307MB), `-Djdk.nio.maxCachedBufferSize=262144`다(2026-10-19, M2).
+  - 측정: `apps` profile에서 6000x4000 JPEG(6MB) 10건을 gateway로 동시에 올리기를 3번 반복했다. cgroup `memory.stat`의 `anon`, `memory.peak`, `memory.swap.current`를 봤다.
+  - 512m·힙 50%: 익명 메모리 450~500MB, 상한 도달 5,902회, 스왑 103MB. 스왑이 없는 환경이면 OOM으로 죽는다.
+  - 원인(호스트 bootRun + Native Memory Tracking, 같은 힙 248MB): 부하에서 힙이 상한까지 커지고, 힙 밖이 약 230MB였다. 메타스페이스 100MB, Symbol·Class·Code·공유 클래스 74MB, 직접 버퍼(큰 `Files.write`의 스레드별 임시 버퍼) 35MB, NMT 밖 네이티브(JPEG 디코더 등) 약 37MB. `MALLOC_ARENA_MAX=2`는 차이가 없었다.
+  - 768m·힙 50%도 힙이 384MB까지 커져 익명 메모리가 670MB, 스왑 21MB였다.
+  - 768m·힙 40%·직접 버퍼 캐시 끔: 익명 메모리 608MB에서 멈췄고 스왑 0. `memory.peak`가 768MB에 닿는 것은 업로드 파일의 페이지 캐시이며 커널이 회수한다. 10건 동시 업로드는 0.8~2.9초였다.
+  - 같은 측정에서 member·notification의 익명 메모리는 378~391MB로 M0 실측(230~335MB)보다 커졌다. M3 재측정 때 함께 본다.
 
 서비스 15개 전망
 - 컨테이너: 실측 최댓값(335MB) 기준 Spring 서비스 15개는 약 5GB, 나머지 12개는 약 4GB다. 합계 약 9GB. 상한 기준은 15 × 512MB = 7.5GB에 4GB를 더해 약 11.5GB다.

@@ -6,6 +6,7 @@ import java.util.List;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -25,6 +26,7 @@ import org.springframework.security.web.SecurityFilterChain;
  *   <li>actuator(health, info, prometheus), OpenAPI 문서, 오류 응답은 연다. gateway는 이 경로를 넘기지 않는다
  *   <li>{@code /internal/**}는 {@code internal} scope(서비스 간 토큰)가 있어야 한다
  *   <li>{@code /v1/seller/**}는 {@code SELLER}, {@code /v1/admin/**}는 {@code ADMIN} 역할이 있어야 한다
+ *   <li>{@code openmarket.security.public-paths}에 적은 경로는 토큰 없이 연다. 토큰이 있으면 검증하고 주체로 쓴다
  *   <li>나머지 {@code /v1/**}는 사용자 토큰(역할이 하나라도 있는 토큰)이어야 한다. 서비스 간 토큰은 역할이 없어 막힌다
  *   <li>그 밖의 경로는 막는다
  * </ol>
@@ -39,6 +41,7 @@ import org.springframework.security.web.SecurityFilterChain;
             "org.springframework.boot.security.oauth2.server.resource.autoconfigure.web.OAuth2ResourceServerWebSecurityAutoConfiguration"
         })
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
+@EnableConfigurationProperties(ResourceServerSecurityProperties.class)
 public class ResourceServerSecurityAutoConfiguration {
 
     /**
@@ -66,29 +69,41 @@ public class ResourceServerSecurityAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean(SecurityFilterChain.class)
     SecurityFilterChain resourceServerSecurityFilterChain(
-            HttpSecurity http, JwtAuthenticationConverter jwtAuthenticationConverter) {
+            HttpSecurity http,
+            JwtAuthenticationConverter jwtAuthenticationConverter,
+            ResourceServerSecurityProperties properties) {
         http.authorizeHttpRequests(
-                        authorize ->
-                                authorize
-                                        .requestMatchers(
-                                                "/actuator/health",
-                                                "/actuator/health/**",
-                                                "/actuator/info",
-                                                "/actuator/prometheus",
-                                                "/v3/api-docs",
-                                                "/v3/api-docs/**",
-                                                "/error")
-                                        .permitAll()
-                                        .requestMatchers("/internal/**")
-                                        .hasAuthority("SCOPE_internal")
-                                        .requestMatchers("/v1/seller/**")
-                                        .hasRole("SELLER")
-                                        .requestMatchers("/v1/admin/**")
-                                        .hasRole("ADMIN")
-                                        .requestMatchers("/v1/**")
-                                        .hasAnyRole("BUYER", "SELLER", "ADMIN")
-                                        .anyRequest()
-                                        .denyAll())
+                        authorize -> {
+                            authorize
+                                    .requestMatchers(
+                                            "/actuator/health",
+                                            "/actuator/health/**",
+                                            "/actuator/info",
+                                            "/actuator/prometheus",
+                                            "/v3/api-docs",
+                                            "/v3/api-docs/**",
+                                            "/error")
+                                    .permitAll()
+                                    .requestMatchers("/internal/**")
+                                    .hasAuthority("SCOPE_internal")
+                                    .requestMatchers("/v1/seller/**")
+                                    .hasRole("SELLER")
+                                    .requestMatchers("/v1/admin/**")
+                                    .hasRole("ADMIN");
+                            properties
+                                    .publicPaths()
+                                    .forEach(
+                                            path ->
+                                                    authorize
+                                                            .requestMatchers(
+                                                                    path.method(), path.pattern())
+                                                            .permitAll());
+                            authorize
+                                    .requestMatchers("/v1/**")
+                                    .hasAnyRole("BUYER", "SELLER", "ADMIN")
+                                    .anyRequest()
+                                    .denyAll();
+                        })
                 // 브라우저가 아니라 BFF와 서비스가 Bearer 토큰으로 부른다. 쿠키 세션을 쓰지 않는다.
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(

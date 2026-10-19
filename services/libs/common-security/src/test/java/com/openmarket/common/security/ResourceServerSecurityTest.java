@@ -1,6 +1,7 @@
 package com.openmarket.common.security;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -25,7 +26,15 @@ import org.springframework.test.web.servlet.ResultActions;
  * spring.security.oauth2.resourceserver.jwt.*} 설정이 하고, 이 모듈은 경로 규칙과 권한 변환을 더한다. 실제 서비스와 같은
  * 키(config-repo 공통 {@code application.yml})를 테스트 키로 바꿔 넣는다.
  */
-@SpringBootTest
+@SpringBootTest(
+        properties = {
+            "openmarket.security.public-paths[0].method=GET",
+            "openmarket.security.public-paths[0].pattern=/public/**",
+            "openmarket.security.public-paths[1].method=GET",
+            "openmarket.security.public-paths[1].pattern=/v1/seller/**",
+            "openmarket.security.public-paths[2].method=GET",
+            "openmarket.security.public-paths[2].pattern=/internal/**"
+        })
 @AutoConfigureMockMvc
 class ResourceServerSecurityTest {
 
@@ -114,6 +123,30 @@ class ResourceServerSecurityTest {
     @DisplayName("규칙에 없는 경로는 토큰이 있어도 막는다")
     void deniesUnknownPaths() throws Exception {
         call("/other/me", TestTokens.user("admin-1", "ADMIN")).andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("공개 경로는 토큰 없이 통과하고, 토큰이 있으면 주체를 쓴다")
+    void publicPathPassesWithoutToken() throws Exception {
+        mockMvc.perform(get("/public/me"))
+                .andExpect(status().isOk())
+                .andExpect(content().string("anonymous"));
+        call("/public/me", TestTokens.user("buyer-1", "BUYER"))
+                .andExpect(status().isOk())
+                .andExpect(content().string("buyer-1"));
+    }
+
+    @Test
+    @DisplayName("공개 경로는 적은 메서드만 연다")
+    void publicPathOnlyForDeclaredMethod() throws Exception {
+        mockMvc.perform(post("/public/me")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("판매자·관리자·내부 경로는 공개 경로에 적어도 열리지 않는다")
+    void rolePathsCannotBePublic() throws Exception {
+        mockMvc.perform(get("/v1/seller/me")).andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/internal/v1/me")).andExpect(status().isUnauthorized());
     }
 
     private ResultActions call(String path, String token) throws Exception {

@@ -52,6 +52,14 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    @DisplayName("TOO_MANY_REQUESTS 분류는 429로 응답한다")
+    void tooManyRequests() throws Exception {
+        mockMvc.perform(get("/test/errors/too-many"))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(jsonPath("$.code").value("TEST_QUOTA_EXCEEDED"));
+    }
+
+    @Test
     @DisplayName("처리하지 못한 예외는 500으로 응답하고 내부 메시지를 노출하지 않는다")
     void unexpected() throws Exception {
         mockMvc.perform(get("/test/errors/unexpected"))

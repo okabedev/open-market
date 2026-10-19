@@ -70,3 +70,38 @@ services:
       interval: 5s
       timeout: 3s
       retries: 30
+
+  file:
+    <<: *spring-service
+    build:
+      context: ../../services
+      args:
+        MODULE: infra/file
+    image: openmarket/file:local
+    # 이미지 처리 때문에 공통 값(512m, 힙 50%)보다 크게 둔다. 힙 밖 기본 사용량이 약 190MB라 512m에서는 큰 사진 동시 업로드 때
+    # 익명 메모리가 상한에 닿아 스왑으로 밀렸다. 실측과 근거는 docs/architecture/risks.md "메모리 예산".
+    mem_limit: 768m
+    depends_on:
+      config:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    environment:
+      <<: *spring-env
+      FILE_DB_PASSWORD: ${FILE_DB_PASSWORD:?}
+      FILE_STORAGE_ROOT: /data
+      # 힙은 상한의 40%(약 307MB). 큰 쓰기의 임시 직접 버퍼(NIO)는 스레드마다 캐시하지 않는다.
+      JDK_JAVA_OPTIONS: "-XX:MaxRAMPercentage=40 -Djdk.nio.maxCachedBufferSize=262144"
+    volumes:
+      - file-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:8201/actuator/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+volumes:
+  # 업로드 파일. 이것만 지우면 파일 메타데이터(postgres-data)와 어긋난다.
+  file-data:
