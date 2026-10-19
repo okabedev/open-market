@@ -61,6 +61,18 @@ spring:
                 - Path=/api/member/**
               filters:
                 - StripPrefix=2
+            - id: file
+              uri: lb://file
+              predicates:
+                - Path=/api/file/**
+              filters:
+                - StripPrefix=2
+            # 공개 이미지(docs/architecture/file.md "썸네일과 제공"). 경로를 그대로 넘긴다. 캐시 헤더는 file이 붙인다.
+            - id: file-public
+              uri: lb://file
+              predicates:
+                - Method=GET
+                - Path=/files/**
 
 openmarket:
   gateway:
@@ -73,6 +85,9 @@ openmarket:
         pattern: /api/auth/v1/accounts/email-verification
       - method: POST
         pattern: /api/auth/v1/accounts/email-verification/resend
+      # 공개 이미지 변형. file 쪽 public-paths(config-repo file.yml)에도 있다.
+      - method: GET
+        pattern: /files/**
     # 사용자(sub) 또는 클라이언트 IP마다 토큰 버킷.
     rate-limit:
       replenish-rate: 20

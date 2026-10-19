@@ -84,7 +84,7 @@ com.openmarket.<service>
   - 응답 타입을 따로 적지 않은 API도 `application/json`으로 문서화한다(`springdoc.default-produces-media-type`).
 
 ## 오류
-- 베이스 예외는 `common-core`의 `BusinessException`이다. `ErrorType`(`INVALID`, `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `CONFLICT`, `UNPROCESSABLE`, `UNAVAILABLE`)과 오류 코드 문자열을 가진다. HTTP 상태는 모른다.
+- 베이스 예외는 `common-core`의 `BusinessException`이다. `ErrorType`(`INVALID`, `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `CONFLICT`, `UNPROCESSABLE`, `TOO_MANY_REQUESTS`, `UNAVAILABLE`)과 오류 코드 문자열을 가진다. HTTP 상태는 모른다.
 - 도메인 예외는 이것을 상속한다. 오류 코드는 `<SERVICE>_<설명>` 형식이다. 예: `ORDER_PRICE_CHANGED`.
 - 조회 쪽 "없음"은 `common-core`의 공통 `NotFoundException`을 던진다.
 - `common-web`의 `@RestControllerAdvice` 하나가 `ErrorType`을 HTTP 상태로 바꾸고, RFC 9457 `ProblemDetail`로 응답한다. 확장 필드는 `code`, `traceId`, 필드 오류 목록(`errors`)이다. 서비스에는 예외 핸들러를 따로 두지 않는다.

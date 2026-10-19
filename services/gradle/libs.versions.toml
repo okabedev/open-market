@@ -10,6 +10,7 @@ springdoc = "3.1.1"
 archunit = "1.5.1"
 shedlock = "7.10.1"
 uuid-creator = "6.1.1"
+twelvemonkeys = "3.15.2"
 opentelemetry-logback-appender = "2.28.1-alpha"
 spotless = "8.10.4"
 google-java-format = "1.36.1"
@@ -30,6 +31,9 @@ archunit-junit5 = { module = "com.tngtech.archunit:archunit-junit5", version.ref
 shedlock-core = { module = "net.javacrumbs.shedlock:shedlock-core", version.ref = "shedlock" }
 shedlock-jdbc = { module = "net.javacrumbs.shedlock:shedlock-provider-jdbc-template", version.ref = "shedlock" }
 uuid-creator = { module = "com.github.f4b6a3:uuid-creator", version.ref = "uuid-creator" }
+# 이미지 읽기(JPEG CMYK·EXIF, WebP). 근거는 ADR 0017
+twelvemonkeys-imageio-jpeg = { module = "com.twelvemonkeys.imageio:imageio-jpeg", version.ref = "twelvemonkeys" }
+twelvemonkeys-imageio-webp = { module = "com.twelvemonkeys.imageio:imageio-webp", version.ref = "twelvemonkeys" }
 opentelemetry-logback-appender = { module = "io.opentelemetry.instrumentation:opentelemetry-logback-appender-1.0", version.ref = "opentelemetry-logback-appender" }
 
 # 정적 분석 (convention 플러그인이 사용)

@@ -1,0 +1,22 @@
+# file 실행 설정. 공통 설정은 application.yml에 있다. 업로드 크기 한도는 코드의 규칙과 묶여 jar의 application.yml에 있다.
+server:
+  port: 8201
+spring:
+  datasource:
+    password: ${FILE_DB_PASSWORD}
+  kafka:
+    consumer:
+      group-id: file
+
+openmarket:
+  # 토큰 없이 여는 서비스 경로(common-security). gateway.yml의 public-paths에도 gateway 기준 경로로 적는다.
+  security:
+    public-paths:
+      # 공개 이미지 변형(docs/architecture/file.md "썸네일과 제공")
+      - method: GET
+        pattern: /files/**
+  file:
+    # 파일 저장 위치. 컨테이너는 compose가 /data(볼륨 file-data)를, bootRun은 레포의 infra/compose/data/file(커밋하지 않는다)을 넣는다.
+    storage-root: ${FILE_STORAGE_ROOT}
+    # 오래된 TEMP 파일을 찾는 주기(TempFileCleanupJob)
+    cleanup-interval: 10m

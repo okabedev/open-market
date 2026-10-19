@@ -31,6 +31,12 @@ public class ErrorTestController {
                 ErrorType.UNAVAILABLE, "TEST_DOWNSTREAM_DOWN", "잠시 후 다시 시도해 주세요.");
     }
 
+    @GetMapping("/too-many")
+    public void tooMany() {
+        throw new BusinessException(
+                ErrorType.TOO_MANY_REQUESTS, "TEST_QUOTA_EXCEEDED", "한도를 넘었습니다.");
+    }
+
     @GetMapping("/unexpected")
     public void unexpected() {
         throw new IllegalStateException("내부 비밀 정보");

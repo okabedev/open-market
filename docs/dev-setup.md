@@ -96,6 +96,7 @@ docker compose --profile search --profile obs --profile apps down
 - 설정은 config 서버에서 받는다(`infra/config-repo`). config-repo를 고쳤으면 서비스만 재시작한다.
 - `apps` profile을 띄워 둔 상태라면 같은 서비스 컨테이너를 먼저 멈춘다(`docker compose stop member`). 둘 다 Eureka에 등록되면 gateway가 요청을 번갈아 보낸다.
 - DB 비밀번호 같은 비밀 값은 레포 루트 `.env`에서 온다. `bootRun`은 `.env`를 환경 변수로 읽는다. IDE로 실행하면 실행 설정에 `.env` 파일을 환경 변수로 지정한다(IntelliJ: Run Configuration의 Environment variables 또는 EnvFile).
+- file은 업로드 파일을 `FILE_STORAGE_ROOT`에 둔다. `bootRun`은 레포의 `infra/compose/data/file`(커밋하지 않는다)을 넣는다. IDE로 실행하면 실행 설정에 같은 경로를 `FILE_STORAGE_ROOT`로 더한다. 컨테이너는 볼륨 `file-data`(`/data`)다.
 - 서비스는 WSL IP로 Eureka에 등록된다. 그래서 컨테이너(Prometheus, gateway)가 그 주소로 접속할 수 있다.
 - gateway 경유 호출(가입): `curl -i -X POST localhost:8080/api/auth/v1/accounts -H 'Content-Type: application/json' -d '{"email":"buyer@example.com","password":"buyer-pass-1234","name":"구매자"}'`. 201이면 Mailpit(http://localhost:8025)에 인증 메일이 온다(notification 실행 필요). 가입·인증·재발송은 IP마다 1분에 5회까지다. 새로 띄운 서비스는 Eureka 등록과 gateway의 인스턴스 캐시 갱신 때문에 몇 초 뒤부터 라우팅된다. 그 전에는 503이다.
 - gateway 자체를 IDE로 실행할 때는 컨테이너를 먼저 멈춘다(`docker compose stop gateway`). 호스트에서는 컨테이너 IP에 닿지 못하므로, 이때 뒤의 서비스도 IDE로 띄워야 한다.

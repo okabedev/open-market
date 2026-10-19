@@ -18,7 +18,9 @@ FROM eclipse-temurin:25.0.4.1_1-jre-noble
 RUN apt-get update \
  && apt-get install -y --no-install-recommends curl \
  && rm -rf /var/lib/apt/lists/* \
- && useradd --system --no-create-home --shell /usr/sbin/nologin app
+ && useradd --system --no-create-home --shell /usr/sbin/nologin app \
+ && install -d -o app -g app /data
+# /data는 볼륨을 붙이는 서비스(file)의 저장 위치다. 새 이름 있는 볼륨은 이 디렉터리의 소유자를 물려받아 app이 쓸 수 있다.
 WORKDIR /app
 # 자주 바뀌지 않는 층부터 복사해 이미지 층 캐시를 살린다.
 COPY --from=build /extracted/dependencies/ ./

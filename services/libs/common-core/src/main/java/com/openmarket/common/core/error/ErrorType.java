@@ -14,6 +14,8 @@ public enum ErrorType {
     CONFLICT,
     /** 형식은 맞지만 비즈니스 규칙상 처리할 수 없다. */
     UNPROCESSABLE,
+    /** 정해진 기간의 한도를 넘었다(업로드 수 등). 잠시 뒤 다시 할 수 있다. */
+    TOO_MANY_REQUESTS,
     /** 의존하는 시스템을 일시적으로 쓸 수 없다. */
     UNAVAILABLE
 }

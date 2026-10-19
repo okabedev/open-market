@@ -28,6 +28,7 @@ Spring Authorization Server는 Spring Security 7.x에 포함되어 Boot BOM이 �
 | springdoc-openapi | 3.1.1 | Boot 4용 3.x 라인. 3.1.0에서 Boot 4.1.0 기준으로 올라감 |
 | ArchUnit | 1.5.1 | 패키지 규약 검사 |
 | ShedLock | 7.10.1 | 스케줄 작업 단일 실행. `shedlock-core`와 `shedlock-provider-jdbc-template`만 쓴다(애노테이션 AOP 대신 `LockingTaskExecutor`를 직접 호출) |
+| TwelveMonkeys ImageIO (`imageio-jpeg`, `imageio-webp`) | 3.15.2 | file의 이미지 읽기(JPEG CMYK·EXIF, WebP). 2026-10-06 릴리스된 3.15.3은 2주 지난 뒤 검토한다. [ADR 0017](0017-image-processing.md). 2026-10-19 추가 |
 | uuid-creator | 6.1.1 | UUID v7 생성(`common-core`). JDK 표준에는 v7 생성기가 없다 |
 | opentelemetry-logback-appender-1.0 | 2.28.1-alpha | Logback 로그를 OTLP로 보낸다(`common-observability`). Boot에 포함되지 않는다. Boot BOM의 OpenTelemetry 1.62.0으로 빌드된 마지막 버전이다(2.29.0부터 1.63.0 이상). Boot의 OpenTelemetry를 올릴 때 함께 올린다. 2026-10-18 추가 |
 

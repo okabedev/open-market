@@ -1,0 +1,21 @@
+# jar 안에는 앱 이름, config 서버 주소, 클래스패스에 묶인 설정만 둔다.
+# 포트, 데이터 소스, 스키마 같은 실행 설정은 infra/config-repo의 file.yml과 공통 application.yml에 있다.
+spring:
+  application:
+    name: file
+  config:
+    import: "optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}"
+  cloud:
+    config:
+      # config 서버에 닿지 못하면 데이터 소스 설정 없이 뜨지 않고 바로 실패한다. 테스트는 spring.cloud.config.enabled=false로 끈다.
+      fail-fast: true
+  servlet:
+    multipart:
+      # 업로드 한도(UploadPolicy.MAX_BYTES, 10MB)와 같다. 넘으면 본문을 다 받기 전에 413이다. 요청 한도는 multipart 머리 몫을 더한다.
+      max-file-size: 10MB
+      max-request-size: 11MB
+  flyway:
+    locations: classpath:db/migration,classpath:db/common/web,classpath:db/common/messaging
+springdoc:
+  # 응답 타입을 명시하지 않은 API도 OpenAPI 문서에 JSON으로 적는다. 프론트 api-client가 이 문서에서 타입을 만든다.
+  default-produces-media-type: application/json

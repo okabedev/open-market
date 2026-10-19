@@ -29,6 +29,8 @@
 | 재고 예약 | `StockReservation` | catalog | 주문 하나에 대한 예약 묶음. 상태: `RESERVED` → `COMMITTED` 또는 `RELEASED` |
 | 재고 조정 | `StockAdjustment` | catalog | 판매자의 입고·차감 이력 |
 | 파일 | `StoredFile` | file | 업로드 파일 메타데이터. 상태: `TEMP` → `ATTACHED` → `DETACHED`(소유자에서 빠짐). 24시간 지난 `TEMP`와 7일 지난 `DETACHED`는 삭제 |
+| 파일 용도 | `FilePurpose` | file | 업로드 목적. 저장 디렉터리와 만들 변형이 정해진다. M2는 `PRODUCT_IMAGE`만 받는다 |
+| 이미지 변형 | `ImageVariant` | file | 공개로 제공하는 썸네일. 폭 300px(`w300`), 800px(`w800`) JPEG. 원본은 제공하지 않는다 |
 
 ## 주문·결제
 | 용어 | 코드 이름 | 담당 | 설명 |
