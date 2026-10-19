@@ -2,6 +2,7 @@ package com.openmarket.catalog.command.application;
 
 import com.openmarket.catalog.command.domain.CategoryRepository;
 import com.openmarket.catalog.command.domain.Product;
+import com.openmarket.catalog.command.domain.ProductAvailabilityCalculator;
 import com.openmarket.catalog.command.domain.ProductNotFoundException;
 import com.openmarket.catalog.command.domain.ProductRepository;
 import com.openmarket.catalog.command.domain.ProductSnapshot;
@@ -19,7 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 상품 내용과 SKU 가격을 고치고 새 SKU를 더한다(CAT-2). 상태와 상관없이 {@code ProductChanged}를 낸다. 검색 반영은 search가 상태를 보고
- * 정한다. 다른 판매자의 상품은 없는 상품처럼 404다.
+ * 정한다. 새 SKU로 상품 단위 판매 가능 여부가 바뀌면 {@code StockAvailabilityChanged}도 낸다. 다른 판매자의 상품은 없는 상품처럼 404다.
  */
 @Service
 public class UpdateProductUseCase {
@@ -27,6 +28,7 @@ public class UpdateProductUseCase {
     private final ProductRepository products;
     private final StockRepository stocks;
     private final CategoryRepository categories;
+    private final ProductAvailabilityCalculator availability;
     private final ProductSnapshotFactory snapshots;
     private final Outbox outbox;
     private final Clock clock;
@@ -35,12 +37,14 @@ public class UpdateProductUseCase {
             ProductRepository products,
             StockRepository stocks,
             CategoryRepository categories,
+            ProductAvailabilityCalculator availability,
             ProductSnapshotFactory snapshots,
             Outbox outbox,
             Clock clock) {
         this.products = products;
         this.stocks = stocks;
         this.categories = categories;
+        this.availability = availability;
         this.snapshots = snapshots;
         this.outbox = outbox;
         this.clock = clock;
@@ -76,6 +80,9 @@ public class UpdateProductUseCase {
             stocks.save(
                     Stock.create(
                             added.get(i).id(), product.id(), newLines.get(i).initialStock(), now));
+        }
+        if (!added.isEmpty()) {
+            AdjustStockUseCase.publishAvailability(outbox, availability.refresh(product.id(), now));
         }
         RegisterProductUseCase.publish(outbox, ProductSnapshot.CHANGED, snapshots.next(product));
     }

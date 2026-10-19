@@ -1,7 +1,7 @@
 # 상품 (catalog 서비스)
 
-카테고리, 상품, SKU, 재고를 갖는다(CAT-1~5). 구매자 목록·검색은 search가 이벤트로 만든 읽기 모델로 한다([context-map.md](context-map.md) "catalog.product").
-재고 조정·이력과 품절 전환 이벤트는 다음 PR에서 더한다.
+카테고리, 상품, SKU, 재고를 갖는다(CAT-1~5). 구매자 목록·검색은 search가 이벤트로 만든 읽기 모델로 한다([context-map.md](context-map.md) "catalog.product", "catalog.stock").
+재고 예약·확정·해제와 동시성(CAT-4)은 M3에서 더한다.
 
 ## 카테고리
 - 2단계 트리다. 대분류 8개, 소분류 24개를 Flyway(`V1__catalog.sql`)로 넣는다. 관리 화면과 API는 없고 바꿀 때도 마이그레이션으로 바꾼다(2026-10-19 결정).
@@ -40,7 +40,7 @@
 
 ### 이벤트
 `ProductRegistered`, `ProductPublished`, `ProductChanged`는 같은 상품 스냅샷을 페이로드로 낸다(필드는 [context-map.md](context-map.md)). JSON 예시는 `services/core/catalog/src/test/resources/events/`에 있다.
-- 스냅샷에는 SKU별 재고 수량 대신 판매 가능 여부(`inStock`)만 넣는다.
+- 스냅샷에는 SKU별 재고 수량 대신 판매 가능 여부(`inStock`)만 넣는다. 상품 단위 `inStock`은 판매 가능 여부(아래 "재고")와 그 리비전을 함께 넣는다.
 - 등록에도 이벤트를 내는 이유: file이 초안의 이미지도 첨부를 확정해야 24시간 정리에서 지워지지 않는다.
 
 ## 판매 상태
@@ -59,6 +59,28 @@
 - 제재는 감사 로그(`PRODUCT_BANNED`, 관리자 ID, 사유)를 남긴다(NFR-8).
 - 판매자 정지·해제는 그 판매자의 상품을 한 트랜잭션에서 모두 잠그고 바꾼다. 판매자 한 명의 상품이 아주 많아지면 나눠 처리하는 방법을 M6 부하 테스트에서 본다.
 
+## 재고
+SKU마다 `Stock`(실재고 `onHand`, 예약 `reserved`)이 있다. 판매 가능 수량은 `onHand - reserved`다. 예약은 M3에서 생긴다.
+
+### 재고 조정(CAT-3)
+판매자가 SKU의 실재고를 늘리거나 줄인다. 증감 수량(`delta`)으로 받아 동시에 조정해도 서로 덮어쓰지 않는다.
+| 항목 | 규칙 |
+|---|---|
+| 증감 수량 | 0이 아닌 -999,999~999,999. 어기면 400 `CATALOG_INVALID_INPUT` |
+| 사유 | 선택, 100자까지. 앞뒤 공백은 지우고 비면 없음 |
+| 조정 뒤 실재고 | 예약 수량 이상, 999,999 이하. 어기면 422 `CATALOG_STOCK_OUT_OF_RANGE` |
+
+- 조정은 재고 행을 잠그고(`SELECT ... FOR UPDATE`) 하고, 이력(`StockAdjustment`: 증감 수량, 조정 뒤 실재고, 사유, 시각)을 같은 트랜잭션에 남긴다.
+- 같은 요청이 두 번 반영되지 않도록 `Idempotency-Key`가 필요하다.
+- 제재된 상품은 조정할 수 없다(422 `CATALOG_PRODUCT_BANNED`). 그 밖의 상태에서는 할 수 있다. 판매 시작 전에 수량을 맞출 수 있어야 하기 때문이다.
+- 다른 판매자의 상품이면 404 `CATALOG_PRODUCT_NOT_FOUND`, 상품에 없는 SKU면 404 `CATALOG_SKU_NOT_FOUND`다.
+
+### 판매 가능 여부와 품절 전환 이벤트
+- 상품마다 판매 가능 여부(`ProductAvailability`: `inStock`, 판매 가능 리비전)를 한 행으로 둔다. 상품을 등록할 때 리비전 1로 만들고, 그 값은 `ProductRegistered` 스냅샷에 들어간다.
+- 재고 조정이나 새 SKU 추가로 SKU의 판매 가능 수량이 바뀌면, 판매 가능 여부 행을 잠그고 그 상품의 재고를 다시 읽어 `inStock`을 계산한다. 값이 바뀌었을 때만 리비전을 올리고 `catalog.stock`에 `StockAvailabilityChanged`를 낸다. search가 품절 상품을 뒤로 보낸다(SRC-3).
+- 행을 잠근 뒤 재고를 읽으므로, 같은 상품의 다른 SKU를 동시에 조정해도 마지막 트랜잭션이 모든 변경을 본다. 잠그는 순서는 재고 → 판매 가능 여부다. 상품 행은 잠그지 않는다. 상품 수정과 재고 조정이 서로 기다리지 않는다.
+- 상품 이벤트와 토픽이 달라 순서가 섞일 수 있다. 소비자가 맞추는 방법은 [context-map.md](context-map.md) "catalog.stock"에 있다.
+
 ## API
 gateway 경로는 `/api/catalog` + 아래 경로다. 판매자 API의 주체는 토큰의 `sub`(= sellerId)다.
 
@@ -73,6 +95,8 @@ gateway 경로는 `/api/catalog` + 아래 경로다. 판매자 API의 주체는 
 | POST | `/v1/seller/products/{id}/publish` | 판매 시작. 이미 판매 중이면 204. 이미지가 없으면 422 `CATALOG_PRODUCT_NOT_PUBLISHABLE` |
 | POST | `/v1/seller/products/{id}/stop` | 판매 중지. 204 |
 | POST | `/v1/seller/products/{id}/resume` | 판매 재개. 204 |
+| POST | `/v1/seller/products/{id}/skus/{skuId}/stock-adjustments` | 재고 조정. 본문 `{"delta", "reason"}`. `Idempotency-Key` 필수. 201 `{adjustmentId, onHand, reserved, available}` |
+| GET | `/v1/seller/products/{id}/skus/{skuId}/stock-adjustments?page=&size=` | 재고 조정 이력. 최근 순, 쪽 번호 |
 | GET | `/v1/admin/products?status=&sellerId=&page=&size=` | 관리자 상품 목록(최근 수정 순, 쪽 번호). `ADMIN` |
 | POST | `/v1/admin/products/{id}/ban` | 제재. 본문 `{"reason"}`. 204 |
 

@@ -40,5 +40,6 @@
   ],
   "minPrice": 19900,
   "inStock": true,
+  "availabilityRevision": 2,
   "publishedAt": "2026-10-19T08:00:00Z"
 }

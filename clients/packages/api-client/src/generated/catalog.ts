@@ -50,6 +50,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/seller/products/{productId}/skus/{skuId}/stock-adjustments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["stockAdjustments"];
+        put?: never;
+        post: operations["adjustStock"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/seller/products/{productId}/resume": {
         parameters: {
             query?: never;
@@ -180,6 +196,21 @@ export interface components {
             /** Format: uuid */
             productId?: string;
         };
+        AdjustStockRequest: {
+            /** Format: int32 */
+            delta: number;
+            reason?: string;
+        };
+        AdjustStockResponse: {
+            /** Format: uuid */
+            adjustmentId?: string;
+            /** Format: int32 */
+            onHand?: number;
+            /** Format: int32 */
+            reserved?: number;
+            /** Format: int32 */
+            available?: number;
+        };
         BanProductRequest: {
             reason: string;
         };
@@ -234,6 +265,26 @@ export interface components {
             createdAt?: string;
             /** Format: date-time */
             updatedAt?: string;
+        };
+        PageViewStockAdjustmentView: {
+            items?: components["schemas"]["StockAdjustmentView"][];
+            /** Format: int64 */
+            totalCount?: number;
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+        };
+        StockAdjustmentView: {
+            /** Format: uuid */
+            adjustmentId?: string;
+            /** Format: int32 */
+            delta?: number;
+            /** Format: int32 */
+            onHandAfter?: number;
+            reason?: string;
+            /** Format: date-time */
+            adjustedAt?: string;
         };
         ProductDetailView: {
             /** Format: uuid */
@@ -407,6 +458,59 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    stockAdjustments: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path: {
+                productId: string;
+                skuId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageViewStockAdjustmentView"];
+                };
+            };
+        };
+    };
+    adjustStock: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: string;
+                skuId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdjustStockRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdjustStockResponse"];
+                };
             };
         };
     };

@@ -10,20 +10,25 @@ import java.util.stream.Collectors;
 import org.jspecify.annotations.Nullable;
 
 /**
- * 상품 이벤트의 스냅샷을 만든다. revision을 하나 올리므로 이벤트를 낼 때만 부른다. 상호는 판매자 사본, 카테고리 경로는 카테고리, 재고 여부는 SKU별 재고에서
- * 읽는다. 같은 트랜잭션에서 방금 만든 재고도 저장소에서 읽힌다.
+ * 상품 이벤트의 스냅샷을 만든다. revision을 하나 올리므로 이벤트를 낼 때만 부른다. 상호는 판매자 사본, 카테고리 경로는 카테고리, SKU별 재고 여부는 재고, 상품
+ * 단위 재고 여부와 그 리비전은 판매 가능 여부에서 읽는다. 같은 트랜잭션에서 방금 만들거나 바꾼 값도 저장소에서 읽힌다.
  */
 public class ProductSnapshotFactory {
 
     private final CategoryRepository categories;
     private final SellerRepository sellers;
     private final StockRepository stocks;
+    private final ProductAvailabilityRepository availabilities;
 
     public ProductSnapshotFactory(
-            CategoryRepository categories, SellerRepository sellers, StockRepository stocks) {
+            CategoryRepository categories,
+            SellerRepository sellers,
+            StockRepository stocks,
+            ProductAvailabilityRepository availabilities) {
         this.categories = categories;
         this.sellers = sellers;
         this.stocks = stocks;
+        this.availabilities = availabilities;
     }
 
     public ProductSnapshot next(Product product) {
@@ -44,6 +49,13 @@ public class ProductSnapshotFactory {
                                             stock != null && stock.inStock());
                                 })
                         .toList();
+        ProductAvailability availability =
+                availabilities
+                        .findByProductId(product.id())
+                        .orElseThrow(
+                                () ->
+                                        new IllegalStateException(
+                                                "판매 가능 여부가 없는 상품: " + product.id()));
         return new ProductSnapshot(
                 product.id(),
                 product.nextRevision(),
@@ -58,7 +70,8 @@ public class ProductSnapshotFactory {
                 product.optionNames(),
                 skus,
                 product.minPrice(),
-                skus.stream().anyMatch(ProductSnapshot.SkuSnapshot::inStock),
+                availability.inStock(),
+                availability.revision(),
                 product.publishedAt());
     }
 

@@ -1,10 +1,12 @@
 package com.openmarket.catalog.ui.web;
 
 import com.openmarket.catalog.query.application.ProductQueryService;
+import com.openmarket.catalog.query.application.StockAdjustmentQueryService;
 import com.openmarket.catalog.query.dto.PageView;
 import com.openmarket.catalog.query.dto.ProductStatus;
 import com.openmarket.catalog.query.dto.SellerProductSummaryView;
 import com.openmarket.catalog.query.dto.SellerProductView;
+import com.openmarket.catalog.query.dto.StockAdjustmentView;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import java.security.Principal;
@@ -22,9 +24,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class SellerProductQueryController {
 
     private final ProductQueryService products;
+    private final StockAdjustmentQueryService adjustments;
 
-    public SellerProductQueryController(ProductQueryService products) {
+    public SellerProductQueryController(
+            ProductQueryService products, StockAdjustmentQueryService adjustments) {
         this.products = products;
+        this.adjustments = adjustments;
     }
 
     /** 본인 상품 목록. 상태를 주지 않으면 전체. 최근 수정 순, 쪽 번호. */
@@ -41,6 +46,17 @@ public class SellerProductQueryController {
     @GetMapping("/{productId}")
     public SellerProductView detail(Principal principal, @PathVariable UUID productId) {
         return products.sellerDetail(sellerId(principal), productId);
+    }
+
+    /** SKU 하나의 재고 조정 이력. 최근 순, 쪽 번호. */
+    @GetMapping("/{productId}/skus/{skuId}/stock-adjustments")
+    public PageView<StockAdjustmentView> stockAdjustments(
+            Principal principal,
+            @PathVariable UUID productId,
+            @PathVariable UUID skuId,
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
+        return adjustments.history(sellerId(principal), productId, skuId, page, size);
     }
 
     static UUID sellerId(Principal principal) {

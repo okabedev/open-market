@@ -310,6 +310,13 @@ public class Product {
         return revision;
     }
 
+    /** 재고를 조정할 수 있는지 본다. 제재된 상품만 안 된다(판매 시작 전에도 수량을 맞춘다). */
+    public void checkStockAdjustable() {
+        if (status == ProductStatus.BANNED) {
+            throw ProductStateException.banned();
+        }
+    }
+
     public boolean isOwnedBy(UUID sellerId) {
         return this.sellerId.equals(sellerId);
     }

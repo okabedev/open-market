@@ -2,6 +2,8 @@ package com.openmarket.catalog.ui.web;
 
 import static com.openmarket.catalog.ui.web.SellerProductQueryController.sellerId;
 
+import com.openmarket.catalog.command.application.AdjustStockCommand;
+import com.openmarket.catalog.command.application.AdjustStockUseCase;
 import com.openmarket.catalog.command.application.ChangeSaleStatusCommand;
 import com.openmarket.catalog.command.application.PublishProductCommand;
 import com.openmarket.catalog.command.application.PublishProductUseCase;
@@ -27,7 +29,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 판매자 상품 등록·수정·판매 시작·중지·재개(CAT-1, CAT-2). 주체는 토큰의 {@code sub}(= sellerId)다. 입력 규칙 위반은 400 {@code
+ * 판매자 상품 등록·수정·판매 시작·중지·재개, 재고 조정(CAT-1~3). 주체는 토큰의 {@code sub}(= sellerId)다. 입력 규칙 위반은 400 {@code
  * CATALOG_INVALID_INPUT}, 다른 판매자의 상품은 404 {@code CATALOG_PRODUCT_NOT_FOUND}.
  */
 @RestController
@@ -39,18 +41,21 @@ public class SellerProductCommandController {
     private final PublishProductUseCase publish;
     private final StopProductUseCase stop;
     private final ResumeProductUseCase resume;
+    private final AdjustStockUseCase adjustStock;
 
     public SellerProductCommandController(
             RegisterProductUseCase register,
             UpdateProductUseCase update,
             PublishProductUseCase publish,
             StopProductUseCase stop,
-            ResumeProductUseCase resume) {
+            ResumeProductUseCase resume,
+            AdjustStockUseCase adjustStock) {
         this.register = register;
         this.update = update;
         this.publish = publish;
         this.stop = stop;
         this.resume = resume;
+        this.adjustStock = adjustStock;
     }
 
     /**
@@ -135,5 +140,30 @@ public class SellerProductCommandController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void resume(Principal principal, @PathVariable UUID productId) {
         resume.execute(new ChangeSaleStatusCommand(sellerId(principal), productId));
+    }
+
+    /**
+     * SKU 실재고를 증감 수량만큼 바꾸고 이력을 남긴다(CAT-3). {@code Idempotency-Key}가 필요하다. 조정 뒤 실재고가 예약 수량보다 작거나
+     * 999,999보다 크면 422 {@code CATALOG_STOCK_OUT_OF_RANGE}, 상품에 없는 SKU는 404 {@code
+     * CATALOG_SKU_NOT_FOUND}.
+     */
+    @PostMapping("/{productId}/skus/{skuId}/stock-adjustments")
+    @ResponseStatus(HttpStatus.CREATED)
+    @Idempotent
+    public AdjustStockResponse adjustStock(
+            Principal principal,
+            @PathVariable UUID productId,
+            @PathVariable UUID skuId,
+            @Valid @RequestBody AdjustStockRequest request) {
+        AdjustStockUseCase.Result result =
+                adjustStock.execute(
+                        new AdjustStockCommand(
+                                sellerId(principal),
+                                productId,
+                                skuId,
+                                request.delta(),
+                                request.reason()));
+        return new AdjustStockResponse(
+                result.adjustmentId(), result.onHand(), result.reserved(), result.available());
     }
 }

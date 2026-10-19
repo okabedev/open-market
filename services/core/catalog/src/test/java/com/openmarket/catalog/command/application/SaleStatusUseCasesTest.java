@@ -4,6 +4,7 @@ import static com.openmarket.catalog.command.application.CatalogFakes.WOMEN;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.openmarket.catalog.command.domain.ProductAvailabilityCalculator;
 import com.openmarket.catalog.command.domain.ProductBanned;
 import com.openmarket.catalog.command.domain.ProductSnapshotFactory;
 import com.openmarket.catalog.command.domain.ProductStatus;
@@ -32,12 +33,15 @@ class SaleStatusUseCasesTest {
     final CatalogFakes.RecordingOutbox outbox = new CatalogFakes.RecordingOutbox();
     final CatalogFakes.RecordingAuditLog auditLog = new CatalogFakes.RecordingAuditLog();
     final Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
+    final CatalogFakes.Availabilities availabilities = new CatalogFakes.Availabilities();
     final ProductSnapshotFactory snapshots =
-            new ProductSnapshotFactory(categories, sellers, stocks);
+            new ProductSnapshotFactory(categories, sellers, stocks, availabilities);
+    final ProductAvailabilityCalculator availability =
+            new ProductAvailabilityCalculator(stocks, availabilities);
 
     final RegisterProductUseCase register =
             new RegisterProductUseCase(
-                    products, stocks, categories, sellers, snapshots, outbox, clock);
+                    products, stocks, categories, sellers, availability, snapshots, outbox, clock);
     final PublishProductUseCase publish =
             new PublishProductUseCase(products, sellers, snapshots, outbox, clock);
     final StopProductUseCase stop = new StopProductUseCase(products, outbox, clock);

@@ -3,11 +3,15 @@ package com.openmarket.catalog.command.application;
 import com.openmarket.catalog.command.domain.Category;
 import com.openmarket.catalog.command.domain.CategoryRepository;
 import com.openmarket.catalog.command.domain.Product;
+import com.openmarket.catalog.command.domain.ProductAvailability;
+import com.openmarket.catalog.command.domain.ProductAvailabilityRepository;
 import com.openmarket.catalog.command.domain.ProductRepository;
 import com.openmarket.catalog.command.domain.ProductSnapshot;
 import com.openmarket.catalog.command.domain.Seller;
 import com.openmarket.catalog.command.domain.SellerRepository;
 import com.openmarket.catalog.command.domain.Stock;
+import com.openmarket.catalog.command.domain.StockAdjustment;
+import com.openmarket.catalog.command.domain.StockAdjustmentRepository;
 import com.openmarket.catalog.command.domain.StockRepository;
 import com.openmarket.common.core.audit.AuditEntry;
 import com.openmarket.common.core.audit.AuditLog;
@@ -40,6 +44,11 @@ final class CatalogFakes {
         }
 
         @Override
+        public Optional<Product> findById(UUID id) {
+            return Optional.ofNullable(rows.get(id));
+        }
+
+        @Override
         public Optional<Product> findForUpdateById(UUID id) {
             return Optional.ofNullable(rows.get(id));
         }
@@ -60,8 +69,43 @@ final class CatalogFakes {
         }
 
         @Override
+        public Optional<Stock> findForUpdateBySkuId(UUID skuId) {
+            return Optional.ofNullable(rows.get(skuId));
+        }
+
+        @Override
         public List<Stock> findByProductId(UUID productId) {
             return rows.values().stream().filter(s -> s.productId().equals(productId)).toList();
+        }
+    }
+
+    static final class Availabilities implements ProductAvailabilityRepository {
+        final Map<UUID, ProductAvailability> rows = new HashMap<>();
+
+        @Override
+        public ProductAvailability save(ProductAvailability availability) {
+            rows.put(availability.productId(), availability);
+            return availability;
+        }
+
+        @Override
+        public Optional<ProductAvailability> findByProductId(UUID productId) {
+            return Optional.ofNullable(rows.get(productId));
+        }
+
+        @Override
+        public Optional<ProductAvailability> findForUpdateByProductId(UUID productId) {
+            return Optional.ofNullable(rows.get(productId));
+        }
+    }
+
+    static final class Adjustments implements StockAdjustmentRepository {
+        final List<StockAdjustment> rows = new ArrayList<>();
+
+        @Override
+        public StockAdjustment save(StockAdjustment adjustment) {
+            rows.add(adjustment);
+            return adjustment;
         }
     }
 

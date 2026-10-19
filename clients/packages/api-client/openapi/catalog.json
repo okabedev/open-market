@@ -154,6 +154,105 @@
         }
       }
     },
+    "/v1/seller/products/{productId}/skus/{skuId}/stock-adjustments" : {
+      "get" : {
+        "tags" : [ "seller-product-query-controller" ],
+        "operationId" : "stockAdjustments",
+        "parameters" : [ {
+          "name" : "productId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "skuId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "page",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 0,
+            "minimum" : 0
+          }
+        }, {
+          "name" : "size",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 20,
+            "maximum" : 100,
+            "minimum" : 1
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PageViewStockAdjustmentView"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "seller-product-command-controller" ],
+        "operationId" : "adjustStock",
+        "parameters" : [ {
+          "name" : "productId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "skuId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AdjustStockRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Created",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AdjustStockResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/seller/products/{productId}/resume" : {
       "post" : {
         "tags" : [ "seller-product-command-controller" ],
@@ -428,6 +527,40 @@
           }
         }
       },
+      "AdjustStockRequest" : {
+        "type" : "object",
+        "properties" : {
+          "delta" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "reason" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "delta" ]
+      },
+      "AdjustStockResponse" : {
+        "type" : "object",
+        "properties" : {
+          "adjustmentId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "onHand" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "reserved" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "available" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }
+      },
       "BanProductRequest" : {
         "type" : "object",
         "properties" : {
@@ -566,6 +699,53 @@
             "format" : "date-time"
           },
           "updatedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "PageViewStockAdjustmentView" : {
+        "type" : "object",
+        "properties" : {
+          "items" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/StockAdjustmentView"
+            }
+          },
+          "totalCount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "page" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "size" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }
+      },
+      "StockAdjustmentView" : {
+        "type" : "object",
+        "properties" : {
+          "adjustmentId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "delta" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "onHandAfter" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "reason" : {
+            "type" : "string"
+          },
+          "adjustedAt" : {
             "type" : "string",
             "format" : "date-time"
           }

@@ -84,7 +84,7 @@ flowchart LR
 | `ProductResumed` | 판매 재개(판매자, 판매자 정지 해제) | productId, revision | search |
 | `ProductBanned` | 관리자 제재 | productId, revision, sellerId, reason(관리자가 쓴 사유) | search, notification(M4, 판매자에게 알림) |
 
-- 상품 스냅샷: productId, revision, status, sellerId, storeName, categoryId, categoryPath(대분류부터 상품 카테고리까지의 ID), name, description, imageFileIds(순서대로), optionNames, skus(skuId, optionValues, price, inStock), minPrice, inStock(판매 가능한 SKU가 하나라도 있는가), publishedAt(판매를 시작한 적이 없으면 null).
+- 상품 스냅샷: productId, revision, status, sellerId, storeName, categoryId, categoryPath(대분류부터 상품 카테고리까지의 ID), name, description, imageFileIds(순서대로), optionNames, skus(skuId, optionValues, price, inStock), minPrice, inStock(판매 가능한 SKU가 하나라도 있는가), availabilityRevision(`inStock`의 판매 가능 리비전, 아래 "catalog.stock"), publishedAt(판매를 시작한 적이 없으면 null).
 - `revision`은 상품마다 이벤트를 낼 때 1씩 올린다. 소비자는 받은 것보다 작거나 같은 revision을 무시한다. 같은 키(productId)라 순서대로 오지만, 재처리·스냅샷으로 오래된 이벤트가 다시 올 수 있다.
 - 초안(`DRAFT`)의 이미지도 첨부가 확정돼야 24시간 정리에서 지워지지 않는다. 그래서 등록에도 이벤트를 낸다. search는 `ON_SALE`이 아닌 스냅샷을 검색에서 뺀다.
 
@@ -93,7 +93,11 @@ flowchart LR
 |---|---|---|---|
 | `StockReserved` | 주문 재고 예약 성공(전 SKU) | orderId | order |
 | `StockReservationFailed` | 하나라도 부족 | orderId, 부족한 skuId 목록 | order |
-| `StockAvailabilityChanged` | 품절·재입고 전환 | productId, inStock | search |
+| `StockAvailabilityChanged` | 상품 단위 품절·재입고 전환(재고 조정, 새 SKU, M3부터 예약·해제) | productId, inStock, availabilityRevision | search |
+
+- `StockAvailabilityChanged`의 키는 productId다. 상품 이벤트와 토픽이 달라 둘 사이 순서는 보장되지 않는다. 그래서 상품 `revision`과 따로 판매 가능 리비전(`availabilityRevision`)을 둔다. 상품 단위 판매 가능 여부가 바뀔 때마다 1씩 오르고, 상품 스냅샷에도 같은 값이 들어간다.
+- search는 `inStock`을 두 토픽 중 `availabilityRevision`이 더 큰 쪽의 값으로 정한다. 나머지 필드는 상품 `revision`으로 거른다. 아직 모르는 상품의 `StockAvailabilityChanged`는 판매 가능 여부만 저장해 둔다(스냅샷보다 먼저 올 수 있다).
+- 스냅샷의 SKU별 `inStock`은 스냅샷을 만든 시점의 값이다. 이후 바뀌어도 이벤트를 내지 않는다.
 
 ### order.order
 | 이벤트 | 시점 | 주요 필드 | 소비자 |
