@@ -14,7 +14,7 @@ infra/
 ├─ grafana/        데이터 소스·대시보드 프로비저닝
 ├─ e2e/            마일스톤 E2E 실행 스크립트 run.sh(별도 Compose 프로젝트 + 앱 3개 + Playwright). 시나리오는 clients/e2e
 ├─ k6/             부하 테스트 시나리오 (M6)
-└─ elasticsearch/  nori 플러그인 커스텀 이미지 (M2)
+└─ elasticsearch/  nori 플러그인 커스텀 이미지(ADR 0016). search profile이 빌드한다
 ```
 
 ## 꼭 지킬 것
