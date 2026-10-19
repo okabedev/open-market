@@ -1,0 +1,20 @@
+{
+  "productId": "019a1b2c-3d4e-7f60-8a1b-2c3d4e5f6a70",
+  "revision": 2,
+  "status": "ON_SALE",
+  "sellerId": "019a0f3c-5e2b-7c41-9d3e-2f6a8b1c4d70",
+  "storeName": "길동상회",
+  "categoryId": "0199f000-0000-7000-8000-000000000101",
+  "categoryPath": ["0199f000-0000-7000-8000-000000000100", "0199f000-0000-7000-8000-000000000101"],
+  "name": "오버핏 반팔 티셔츠",
+  "description": "면 100% 오버핏 반팔 티셔츠입니다.",
+  "imageFileIds": ["01a1536b-fce4-7842-b53c-c0268e2887fd"],
+  "optionNames": ["색상", "사이즈"],
+  "skus": [
+    {"skuId": "019a1b2c-3d4e-7f60-8a1b-2c3d4e5f6a71", "optionValues": ["블랙", "M"], "price": 19900, "inStock": true},
+    {"skuId": "019a1b2c-3d4e-7f60-8a1b-2c3d4e5f6a72", "optionValues": ["블랙", "L"], "price": 21900, "inStock": false}
+  ],
+  "minPrice": 19900,
+  "inStock": true,
+  "publishedAt": "2026-10-19T08:00:00Z"
+}

@@ -1,0 +1,19 @@
+# catalog 실행 설정. 공통 설정은 application.yml에 있다.
+server:
+  port: 8102
+spring:
+  datasource:
+    password: ${CATALOG_DB_PASSWORD}
+  kafka:
+    consumer:
+      group-id: catalog
+
+openmarket:
+  # 토큰 없이 여는 서비스 경로(common-security). gateway.yml의 public-paths에도 gateway 기준 경로로 적는다.
+  security:
+    public-paths:
+      # 카테고리 트리와 구매자 상품 상세(docs/architecture/catalog.md "API")
+      - method: GET
+        pattern: /v1/categories
+      - method: GET
+        pattern: /v1/products/**

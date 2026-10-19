@@ -20,6 +20,7 @@ include(":libs:common-security")
 include(":libs:common-test")
 
 include(":core:member")
+include(":core:catalog")
 
 include(":infra:discovery")
 include(":infra:config")

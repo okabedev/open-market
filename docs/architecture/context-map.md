@@ -69,7 +69,7 @@ flowchart LR
 ### member.seller
 | 이벤트 | 시점 | 주요 필드 | 소비자 |
 |---|---|---|---|
-| `SellerApproved` | 입점 승인 | sellerId(=memberId), storeName | auth(`SELLER` 역할 추가), notification(M4) |
+| `SellerApproved` | 입점 승인 | sellerId(=memberId), storeName | auth(`SELLER` 역할 추가), catalog(판매자 사본: 상호), notification(M4) |
 | `SellerRejected` | 입점 반려 | memberId, applicationId, reason | notification(M4) |
 | `SellerSuspended` | 판매자 정지 | sellerId, reason | catalog(전 상품 판매 중지), auth(`SELLER` 역할 회수) |
 | `SellerReinstated` | 정지 해제 | sellerId | catalog, auth(`SELLER` 역할 복구) |
@@ -77,11 +77,16 @@ flowchart LR
 ### catalog.product
 | 이벤트 | 시점 | 주요 필드 | 소비자 |
 |---|---|---|---|
-| `ProductPublished` | 판매 시작 | 상품 스냅샷(이름, 카테고리, 판매자, SKU·가격, 이미지 fileId) | search, file(첨부 확정) |
-| `ProductChanged` | 판매 중 상품 수정 | 상품 스냅샷 | search, file |
-| `ProductStopped` | 판매 중지(판매자, 판매자 정지) | productId, reason | search |
-| `ProductResumed` | 판매 재개 | productId | search |
-| `ProductBanned` | 관리자 제재 | productId, reason | search, notification |
+| `ProductRegistered` | 상품 등록(`DRAFT`) | 상품 스냅샷 | file(첨부 확정) |
+| `ProductPublished` | 판매 시작(`DRAFT` → `ON_SALE`) | 상품 스냅샷 | search, file(첨부 확정) |
+| `ProductChanged` | 상품 수정(상태와 상관없이) | 상품 스냅샷 | search, file(첨부 확정·분리) |
+| `ProductStopped` | 판매 중지(판매자, 판매자 정지) | productId, revision, reason | search |
+| `ProductResumed` | 판매 재개 | productId, revision | search |
+| `ProductBanned` | 관리자 제재 | productId, revision, reason | search, notification |
+
+- 상품 스냅샷: productId, revision, status, sellerId, storeName, categoryId, categoryPath(대분류부터 상품 카테고리까지의 ID), name, description, imageFileIds(순서대로), optionNames, skus(skuId, optionValues, price, inStock), minPrice, inStock(판매 가능한 SKU가 하나라도 있는가), publishedAt(판매를 시작한 적이 없으면 null).
+- `revision`은 상품마다 이벤트를 낼 때 1씩 올린다. 소비자는 받은 것보다 작거나 같은 revision을 무시한다. 같은 키(productId)라 순서대로 오지만, 재처리·스냅샷으로 오래된 이벤트가 다시 올 수 있다.
+- 초안(`DRAFT`)의 이미지도 첨부가 확정돼야 24시간 정리에서 지워지지 않는다. 그래서 등록에도 이벤트를 낸다. search는 `ON_SALE`이 아닌 스냅샷을 검색에서 뺀다.
 
 ### catalog.stock
 | 이벤트 | 시점 | 주요 필드 | 소비자 |

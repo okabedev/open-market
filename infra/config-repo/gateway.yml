@@ -61,6 +61,12 @@ spring:
                 - Path=/api/member/**
               filters:
                 - StripPrefix=2
+            - id: catalog
+              uri: lb://catalog
+              predicates:
+                - Path=/api/catalog/**
+              filters:
+                - StripPrefix=2
             - id: file
               uri: lb://file
               predicates:
@@ -85,6 +91,11 @@ openmarket:
         pattern: /api/auth/v1/accounts/email-verification
       - method: POST
         pattern: /api/auth/v1/accounts/email-verification/resend
+      # 카테고리 트리와 구매자 상품 상세. catalog 쪽 public-paths(config-repo catalog.yml)에도 있다.
+      - method: GET
+        pattern: /api/catalog/v1/categories
+      - method: GET
+        pattern: /api/catalog/v1/products/**
       # 공개 이미지 변형. file 쪽 public-paths(config-repo file.yml)에도 있다.
       - method: GET
         pattern: /files/**

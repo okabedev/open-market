@@ -45,6 +45,29 @@ services:
       timeout: 3s
       retries: 30
 
+  catalog:
+    <<: *spring-service
+    build:
+      context: ../../services
+      args:
+        MODULE: core/catalog
+    image: openmarket/catalog:local
+    depends_on:
+      config:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    environment:
+      <<: *spring-env
+      CATALOG_DB_PASSWORD: ${CATALOG_DB_PASSWORD:?}
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:8102/actuator/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
   notification:
     <<: *spring-service
     build:

@@ -8,5 +8,6 @@ export {
   type ServiceName,
 } from "./client";
 export type { components as AuthComponents, paths as AuthPaths } from "./generated/auth";
+export type { components as CatalogComponents, paths as CatalogPaths } from "./generated/catalog";
 export type { components as FileComponents, paths as FilePaths } from "./generated/file";
 export type { components as MemberComponents, paths as MemberPaths } from "./generated/member";
