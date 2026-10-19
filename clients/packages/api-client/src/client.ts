@@ -1,11 +1,13 @@
 import createClient, { type Client } from "openapi-fetch";
 import type { paths as AuthPaths } from "./generated/auth";
+import type { paths as CatalogPaths } from "./generated/catalog";
 import type { paths as FilePaths } from "./generated/file";
 import type { paths as MemberPaths } from "./generated/member";
 
 /** 서비스마다 생성한 경로 타입. 서비스를 추가하면 openapi/<서비스>.json과 함께 여기에 더한다. */
 type ServicePaths = {
   auth: AuthPaths;
+  catalog: CatalogPaths;
   file: FilePaths;
   member: MemberPaths;
 };
