@@ -10,10 +10,14 @@ import org.jspecify.annotations.Nullable;
  *
  * @param categoryPath 대분류부터 상품 카테고리까지
  * @param imageFileIds 순서대로
+ * @param stopReason 판매 중지 사유. {@code SELLER_SUSPENDED}면 판매자가 다시 열 수 없다
+ * @param banReason 관리자 제재 사유
  */
 public record SellerProductView(
         UUID productId,
         ProductStatus status,
+        @Nullable StopReason stopReason,
+        @Nullable String banReason,
         String name,
         String description,
         List<CategoryRefView> categoryPath,

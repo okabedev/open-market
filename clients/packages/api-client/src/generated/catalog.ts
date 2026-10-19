@@ -34,6 +34,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/seller/products/{productId}/stop": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["stop"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/seller/products/{productId}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["resume"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/seller/products/{productId}/publish": {
         parameters: {
             query?: never;
@@ -44,6 +76,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["publish"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/products/{productId}/ban": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ban"];
         delete?: never;
         options?: never;
         head?: never;
@@ -74,6 +122,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["categories"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_1"];
         put?: never;
         post?: never;
         delete?: never;
@@ -116,6 +180,9 @@ export interface components {
             /** Format: uuid */
             productId?: string;
         };
+        BanProductRequest: {
+            reason: string;
+        };
         PageViewSellerProductSummaryView: {
             items?: components["schemas"]["SellerProductSummaryView"][];
             /** Format: int64 */
@@ -152,6 +219,9 @@ export interface components {
             productId?: string;
             /** @enum {string} */
             status?: "DRAFT" | "ON_SALE" | "STOPPED" | "BANNED";
+            /** @enum {string} */
+            stopReason?: "SELLER" | "SELLER_SUSPENDED";
+            banReason?: string;
             name?: string;
             description?: string;
             categoryPath?: components["schemas"]["CategoryRefView"][];
@@ -190,6 +260,32 @@ export interface components {
             categoryId?: string;
             name?: string;
             children?: components["schemas"]["CategoryView"][];
+        };
+        AdminProductSummaryView: {
+            /** Format: uuid */
+            productId?: string;
+            name?: string;
+            /** @enum {string} */
+            status?: "DRAFT" | "ON_SALE" | "STOPPED" | "BANNED";
+            /** Format: uuid */
+            sellerId?: string;
+            storeName?: string;
+            /** Format: uuid */
+            thumbnailFileId?: string;
+            /** Format: int64 */
+            minPrice?: number;
+            banReason?: string;
+            /** Format: date-time */
+            updatedAt?: string;
+        };
+        PageViewAdminProductSummaryView: {
+            items?: components["schemas"]["AdminProductSummaryView"][];
+            /** Format: int64 */
+            totalCount?: number;
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
         };
     };
     responses: never;
@@ -294,6 +390,46 @@ export interface operations {
             };
         };
     };
+    stop: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    resume: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     publish: {
         parameters: {
             query?: never;
@@ -304,6 +440,30 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ban: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BanProductRequest"];
+            };
+        };
         responses: {
             /** @description No Content */
             204: {
@@ -352,6 +512,31 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CategoryView"][];
+                };
+            };
+        };
+    };
+    list_1: {
+        parameters: {
+            query?: {
+                status?: "DRAFT" | "ON_SALE" | "STOPPED" | "BANNED";
+                sellerId?: string;
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageViewAdminProductSummaryView"];
                 };
             };
         };

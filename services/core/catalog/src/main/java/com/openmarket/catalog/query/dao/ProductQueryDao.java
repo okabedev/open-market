@@ -5,11 +5,13 @@ import static com.openmarket.catalog.command.domain.QSeller.seller;
 import static com.openmarket.catalog.command.domain.QSku.sku;
 import static com.openmarket.catalog.command.domain.QStock.stock;
 
+import com.openmarket.catalog.query.dto.AdminProductSummaryView;
 import com.openmarket.catalog.query.dto.PageView;
 import com.openmarket.catalog.query.dto.ProductDetailView;
 import com.openmarket.catalog.query.dto.ProductStatus;
 import com.openmarket.catalog.query.dto.SellerProductSummaryView;
 import com.openmarket.catalog.query.dto.SellerProductView;
+import com.openmarket.catalog.query.dto.StopReason;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.Tuple;
 import com.querydsl.core.types.dsl.ComparablePath;
@@ -107,6 +109,8 @@ public class ProductQueryDao {
         Tuple row =
                 query.select(
                                 product.status.stringValue(),
+                                product.stopReason.stringValue(),
+                                product.banReason,
                                 product.name,
                                 product.description,
                                 product.categoryId,
@@ -125,6 +129,8 @@ public class ProductQueryDao {
                 new SellerProductView(
                         productId,
                         ProductStatus.valueOf(Objects.requireNonNull(row.get(0, String.class))),
+                        stopReason(row.get(1, String.class)),
+                        row.get(product.banReason),
                         Objects.requireNonNull(row.get(product.name)),
                         Objects.requireNonNull(row.get(product.description)),
                         categories.findPath(Objects.requireNonNull(row.get(product.categoryId))),
@@ -190,6 +196,62 @@ public class ProductQueryDao {
                             Objects.requireNonNull(r.get(product.updatedAt))));
         }
         return new PageView<>(items, total, page, size);
+    }
+
+    /** 관리자 상품 목록. 최근 수정 순. 등록 중인 상품은 빼지 않는다(제재할 수 있다). */
+    public PageView<AdminProductSummaryView> findAdminProducts(
+            @Nullable ProductStatus status, @Nullable UUID sellerId, int page, int size) {
+        BooleanBuilder where = new BooleanBuilder();
+        if (status != null) {
+            where.and(product.status.stringValue().eq(status.name()));
+        }
+        if (sellerId != null) {
+            where.and(product.sellerId.eq(sellerId));
+        }
+        long total =
+                Objects.requireNonNullElse(
+                        query.select(product.count()).from(product).where(where).fetchOne(), 0L);
+        List<Tuple> rows =
+                query.select(
+                                product.id,
+                                product.name,
+                                product.status.stringValue(),
+                                product.sellerId,
+                                seller.storeName,
+                                product.banReason,
+                                product.updatedAt)
+                        .from(product)
+                        .join(seller)
+                        .on(seller.id.eq(product.sellerId))
+                        .where(where)
+                        .orderBy(product.updatedAt.desc(), product.id.desc())
+                        .offset((long) page * size)
+                        .limit(size)
+                        .fetch();
+        List<UUID> ids = rows.stream().map(r -> Objects.requireNonNull(r.get(product.id))).toList();
+        Map<UUID, Tuple> totals = skuTotals(ids);
+        Map<UUID, UUID> thumbnails = thumbnails(ids);
+        List<AdminProductSummaryView> items = new ArrayList<>();
+        for (Tuple r : rows) {
+            UUID id = Objects.requireNonNull(r.get(product.id));
+            @Nullable Tuple t = totals.get(id);
+            items.add(
+                    new AdminProductSummaryView(
+                            id,
+                            Objects.requireNonNull(r.get(product.name)),
+                            ProductStatus.valueOf(Objects.requireNonNull(r.get(2, String.class))),
+                            Objects.requireNonNull(r.get(product.sellerId)),
+                            Objects.requireNonNull(r.get(seller.storeName)),
+                            thumbnails.get(id),
+                            t == null ? 0 : Objects.requireNonNullElse(t.get(1, Long.class), 0L),
+                            r.get(product.banReason),
+                            Objects.requireNonNull(r.get(product.updatedAt))));
+        }
+        return new PageView<>(items, total, page, size);
+    }
+
+    private static @Nullable StopReason stopReason(@Nullable String name) {
+        return name == null ? null : StopReason.valueOf(name);
     }
 
     private List<UUID> images(UUID productId) {

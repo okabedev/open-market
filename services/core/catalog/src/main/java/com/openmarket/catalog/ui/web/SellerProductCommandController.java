@@ -2,10 +2,13 @@ package com.openmarket.catalog.ui.web;
 
 import static com.openmarket.catalog.ui.web.SellerProductQueryController.sellerId;
 
+import com.openmarket.catalog.command.application.ChangeSaleStatusCommand;
 import com.openmarket.catalog.command.application.PublishProductCommand;
 import com.openmarket.catalog.command.application.PublishProductUseCase;
 import com.openmarket.catalog.command.application.RegisterProductCommand;
 import com.openmarket.catalog.command.application.RegisterProductUseCase;
+import com.openmarket.catalog.command.application.ResumeProductUseCase;
+import com.openmarket.catalog.command.application.StopProductUseCase;
 import com.openmarket.catalog.command.application.UpdateProductCommand;
 import com.openmarket.catalog.command.application.UpdateProductUseCase;
 import com.openmarket.common.web.idempotency.Idempotent;
@@ -24,7 +27,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 판매자 상품 등록·수정·판매 시작(CAT-1, CAT-2). 주체는 토큰의 {@code sub}(= sellerId)다. 입력 규칙 위반은 400 {@code
+ * 판매자 상품 등록·수정·판매 시작·중지·재개(CAT-1, CAT-2). 주체는 토큰의 {@code sub}(= sellerId)다. 입력 규칙 위반은 400 {@code
  * CATALOG_INVALID_INPUT}, 다른 판매자의 상품은 404 {@code CATALOG_PRODUCT_NOT_FOUND}.
  */
 @RestController
@@ -34,14 +37,20 @@ public class SellerProductCommandController {
     private final RegisterProductUseCase register;
     private final UpdateProductUseCase update;
     private final PublishProductUseCase publish;
+    private final StopProductUseCase stop;
+    private final ResumeProductUseCase resume;
 
     public SellerProductCommandController(
             RegisterProductUseCase register,
             UpdateProductUseCase update,
-            PublishProductUseCase publish) {
+            PublishProductUseCase publish,
+            StopProductUseCase stop,
+            ResumeProductUseCase resume) {
         this.register = register;
         this.update = update;
         this.publish = publish;
+        this.stop = stop;
+        this.resume = resume;
     }
 
     /**
@@ -106,5 +115,25 @@ public class SellerProductCommandController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void publish(Principal principal, @PathVariable UUID productId) {
         publish.execute(new PublishProductCommand(sellerId(principal), productId));
+    }
+
+    /**
+     * 판매를 멈춘다(CAT-2). 이미 멈췄으면 204. 등록 중이면 422 {@code CATALOG_INVALID_STATUS}, 제재된 상품이면 422 {@code
+     * CATALOG_PRODUCT_BANNED}.
+     */
+    @PostMapping("/{productId}/stop")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void stop(Principal principal, @PathVariable UUID productId) {
+        stop.execute(new ChangeSaleStatusCommand(sellerId(principal), productId));
+    }
+
+    /**
+     * 직접 멈춘 상품의 판매를 다시 연다. 이미 판매 중이면 204. 판매자 정지 중이면 422 {@code CATALOG_SELLER_SUSPENDED}, 제재된 상품이면
+     * 422 {@code CATALOG_PRODUCT_BANNED}.
+     */
+    @PostMapping("/{productId}/resume")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void resume(Principal principal, @PathVariable UUID productId) {
+        resume.execute(new ChangeSaleStatusCommand(sellerId(principal), productId));
     }
 }

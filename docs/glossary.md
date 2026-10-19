@@ -25,6 +25,7 @@
 | 카테고리 | `Category` | catalog | 트리 구조. 수수료율은 정산이 카테고리 ID로 따로 관리한다 |
 | 상품 | `Product` | catalog | 상태: `DRAFT` → `ON_SALE` ↔ `STOPPED`, 관리자 제재 시 `BANNED` |
 | 옵션 조합 | `Sku` | catalog | 주문과 재고의 단위. 가격을 가진다. 상품의 옵션 이름(최대 2개, 예: 색상·사이즈)마다 값 하나씩을 갖는다 |
+| 판매 중지 사유 | `StopReason` | catalog | `SELLER`(판매자가 멈춤, 판매자가 다시 연다), `SELLER_SUSPENDED`(판매자 정지로 멈춤, 정지가 풀리면 다시 열린다) |
 | 상품 리비전 | `revision` | catalog | 상품 이벤트를 낼 때마다 1씩 오르는 번호. 소비자가 오래된 이벤트를 거른다 |
 | 판매자 사본 | `Seller` | catalog | member의 판매자 이벤트로 만든 사본. 상호와 판매 상태만 갖는다 |
 | 재고 | `Stock` | catalog | SKU별 `onHand`(실재고)와 `reserved`(예약 수량). 판매 가능 수량 = `onHand - reserved` |
