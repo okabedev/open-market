@@ -1,5 +1,6 @@
 package com.openmarket.common.core.error;
 
+import java.util.Map;
 import java.util.regex.Pattern;
 
 /**
@@ -32,6 +33,14 @@ public class BusinessException extends RuntimeException {
 
     public String getCode() {
         return code;
+    }
+
+    /**
+     * 응답에 함께 실을 확장 필드. 화면이 어느 대상이 문제인지 보여 줄 때 쓴다(예: 가격이 바뀐 SKU 목록). 하위 클래스가 덮어쓴다. 개인정보와 입력값을 넣지
+     * 않는다.
+     */
+    public Map<String, Object> getProperties() {
+        return Map.of();
     }
 
     private static String validate(String code) {

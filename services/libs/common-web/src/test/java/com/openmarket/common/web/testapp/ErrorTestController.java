@@ -5,6 +5,8 @@ import com.openmarket.common.core.error.ErrorType;
 import com.openmarket.common.core.error.NotFoundException;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import java.util.List;
+import java.util.Map;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -18,6 +20,16 @@ public class ErrorTestController {
     @GetMapping("/business")
     public void business() {
         throw new BusinessException(ErrorType.UNPROCESSABLE, "TEST_RULE_VIOLATED", "규칙을 어겼습니다.");
+    }
+
+    @GetMapping("/business-with-properties")
+    public void businessWithProperties() {
+        throw new BusinessException(ErrorType.CONFLICT, "TEST_PRICE_CHANGED", "가격이 바뀌었습니다.") {
+            @Override
+            public Map<String, Object> getProperties() {
+                return Map.of("skuIds", List.of("sku-1"), "code", "IGNORED");
+            }
+        };
     }
 
     @GetMapping("/not-found")

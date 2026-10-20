@@ -36,6 +36,15 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    @DisplayName("BusinessException의 확장 필드는 응답에 실린다. 표준·공통 필드 이름은 덮어쓰지 않는다")
+    void businessExceptionProperties() throws Exception {
+        mockMvc.perform(get("/test/errors/business-with-properties"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("TEST_PRICE_CHANGED"))
+                .andExpect(jsonPath("$.skuIds[0]").value("sku-1"));
+    }
+
+    @Test
     @DisplayName("NotFoundException은 404로 응답한다")
     void notFound() throws Exception {
         mockMvc.perform(get("/test/errors/not-found"))
