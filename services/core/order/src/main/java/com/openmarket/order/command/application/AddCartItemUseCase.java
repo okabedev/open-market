@@ -39,9 +39,9 @@ public class AddCartItemUseCase {
         CatalogSku sku =
                 catalog.findAll(List.of(command.skuId())).stream()
                         .findFirst()
-                        .orElseThrow(SkuNotFoundException::new);
+                        .orElseThrow(() -> new SkuNotFoundException(List.of(command.skuId())));
         if (!sku.onSale()) {
-            throw new SkuNotOnSaleException();
+            throw new SkuNotOnSaleException(List.of(command.skuId()));
         }
         transaction.executeWithoutResult(
                 status -> {

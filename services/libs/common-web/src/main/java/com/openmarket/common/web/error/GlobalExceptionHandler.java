@@ -5,6 +5,7 @@ import com.openmarket.common.core.error.ErrorType;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,7 +22,8 @@ import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
 /**
- * 모든 오류를 RFC 9457 ProblemDetail로 응답한다. 확장 필드는 {@code code}, {@code traceId}, {@code errors}다.
+ * 모든 오류를 RFC 9457 ProblemDetail로 응답한다. 확장 필드는 {@code code}, {@code traceId}, {@code errors}와 예외가 주는
+ * 필드({@link BusinessException#getProperties()})다.
  *
  * <p>서비스에는 예외 핸들러를 따로 두지 않는다. 도메인은 {@link BusinessException}을 던지고 HTTP 상태는 여기서 정한다.
  */
@@ -30,6 +32,10 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
     private static final String SECURITY_PACKAGE = "org.springframework.security.";
+
+    /** 예외의 확장 필드가 덮어쓰지 못하는 이름. RFC 9457 표준 필드와 이 핸들러가 붙이는 필드다. */
+    private static final Set<String> RESERVED_PROPERTIES =
+            Set.of("type", "title", "status", "detail", "instance", "code", "traceId", "errors");
 
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ProblemDetail> handleBusiness(BusinessException exception) {
@@ -40,6 +46,14 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
             log.debug("{}: {}", exception.getCode(), exception.getMessage());
         }
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(status, exception.getMessage());
+        exception
+                .getProperties()
+                .forEach(
+                        (name, value) -> {
+                            if (!RESERVED_PROPERTIES.contains(name)) {
+                                problem.setProperty(name, value);
+                            }
+                        });
         enrich(problem, exception.getCode());
         return ResponseEntity.status(status).body(problem);
     }

@@ -34,7 +34,20 @@ class FeignSkuCatalogAdapter implements SkuCatalogPort {
             throw unavailable(e);
         }
         return skus.stream()
-                .map(sku -> new CatalogSku(sku.skuId(), "ON_SALE".equals(sku.productStatus())))
+                .map(
+                        sku ->
+                                new CatalogSku(
+                                        sku.skuId(),
+                                        sku.productId(),
+                                        sku.productName(),
+                                        "ON_SALE".equals(sku.productStatus()),
+                                        sku.sellerId(),
+                                        sku.storeName(),
+                                        sku.categoryId(),
+                                        sku.optionNames(),
+                                        sku.optionValues(),
+                                        sku.price(),
+                                        sku.availableQuantity()))
                 .toList();
     }
 

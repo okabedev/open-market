@@ -20,6 +20,17 @@ interface CatalogSkuClient {
     @GetMapping("/internal/v1/skus")
     List<SkuResponse> skus(@RequestParam("ids") Collection<UUID> ids);
 
-    /** 응답에서 커맨드가 쓰는 필드만 읽는다. */
-    record SkuResponse(UUID skuId, String productStatus) {}
+    /** 응답에서 커맨드가 쓰는 필드만 읽는다. 대표 이미지는 쓰지 않는다. */
+    record SkuResponse(
+            UUID skuId,
+            UUID productId,
+            String productName,
+            String productStatus,
+            UUID sellerId,
+            String storeName,
+            UUID categoryId,
+            List<String> optionNames,
+            List<String> optionValues,
+            long price,
+            int availableQuantity) {}
 }

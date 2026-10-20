@@ -48,7 +48,7 @@ public class Cart {
     /**
      * SKU를 담는다. 이미 담은 SKU면 수량을 더하고 담은 시각을 새로 한다.
      *
-     * @throws InvalidCartInputException 수량이 1~99가 아니다
+     * @throws InvalidOrderInputException 수량이 1~99가 아니다
      * @throws CartQuantityExceededException 더한 수량이 99를 넘는다
      * @throws CartFullException 새 SKU인데 이미 50개를 담았다
      */
@@ -69,7 +69,7 @@ public class Cart {
     /**
      * 담은 SKU의 수량을 바꾼다.
      *
-     * @throws InvalidCartInputException 수량이 1~99가 아니다
+     * @throws InvalidOrderInputException 수량이 1~99가 아니다
      * @throws CartItemNotFoundException 담지 않은 SKU다
      */
     public void changeQuantity(UUID skuId, int quantity, Instant now) {

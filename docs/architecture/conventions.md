@@ -90,7 +90,7 @@ com.openmarket.<service>
 - 베이스 예외는 `common-core`의 `BusinessException`이다. `ErrorType`(`INVALID`, `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `CONFLICT`, `UNPROCESSABLE`, `TOO_MANY_REQUESTS`, `UNAVAILABLE`)과 오류 코드 문자열을 가진다. HTTP 상태는 모른다.
 - 도메인 예외는 이것을 상속한다. 오류 코드는 `<SERVICE>_<설명>` 형식이다. 예: `ORDER_PRICE_CHANGED`.
 - 조회 쪽 "없음"은 `common-core`의 공통 `NotFoundException`을 던진다.
-- `common-web`의 `@RestControllerAdvice` 하나가 `ErrorType`을 HTTP 상태로 바꾸고, RFC 9457 `ProblemDetail`로 응답한다. 확장 필드는 `code`, `traceId`, 필드 오류 목록(`errors`)이다. 서비스에는 예외 핸들러를 따로 두지 않는다.
+- `common-web`의 `@RestControllerAdvice` 하나가 `ErrorType`을 HTTP 상태로 바꾸고, RFC 9457 `ProblemDetail`로 응답한다. 확장 필드는 `code`, `traceId`, 필드 오류 목록(`errors`)이다. 예외가 `getProperties()`로 주는 필드(예: 가격이 바뀐 SKU 목록)도 실린다. 표준 필드와 위 이름은 덮어쓰지 않는다. 서비스에는 예외 핸들러를 따로 두지 않는다.
 - gateway가 직접 거절한 요청(401, 403, 429)은 본문 없이 상태와 헤더만 준다. 모든 응답에는 trace id가 `X-Request-Id` 헤더로 붙는다([ADR 0011](../adr/0011-gateway-webflux.md)).
 
 ## 테스트

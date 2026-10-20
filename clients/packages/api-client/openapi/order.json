@@ -53,6 +53,34 @@
         }
       }
     },
+    "/v1/orders" : {
+      "post" : {
+        "tags" : [ "order-command-controller" ],
+        "operationId" : "place",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/PlaceOrderRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Created",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PlaceOrderResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/cart/items" : {
       "post" : {
         "tags" : [ "cart-command-controller" ],
@@ -70,6 +98,33 @@
         "responses" : {
           "204" : {
             "description" : "No Content"
+          }
+        }
+      }
+    },
+    "/v1/orders/{orderId}" : {
+      "get" : {
+        "tags" : [ "order-query-controller" ],
+        "operationId" : "order",
+        "parameters" : [ {
+          "name" : "orderId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/OrderDetailView"
+                }
+              }
+            }
           }
         }
       }
@@ -105,6 +160,68 @@
         },
         "required" : [ "quantity" ]
       },
+      "Line" : {
+        "type" : "object",
+        "properties" : {
+          "skuId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "quantity" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "expectedPrice" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        },
+        "required" : [ "expectedPrice", "quantity", "skuId" ]
+      },
+      "PlaceOrderRequest" : {
+        "type" : "object",
+        "properties" : {
+          "lines" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/Line"
+            }
+          },
+          "shipping" : {
+            "$ref" : "#/components/schemas/Shipping"
+          }
+        },
+        "required" : [ "lines", "shipping" ]
+      },
+      "Shipping" : {
+        "type" : "object",
+        "properties" : {
+          "recipientName" : {
+            "type" : "string"
+          },
+          "recipientPhone" : {
+            "type" : "string"
+          },
+          "zipCode" : {
+            "type" : "string"
+          },
+          "baseAddress" : {
+            "type" : "string"
+          },
+          "detailAddress" : {
+            "type" : "string"
+          }
+        }
+      },
+      "PlaceOrderResponse" : {
+        "type" : "object",
+        "properties" : {
+          "orderId" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }
+      },
       "AddCartItemRequest" : {
         "type" : "object",
         "properties" : {
@@ -118,6 +235,133 @@
           }
         },
         "required" : [ "quantity", "skuId" ]
+      },
+      "OrderDetailView" : {
+        "type" : "object",
+        "properties" : {
+          "orderId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "status" : {
+            "type" : "string",
+            "enum" : [ "PENDING", "AWAITING_PAYMENT", "PAID", "CANCELLED" ]
+          },
+          "cancelReason" : {
+            "type" : "string",
+            "enum" : [ "STOCK_UNAVAILABLE", "PAYMENT_TIMEOUT", "BUYER_CANCELLED" ]
+          },
+          "amount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "orderName" : {
+            "type" : "string"
+          },
+          "shipping" : {
+            "$ref" : "#/components/schemas/OrderShippingView"
+          },
+          "sellerOrders" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/OrderSellerOrderView"
+            }
+          },
+          "placedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "OrderLineView" : {
+        "type" : "object",
+        "properties" : {
+          "orderLineId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "skuId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "productId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "productName" : {
+            "type" : "string"
+          },
+          "optionNames" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "optionValues" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "unitPrice" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "quantity" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "amount" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }
+      },
+      "OrderSellerOrderView" : {
+        "type" : "object",
+        "properties" : {
+          "sellerOrderId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "sellerId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "storeName" : {
+            "type" : "string"
+          },
+          "amount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "lines" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/OrderLineView"
+            }
+          }
+        }
+      },
+      "OrderShippingView" : {
+        "type" : "object",
+        "properties" : {
+          "recipientName" : {
+            "type" : "string"
+          },
+          "recipientPhone" : {
+            "type" : "string"
+          },
+          "zipCode" : {
+            "type" : "string"
+          },
+          "baseAddress" : {
+            "type" : "string"
+          },
+          "detailAddress" : {
+            "type" : "string"
+          }
+        }
       },
       "CartItemView" : {
         "type" : "object",

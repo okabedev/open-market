@@ -104,12 +104,13 @@ flowchart LR
 | 이벤트 | 시점 | 주요 필드 | 소비자 |
 |---|---|---|---|
 | `OrderPlaced` | 주문 생성(`PENDING`) | orderId, buyerId, lines(skuId, quantity), issuedCouponIds | catalog(재고 예약), promotion(쿠폰 예약) |
-| `OrderAwaitingPayment` | 예약 모두 성공 | orderId, 결제 금액, 주문명 | payment(결제 준비) |
+| `OrderAwaitingPayment` | 예약 모두 성공 | orderId, amount(결제 금액), orderName(주문명) | payment(결제 준비) |
 | `OrderPaid` | 결제 승인 반영 | orderId, buyerId, 하위 주문 목록(판매자, 항목, 카테고리, 금액, 판매자 쿠폰 부담분), 배송지 스냅샷 | catalog(예약 확정), promotion(쿠폰 사용 확정), fulfillment(배송 생성), notification |
 | `OrderCancelled` | 결제 전 취소(예약 실패, 만료, 구매자 취소) | orderId, reason | catalog(예약 해제), promotion(쿠폰 복원), payment(결제 무효화·보상 취소) |
 
 - 키는 orderId다. 한 주문의 이벤트는 순서대로 온다.
-- `OrderPlaced`, `OrderCancelled`의 JSON 예시는 `services/core/order/src/test/resources/events/`에 있다. order가 주문 생성을 구현하기 전에 소비자(catalog)를 먼저 만들어서 예시를 먼저 정했다. 발행 코드는 이 예시에 맞춘다. `OrderPaid` 예시는 결제 승인을 반영할 때 정한다. catalog는 그중 orderId만 읽는다.
+- JSON 예시는 `services/core/order/src/test/resources/events/`에 있다. `OrderPaid` 예시는 결제 승인을 반영할 때 정한다. catalog는 그중 orderId만 읽는다.
+- `OrderCancelled`의 reason은 `STOCK_UNAVAILABLE`, `PAYMENT_TIMEOUT`, `BUYER_CANCELLED`다([order.md](order.md) "취소 사유").
 
 ### promotion.issued-coupon
 | 이벤트 | 시점 | 주요 필드 | 소비자 |
