@@ -12,7 +12,7 @@
 | R6 | 로컬 메모리 예산 | 서비스 15개, Kafka, Connect, ES, 관측성을 함께 띄워야 한다. WSL 메모리가 부족하면 E2E를 돌릴 수 없다 | profile별로 띄워 `docker stats`로 실측하고, 서비스 JVM 힙 기본값(`-XX:MaxRAMPercentage`)을 정한다 | M0-c | 확인(2026-10-17): 전체 profile 실측 5.1GB(Spring 서비스 4개). 상한이 없으면 JVM이 VM 메모리 기준으로 힙 상한을 5GB로 잡는 것을 발견했다. JVM 컨테이너에 `mem_limit` 512m + `MaxRAMPercentage=50`을 두었다. 서비스 15개 기준 컨테이너 상한 합계 약 11.5GB, 빌드까지 VM 전체 약 18GB로 `.wslconfig` 20GB를 권장한다. 아래 "메모리 예산". 서비스에 Kafka 소비자와 데이터가 붙는 M3 마감 전에 다시 잰다 |
 | R7 | auth issuer 호스트 이름 | 브라우저, IDE 실행 서비스, 컨테이너가 같은 issuer URL로 auth에 닿아야 한다 | hosts + 네트워크 별칭으로 세 경우 모두 토큰 검증 확인 | M1 | 확인(2026-10-18): issuer를 고정하면 요청 주소와 상관없이 `iss`가 같다(`AuthorizationServerIntegrationTest`, 무작위 포트·다른 Host). 호스트(curl, hosts 대신 `--resolve`)에서 PKCE 로그인으로 받은 토큰을 컨테이너 gateway가 검증했다. 네트워크 별칭은 auth를 IDE로 띄우면 사라져 JWK를 받지 못해, 컨테이너가 `host-gateway`로 호스트 포트에 닿게 바꿨다. auth가 컨테이너일 때와 IDE일 때 모두 검증 통과. IDE gateway(bootRun)도 hosts 항목을 넣은 뒤 같은 결과였다(유효 토큰 통과, 서명 위조·토큰 없음 401). IDE gateway는 Netty DNS 리졸버가 `/etc/hosts`만 읽어서, JVM 옵션 `jdk.net.hosts.file`로는 대신할 수 없다. [ADR 0013](../adr/0013-auth-issuer-host.md) |
 | R8 | Next.js BFF 세션과 토큰 갱신 | 서버 컴포넌트, Server Action, Route Handler 모두에서 세션을 읽고 토큰을 갱신해야 한다. 동시 갱신 경쟁이 생길 수 있다 | 갱신 중복 방지(Redis 락) 시나리오 테스트 | M1 | 확인(2026-10-18): Redis 락(`SET NX PX`)을 잡은 한 요청만 갱신하고 나머지는 기다린다. BFF 인스턴스 둘이 동시에 20번 갱신해도 auth 요청은 1번이다(`bff.test.ts`, 락을 끄면 2번으로 실패). 실제 auth와 브라우저에서 액세스 토큰을 강제 만료한 뒤 서버 컴포넌트 5·Route Handler 5·Server Action 1을 동시에 보내기를 3번 반복했다. 모두 인증됐고 세션이 유지됐다. [ADR 0014](../adr/0014-bff-session.md) |
-| R9 | 토스페이먼츠 테스트 환경 | 테스트 키로 승인, 부분취소, 웹훅을 로컬에서 받을 수 있어야 한다. 웹훅은 공인 주소가 필요하다 | 승인·취소 API 확인. 웹훅은 결제 조회 폴링으로 대신할 수 있는지 확인 | M3 | 미확인 |
+| R9 | 토스페이먼츠 테스트 환경 | 테스트 키로 승인, 부분취소, 웹훅을 로컬에서 받을 수 있어야 한다. 웹훅은 공인 주소가 필요하다 | 승인·취소 API 확인. 웹훅은 결제 조회 폴링으로 대신할 수 있는지 확인 | M3 | 확인(2026-10-20): 주문서형 연동 키는 전자결제 신청(사업자 정보) 뒤에만 나와서 문서용 공개 테스트 키를 쓴다. 위젯 결제 → 서버 승인 → 조회 → 부분취소 → 나머지 취소가 로컬에서 됐고, 토스 `Idempotency-Key`로 승인·취소를 다시 보내도 한 번만 처리됐다. 웹훅 없이 `paymentKey` 조회로 상태를 확정할 수 있다. `orderId` 조회는 문서용 키에서 404라 쓰지 않는다. 아래 "토스 테스트 환경 확인". [ADR 0018](../adr/0018-toss-payments-integration.md) |
 | R10 | Elasticsearch nori 플러그인 | 공식 이미지에 nori가 없어서 커스텀 이미지가 필요하다 | Dockerfile로 플러그인 설치, 인덱스 분석기 테스트 | M2 | 확인(2026-10-19): 공식 9.4.6 이미지에 `analysis-nori` 9.4.6을 설치한 이미지가 뜨고, 메모리는 1.5GB로 같다. 색인·검색 `decompound_mode` 조합 셋을 상품명으로 비교했다. 검색도 `mixed`로 해야 붙여 쓴 원형(`사과즙`)이 띄어 쓴 문서보다 위로 오고, `operator: and`에서도 띄어 쓴 문서를 놓치지 않았다. [ADR 0016](../adr/0016-elasticsearch-nori.md) |
 
 ## outbox 발행 확인 (R5)
@@ -30,6 +30,34 @@
 | `docker compose up -d --wait` 반복 | 두 번째부터 토픽 0개 생성, 커넥터 설정 갱신(HTTP 200), 종료 코드 0 |
 
 확인하지 않은 것: 슬롯이 `max_slot_wal_keep_size`(1GB)를 넘어 무효가 되는 경우. 이때 `when_needed`가 스냅샷을 다시 찍는다(위 스냅샷 경로와 같다). M6 장애 주입에서 확인한다.
+
+## 토스 테스트 환경 확인 (R9)
+환경(2026-10-20): 문서용 공개 테스트 키(`.env.example`), SDK v2 `https://js.tosspayments.com/v2/standard`, 확인용 페이지를 로컬(`localhost`)에 띄우고 Windows 브라우저에서 결제했다. 승인 이후 단계는 `successUrl`을 받은 서버가 이어서 불렀다. 결제는 끝에 전액 취소했다.
+
+| 확인 | 결과 |
+|---|---|
+| 위젯 렌더링 | 테스트 환경 안내와 결제수단(퀵계좌이체, 카드, 토스페이, 페이코, 카카오페이, 네이버페이)이 나온다. 가상계좌는 없다 |
+| 결제수단별 인증 | 카드는 카드사의 실제 인증 화면(예: `customer.kbcard.com`), 토스페이는 토스 앱 QR이다. 자동화할 수 없어 사람이 한다. 카드사를 고르지 않고 결제하면 SDK가 `NEED_CARD_PAYMENT_DETAIL`로 거절한다 |
+| `successUrl` | `paymentType=NORMAL`, `orderId`, `paymentKey`(`tgen_` 접두어), `amount=15000` |
+| 승인 전 `GET /v1/payments/orders/{orderId}` | 404 `NOT_FOUND_MERCHANT`. 승인 뒤에도 같다. 문서용 키(상점 `tgen_docs`)에서는 `orderId` 조회를 쓸 수 없다 |
+| 금액을 바꾼 승인 | 403 `FORBIDDEN_REQUEST`. 그 뒤 맞는 금액으로 승인하면 성공한다 |
+| 승인 | 200, 854ms. `status=DONE`, `totalAmount=15000`, `balanceAmount=15000`, `method=간편결제`. 토스페이 즉시 할인(16원)은 `easyPay.discountAmount`에만 나오고 `totalAmount`는 요청 금액 그대로다 |
+| 같은 `Idempotency-Key`로 승인 재요청 | 200, 50ms, 첫 응답과 같다 |
+| 키 없이 승인 재요청 | 400 `ALREADY_PROCESSED_PAYMENT`. 이미 승인된 결제다. 조회로 확인해야 한다 |
+| 부분취소 5,000원 | 200, 1,135ms. `PARTIAL_CANCELED`, 잔액 10,000. `cancels[]`에 `transactionKey`, `cancelAmount`, `canceledAt` |
+| 같은 키로 부분취소 재요청 | 200, 62ms, 취소는 하나만 남는다 |
+| 나머지 전액 취소(금액 없이) | 200. 잔액 0인데 상태는 `CANCELED`가 아니라 `PARTIAL_CANCELED`로 남는다 |
+| 취소된 결제 다시 취소 | 403 `NOT_CANCELABLE_AMOUNT` |
+| `GET /v1/payments/{paymentKey}` | 200. 승인·취소 내역이 모두 나온다 |
+| `TossPayments-Test-Code: REJECT_CARD_PAYMENT` | 403 `REJECT_CARD_PAYMENT`. 없는 결제에도 지정한 오류가 그대로 온다 |
+| 잘못된 시크릿 키 | 401 `UNAUTHORIZED_KEY` |
+| 없는 `paymentKey`로 승인 | 404 `NOT_FOUND_PAYMENT_SESSION`(결제 진행 데이터 만료와 같은 코드) |
+
+설계에 반영한 것([ADR 0018](../adr/0018-toss-payments-integration.md))
+- 승인 타임아웃·재조회는 `orderId`가 아니라 `paymentKey`로 조회한다. 승인 요청에 `paymentKey`가 있으므로 `IN_PROGRESS` 결제는 늘 `paymentKey`를 갖는다.
+- 결제 상태는 토스 `status`만 보지 않는다. 취소 결과는 `balanceAmount`가 0이면 전액 취소로 본다.
+- 금액 대조는 `totalAmount`로 한다. 결제수단의 즉시 할인이 있어도 `totalAmount`는 요청 금액 그대로다.
+- 키 없이 다시 보낸 승인의 `ALREADY_PROCESSED_PAYMENT`는 실패가 아니다. 조회로 실제 상태를 확인한다.
 
 ## 메모리 예산 (R6)
 측정 환경(2026-10-17): Docker Desktop 29.8.2(WSL2), `.wslconfig` `memory=20GB`(VM에서 보이는 값 19.5GB), CPU 6개. `docker compose --profile search --profile obs --profile apps up` 후 gateway 경유로 20,000건(동시 16)을 보내고 `docker stats`로 쟀다. JVM 값은 `/actuator/prometheus`의 `jvm_memory_*`다.

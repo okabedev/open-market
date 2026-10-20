@@ -21,6 +21,7 @@
 | [0015](0015-frontend-ui-stack.md) | 프론트 화면은 Tailwind CSS, shadcn/ui 방식 컴포넌트, Server Action 폼으로 만든다 | 승인 |
 | [0016](0016-elasticsearch-nori.md) | Elasticsearch는 nori를 더한 커스텀 이미지, 한국어 필드는 mixed 분석기 하나로 색인·검색한다 | 승인 |
 | [0017](0017-image-processing.md) | 썸네일은 JDK ImageIO + TwelveMonkeys 리더로 서브샘플링해 만든다 | 승인 |
+| [0018](0018-toss-payments-integration.md) | 토스 결제는 주문서형 SDK v2와 서버 승인, 웹훅 대신 조회로 연동하고 E2E는 가짜 PG로 돌린다 | 승인 |
 
 
 ## 템플릿
