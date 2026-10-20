@@ -13,6 +13,8 @@ import com.openmarket.catalog.command.domain.Stock;
 import com.openmarket.catalog.command.domain.StockAdjustment;
 import com.openmarket.catalog.command.domain.StockAdjustmentRepository;
 import com.openmarket.catalog.command.domain.StockRepository;
+import com.openmarket.catalog.command.domain.StockReservation;
+import com.openmarket.catalog.command.domain.StockReservationRepository;
 import com.openmarket.common.core.audit.AuditEntry;
 import com.openmarket.common.core.audit.AuditLog;
 import com.openmarket.common.messaging.outbox.Outbox;
@@ -141,6 +143,26 @@ final class CatalogFakes {
         @Override
         public Optional<Seller> findById(UUID id) {
             return Optional.ofNullable(rows.get(id));
+        }
+    }
+
+    static final class Reservations implements StockReservationRepository {
+        final Map<UUID, StockReservation> rows = new LinkedHashMap<>();
+
+        @Override
+        public StockReservation save(StockReservation reservation) {
+            rows.put(reservation.orderId(), reservation);
+            return reservation;
+        }
+
+        @Override
+        public boolean existsByOrderId(UUID orderId) {
+            return rows.containsKey(orderId);
+        }
+
+        @Override
+        public Optional<StockReservation> findForUpdateByOrderId(UUID orderId) {
+            return Optional.ofNullable(rows.get(orderId));
         }
     }
 

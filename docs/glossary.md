@@ -30,7 +30,7 @@
 | 검색 상품 | `SearchProduct` | search | 상품 이벤트와 품절 전환 이벤트로 만든 검색용 문서. 상품 `revision`과 판매 가능 리비전을 따로 두고 각각 커질 때만 반영한다 |
 | 판매자 사본 | `Seller` | catalog | member의 판매자 이벤트로 만든 사본. 상호와 판매 상태만 갖는다 |
 | 재고 | `Stock` | catalog | SKU별 `onHand`(실재고)와 `reserved`(예약 수량). 판매 가능 수량 = `onHand - reserved` |
-| 재고 예약 | `StockReservation` | catalog | 주문 하나에 대한 예약 묶음. 상태: `RESERVED` → `COMMITTED` 또는 `RELEASED` |
+| 재고 예약 | `StockReservation` | catalog | 주문 하나에 대한 예약 묶음. 상태: `RESERVED` → `COMMITTED` 또는 `RELEASED`. 재고가 모자라 예약하지 못한 주문은 `FAILED`로 남긴다 |
 | 재고 조정 | `StockAdjustment` | catalog | 판매자의 입고·차감 이력. 증감 수량과 조정 뒤 실재고를 남긴다 |
 | 판매 가능 여부 | `ProductAvailability` | catalog | 상품 단위로 판매 가능한 SKU가 하나라도 있는가(`inStock`). 바뀔 때마다 판매 가능 리비전(`availabilityRevision`)이 1씩 오른다 |
 | 파일 | `StoredFile` | file | 업로드 파일 메타데이터. 상태: `TEMP` → `ATTACHED` → `DETACHED`(소유자에서 빠짐). 24시간 지난 `TEMP`와 7일 지난 `DETACHED`는 삭제 |

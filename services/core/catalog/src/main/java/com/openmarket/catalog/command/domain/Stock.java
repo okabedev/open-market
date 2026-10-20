@@ -8,7 +8,10 @@ import jakarta.persistence.Version;
 import java.time.Instant;
 import java.util.UUID;
 
-/** 재고(docs/glossary.md "재고"). SKU마다 하나다. 판매 가능 수량은 {@code onHand - reserved}다. 예약은 M3에서 더한다. */
+/**
+ * 재고(docs/glossary.md "재고"). SKU마다 하나다. 판매 가능 수량은 {@code onHand - reserved}다. 예약은 {@link
+ * StockReservation}이 바꾼다.
+ */
 @Entity
 @Table(name = "stock")
 public class Stock {
@@ -67,6 +70,34 @@ public class Stock {
             throw new StockOutOfRangeException();
         }
         this.onHand = (int) after;
+        this.updatedAt = now;
+    }
+
+    /** 주문 수량을 예약한다. 판매 가능 수량은 부르는 쪽({@link StockReservation})이 먼저 확인한다. */
+    void reserve(int quantity, Instant now) {
+        if (quantity < 1 || quantity > available()) {
+            throw new IllegalStateException("예약할 수 없는 수량: " + quantity);
+        }
+        this.reserved += quantity;
+        this.updatedAt = now;
+    }
+
+    /** 예약을 확정한다. 실재고와 예약 수량을 함께 줄여 판매 가능 수량은 그대로다. */
+    void commit(int quantity, Instant now) {
+        if (quantity < 1 || quantity > reserved) {
+            throw new IllegalStateException("확정할 수 없는 수량: " + quantity);
+        }
+        this.onHand -= quantity;
+        this.reserved -= quantity;
+        this.updatedAt = now;
+    }
+
+    /** 예약을 푼다. */
+    void release(int quantity, Instant now) {
+        if (quantity < 1 || quantity > reserved) {
+            throw new IllegalStateException("풀 수 없는 수량: " + quantity);
+        }
+        this.reserved -= quantity;
         this.updatedAt = now;
     }
 

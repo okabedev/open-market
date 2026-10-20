@@ -1,7 +1,6 @@
 # 상품 (catalog 서비스)
 
 카테고리, 상품, SKU, 재고를 갖는다(CAT-1~5). 구매자 목록·검색은 search가 이벤트로 만든 읽기 모델로 한다([context-map.md](context-map.md) "catalog.product", "catalog.stock").
-재고 예약·확정·해제와 동시성(CAT-4)은 M3에서 더한다.
 
 ## 카테고리
 - 2단계 트리다. 대분류 8개, 소분류 24개를 Flyway(`V1__catalog.sql`)로 넣는다. 관리 화면과 API는 없고 바꿀 때도 마이그레이션으로 바꾼다(2026-10-19 결정).
@@ -60,7 +59,7 @@
 - 판매자 정지·해제는 그 판매자의 상품을 한 트랜잭션에서 모두 잠그고 바꾼다. 판매자 한 명의 상품이 아주 많아지면 나눠 처리하는 방법을 M6 부하 테스트에서 본다.
 
 ## 재고
-SKU마다 `Stock`(실재고 `onHand`, 예약 `reserved`)이 있다. 판매 가능 수량은 `onHand - reserved`다. 예약은 M3에서 생긴다.
+SKU마다 `Stock`(실재고 `onHand`, 예약 `reserved`)이 있다. 판매 가능 수량은 `onHand - reserved`다. 예약은 주문이 만든다(아래 "재고 예약").
 
 ### 재고 조정(CAT-3)
 판매자가 SKU의 실재고를 늘리거나 줄인다. 증감 수량(`delta`)으로 받아 동시에 조정해도 서로 덮어쓰지 않는다.
@@ -80,6 +79,24 @@ SKU마다 `Stock`(실재고 `onHand`, 예약 `reserved`)이 있다. 판매 가�
 - 재고 조정이나 새 SKU 추가로 SKU의 판매 가능 수량이 바뀌면, 판매 가능 여부 행을 잠그고 그 상품의 재고를 다시 읽어 `inStock`을 계산한다. 값이 바뀌었을 때만 리비전을 올리고 `catalog.stock`에 `StockAvailabilityChanged`를 낸다. search가 품절 상품을 뒤로 보낸다(SRC-3).
 - 행을 잠근 뒤 재고를 읽으므로, 같은 상품의 다른 SKU를 동시에 조정해도 마지막 트랜잭션이 모든 변경을 본다. 잠그는 순서는 재고 → 판매 가능 여부다. 상품 행은 잠그지 않는다. 상품 수정과 재고 조정이 서로 기다리지 않는다.
 - 상품 이벤트와 토픽이 달라 순서가 섞일 수 있다. 소비자가 맞추는 방법은 [context-map.md](context-map.md) "catalog.stock"에 있다.
+
+## 재고 예약(CAT-4)
+주문 Saga에서 catalog가 맡는 부분이다([messaging.md](messaging.md) "주문·결제 Saga"). `order.order` 토픽을 받는다.
+
+| 받는 이벤트 | 처리 | 내는 이벤트(`catalog.stock`, 키 orderId) |
+|---|---|---|
+| `OrderPlaced` | 주문의 SKU를 모두 예약한다. 하나라도 모자라면 아무것도 예약하지 않는다 | `StockReserved` 또는 `StockReservationFailed`(모자라거나 없는 SKU 목록) |
+| `OrderPaid` | 예약을 확정한다. 실재고와 예약 수량을 함께 줄인다. 판매 가능 수량은 그대로다 | 없음 |
+| `OrderCancelled` | 예약을 푼다. 예약 수량을 줄인다 | 없음 |
+
+- 주문 하나에 예약(`StockReservation`) 하나다. 상태는 `RESERVED` → `COMMITTED` 또는 `RELEASED`이고, 예약하지 못한 주문은 `FAILED`로 남긴다. 줄(`StockReservationLine`)은 SKU, 상품, 수량이다. 같은 SKU가 여러 줄이면 수량을 합친다.
+- **초과 판매 방지**: 예약은 주문의 SKU 재고 행을 skuId 순서로 잠그고(`SELECT ... FOR UPDATE`) 판매 가능 수량을 확인한 뒤 예약 수량을 올린다. 한 트랜잭션이라 동시에 들어온 주문이 같은 수량을 두 번 가져가지 못한다. 잠그는 순서를 정해 두어 SKU가 겹치는 주문끼리 교착하지 않는다. 재고 조정과도 같은 행 잠금을 쓴다.
+- 재고 행이 없는 SKU(catalog에 없는 SKU)도 모자란 것으로 본다. 상품의 판매 상태는 보지 않는다. 판매 상태는 order가 주문을 만들 때 확인한다.
+- 예약·확정·해제로 SKU의 판매 가능 수량이 바뀌면 판매 가능 여부를 다시 계산하고, 바뀌었으면 `StockAvailabilityChanged`를 낸다(위 "판매 가능 여부와 품절 전환 이벤트"). 상품이 여럿이면 productId 순서로 잠근다. 잠그는 순서는 재고 → 판매 가능 여부로 재고 조정과 같다.
+- **멱등과 순서**: 리스너는 처리 기록(`processed_event`)으로 같은 이벤트를 한 번만 처리한다. 그와 별도로 주문마다 예약 행이 하나라 같은 주문의 `OrderPlaced`가 다른 이벤트 ID로 다시 와도 다시 예약하지 않는다.
+  - 예약이 없는 주문에 `OrderCancelled`가 오면 빈 `RELEASED` 예약을 남긴다. DLT에서 다시 보낸 `OrderPlaced`가 취소 뒤에 와도 재고를 잡지 않게 하기 위해서다.
+  - 상태가 맞지 않는 이벤트(예: `RELEASED` 예약에 `OrderPaid`, 예약이 없는 주문에 `OrderPaid`)는 경고 로그를 남기고 무시한다. 같은 상태로 가는 이벤트(이미 `COMMITTED`인데 `OrderPaid`)는 조용히 넘긴다.
+- 재고 조정은 실재고를 예약 수량보다 작게 만들 수 없다(위 "재고 조정"). 그래서 예약한 수량은 확정하거나 풀 때까지 남아 있다.
 
 ## API
 gateway 경로는 `/api/catalog` + 아래 경로다. 판매자 API의 주체는 토큰의 `sub`(= sellerId)다.

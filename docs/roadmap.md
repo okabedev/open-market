@@ -136,7 +136,7 @@
   - [ ] 만료, 결제 전 구매자 취소
 - [ ] catalog
   - [x] SKU 일괄 조회(order용 내부 API)
-  - [ ] 재고 예약·확정·해제, 동시성(CAT-4)
+  - [x] 재고 예약·확정·해제, 동시성(CAT-4, [catalog.md](architecture/catalog.md) "재고 예약")
 - [ ] payment: 토스 결제위젯 연동(R9), 금액 대조, 승인 타임아웃 처리, 보상 취소, 원장
 - [ ] 멱등성 키 필터(NFR-2), 동기 호출 타임아웃·서킷 브레이커(NFR-4)
   - [x] 서비스 간 조회 클라이언트(OpenFeign, `client_credentials`, 타임아웃, 서킷 브레이커): order → catalog

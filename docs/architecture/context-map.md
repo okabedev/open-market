@@ -92,20 +92,24 @@ flowchart LR
 | 이벤트 | 시점 | 주요 필드 | 소비자 |
 |---|---|---|---|
 | `StockReserved` | 주문 재고 예약 성공(전 SKU) | orderId | order |
-| `StockReservationFailed` | 하나라도 부족 | orderId, 부족한 skuId 목록 | order |
+| `StockReservationFailed` | 하나라도 부족 | orderId, insufficientSkuIds(부족하거나 없는 SKU) | order |
 | `StockAvailabilityChanged` | 상품 단위 품절·재입고 전환(재고 조정, 새 SKU, M3부터 예약·해제) | productId, inStock, availabilityRevision | search |
 
 - `StockAvailabilityChanged`의 키는 productId다. 상품 이벤트와 토픽이 달라 둘 사이 순서는 보장되지 않는다. 그래서 상품 `revision`과 따로 판매 가능 리비전(`availabilityRevision`)을 둔다. 상품 단위 판매 가능 여부가 바뀔 때마다 1씩 오르고, 상품 스냅샷에도 같은 값이 들어간다.
 - search는 `inStock`을 두 토픽 중 `availabilityRevision`이 더 큰 쪽의 값으로 정한다. 나머지 필드는 상품 `revision`으로 거른다. 아직 모르는 상품의 `StockAvailabilityChanged`는 판매 가능 여부만 저장해 둔다(스냅샷보다 먼저 올 수 있다).
 - 스냅샷의 SKU별 `inStock`은 스냅샷을 만든 시점의 값이다. 이후 바뀌어도 이벤트를 내지 않는다.
+- `StockReserved`, `StockReservationFailed`의 키는 orderId다. 처리 규칙은 [catalog.md](catalog.md) "재고 예약".
 
 ### order.order
 | 이벤트 | 시점 | 주요 필드 | 소비자 |
 |---|---|---|---|
-| `OrderPlaced` | 주문 생성(`PENDING`) | orderId, buyerId, 항목(skuId, 수량), 발급 쿠폰 ID 목록 | catalog(재고 예약), promotion(쿠폰 예약) |
+| `OrderPlaced` | 주문 생성(`PENDING`) | orderId, buyerId, lines(skuId, quantity), issuedCouponIds | catalog(재고 예약), promotion(쿠폰 예약) |
 | `OrderAwaitingPayment` | 예약 모두 성공 | orderId, 결제 금액, 주문명 | payment(결제 준비) |
 | `OrderPaid` | 결제 승인 반영 | orderId, buyerId, 하위 주문 목록(판매자, 항목, 카테고리, 금액, 판매자 쿠폰 부담분), 배송지 스냅샷 | catalog(예약 확정), promotion(쿠폰 사용 확정), fulfillment(배송 생성), notification |
 | `OrderCancelled` | 결제 전 취소(예약 실패, 만료, 구매자 취소) | orderId, reason | catalog(예약 해제), promotion(쿠폰 복원), payment(결제 무효화·보상 취소) |
+
+- 키는 orderId다. 한 주문의 이벤트는 순서대로 온다.
+- `OrderPlaced`, `OrderCancelled`의 JSON 예시는 `services/core/order/src/test/resources/events/`에 있다. order가 주문 생성을 구현하기 전에 소비자(catalog)를 먼저 만들어서 예시를 먼저 정했다. 발행 코드는 이 예시에 맞춘다. `OrderPaid` 예시는 결제 승인을 반영할 때 정한다. catalog는 그중 orderId만 읽는다.
 
 ### promotion.issued-coupon
 | 이벤트 | 시점 | 주요 필드 | 소비자 |

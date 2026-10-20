@@ -1,0 +1,9 @@
+{
+  "orderId": "019a2c3d-4e5f-7a60-8b1c-2d3e4f5a6b70",
+  "buyerId": "019a2c3d-4e5f-7a60-8b1c-2d3e4f5a6b71",
+  "lines": [
+    { "skuId": "019a1b2c-3d4e-7f60-8a1b-2c3d4e5f6a71", "quantity": 2 },
+    { "skuId": "019a1b2c-3d4e-7f60-8a1b-2c3d4e5f6a72", "quantity": 1 }
+  ],
+  "issuedCouponIds": []
+}
