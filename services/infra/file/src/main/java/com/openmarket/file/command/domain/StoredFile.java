@@ -21,6 +21,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
+import org.jspecify.annotations.Nullable;
 
 /**
  * 업로드 파일 메타데이터(docs/glossary.md "파일"). 원본과 변형은 저장소에 두고 여기에는 위치와 크기만 둔다.
@@ -34,6 +35,9 @@ public class StoredFile {
 
     /** 이 시간이 지나도록 어디에도 붙지 않은 파일은 지운다. */
     public static final Duration TEMP_TTL = Duration.ofHours(24);
+
+    /** 소유자에서 빠진 뒤 이 시간이 지나면 지운다. 그 안에는 다시 붙일 수 있다. */
+    public static final Duration DETACHED_TTL = Duration.ofDays(7);
 
     @Id private UUID id;
 
@@ -67,6 +71,19 @@ public class StoredFile {
     @CollectionTable(name = "stored_file_variant", joinColumns = @JoinColumn(name = "file_id"))
     @OrderColumn(name = "position")
     private List<FileVariant> variants = new ArrayList<>();
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "owner_type")
+    private @Nullable FileOwnerType ownerType;
+
+    @Column(name = "owner_id")
+    private @Nullable UUID ownerId;
+
+    @Column(name = "attached_at")
+    private @Nullable Instant attachedAt;
+
+    @Column(name = "detached_at")
+    private @Nullable Instant detachedAt;
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
@@ -117,9 +134,52 @@ public class StoredFile {
         variants.add(new FileVariant(variant, variantKey(variant), dimensions, sizeBytes));
     }
 
-    /** 만든 지 {@link #TEMP_TTL}이 지난 {@code TEMP}인가. */
-    public boolean isExpiredTemp(Instant now) {
-        return status == StoredFileStatus.TEMP && !now.isBefore(createdAt.plus(TEMP_TTL));
+    /**
+     * 소유자에 붙인다(docs/architecture/file.md "첨부"). {@code TEMP}와 {@code DETACHED}는 붙고, 같은 소유자에 붙어 있으면
+     * 그대로다.
+     *
+     * @param uploaderId 소유자의 주인(상품이면 판매자). 이 파일을 올린 사람이어야 한다
+     */
+    public AttachOutcome attachTo(
+            FileOwnerType ownerType, UUID ownerId, UUID uploaderId, Instant now) {
+        if (!this.uploaderId.equals(uploaderId) || purpose != ownerType.purpose()) {
+            return AttachOutcome.REJECTED;
+        }
+        if (status == StoredFileStatus.ATTACHED) {
+            return ownerId.equals(this.ownerId) ? AttachOutcome.UNCHANGED : AttachOutcome.REJECTED;
+        }
+        this.status = StoredFileStatus.ATTACHED;
+        this.ownerType = ownerType;
+        this.ownerId = ownerId;
+        this.attachedAt = now;
+        this.detachedAt = null;
+        return AttachOutcome.ATTACHED;
+    }
+
+    /**
+     * 소유자에서 뺀다. 소유자 정보는 남겨 두고 {@link #DETACHED_TTL} 뒤에 지운다.
+     *
+     * @return 붙어 있다가 빠졌으면 true
+     */
+    public boolean detach(Instant now) {
+        if (status != StoredFileStatus.ATTACHED) {
+            return false;
+        }
+        this.status = StoredFileStatus.DETACHED;
+        this.detachedAt = now;
+        return true;
+    }
+
+    /**
+     * 지울 때가 됐는가: 만든 지 {@link #TEMP_TTL}이 지난 {@code TEMP}, 분리된 지 {@link #DETACHED_TTL}이 지난 {@code
+     * DETACHED}.
+     */
+    public boolean isExpired(Instant now) {
+        return switch (status) {
+            case TEMP -> !now.isBefore(createdAt.plus(TEMP_TTL));
+            case DETACHED -> detachedAt != null && !now.isBefore(detachedAt.plus(DETACHED_TTL));
+            case ATTACHED -> false;
+        };
     }
 
     /** 지울 때 함께 지울 저장 경로(원본과 변형). */
@@ -167,6 +227,10 @@ public class StoredFile {
 
     public List<FileVariant> variants() {
         return Collections.unmodifiableList(variants);
+    }
+
+    public @Nullable UUID ownerId() {
+        return ownerId;
     }
 
     public Instant createdAt() {

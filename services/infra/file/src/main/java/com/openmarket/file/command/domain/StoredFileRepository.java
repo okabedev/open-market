@@ -17,6 +17,14 @@ public interface StoredFileRepository {
     /** 업로더가 이 시각 뒤에 올린 파일 수(업로드 한도). */
     long countByUploaderIdAndCreatedAtAfter(UUID uploaderId, Instant after);
 
-    /** 이 시각 전에 만든 {@code TEMP} 파일 ID. 오래된 것부터. */
-    List<UUID> findExpiredTempIds(Instant createdBefore, int limit);
+    /**
+     * 지울 때가 된 파일 ID({@link StoredFile#isExpired}). 오래된 것부터.
+     *
+     * @param tempCreatedBefore 이 시각 전에 만든 {@code TEMP}
+     * @param detachedBefore 이 시각 전에 분리된 {@code DETACHED}
+     */
+    List<UUID> findExpiredIds(Instant tempCreatedBefore, Instant detachedBefore, int limit);
+
+    /** 이 소유자에 붙어 있는({@code ATTACHED}) 파일. */
+    List<StoredFile> findAttachedByOwnerId(UUID ownerId);
 }

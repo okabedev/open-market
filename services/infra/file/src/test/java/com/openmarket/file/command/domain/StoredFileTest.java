@@ -13,6 +13,7 @@ class StoredFileTest {
 
     static final UUID ID = UUID.fromString("0199f5a0-0000-7000-8000-000000000001");
     static final UUID UPLOADER = UUID.fromString("0199f5a0-0000-7000-8000-0000000000aa");
+    static final UUID PRODUCT = UUID.fromString("0199f5a0-0000-7000-8000-0000000000b1");
     static final Instant NOW = Instant.parse("2026-10-19T08:00:00Z");
 
     @Test
@@ -64,8 +65,67 @@ class StoredFileTest {
     void tempExpiresAfter24Hours() {
         StoredFile file = upload();
 
-        assertThat(file.isExpiredTemp(NOW.plus(Duration.ofHours(24)).minusSeconds(1))).isFalse();
-        assertThat(file.isExpiredTemp(NOW.plus(Duration.ofHours(24)))).isTrue();
+        assertThat(file.isExpired(NOW.plus(Duration.ofHours(24)).minusSeconds(1))).isFalse();
+        assertThat(file.isExpired(NOW.plus(Duration.ofHours(24)))).isTrue();
+    }
+
+    @Test
+    @DisplayName("업로더의 상품에 붙으면 ATTACHED가 되고 만료되지 않는다. 같은 상품에 다시 붙여도 바뀌지 않는다")
+    void attachesToOwnersProduct() {
+        StoredFile file = upload();
+
+        assertThat(file.attachTo(FileOwnerType.PRODUCT, PRODUCT, UPLOADER, NOW))
+                .isEqualTo(AttachOutcome.ATTACHED);
+        assertThat(file.attachTo(FileOwnerType.PRODUCT, PRODUCT, UPLOADER, NOW))
+                .isEqualTo(AttachOutcome.UNCHANGED);
+
+        assertThat(file.status()).isEqualTo(StoredFileStatus.ATTACHED);
+        assertThat(file.ownerId()).isEqualTo(PRODUCT);
+        assertThat(file.isExpired(NOW.plus(Duration.ofDays(365)))).isFalse();
+    }
+
+    @Test
+    @DisplayName("업로더가 다르거나 이미 다른 소유자에 붙은 파일은 붙이지 않는다")
+    void rejectsForeignFiles() {
+        StoredFile file = upload();
+
+        assertThat(file.attachTo(FileOwnerType.PRODUCT, PRODUCT, UUID.randomUUID(), NOW))
+                .isEqualTo(AttachOutcome.REJECTED);
+        assertThat(file.status()).isEqualTo(StoredFileStatus.TEMP);
+
+        file.attachTo(FileOwnerType.PRODUCT, PRODUCT, UPLOADER, NOW);
+        assertThat(file.attachTo(FileOwnerType.PRODUCT, UUID.randomUUID(), UPLOADER, NOW))
+                .isEqualTo(AttachOutcome.REJECTED);
+        assertThat(file.ownerId()).isEqualTo(PRODUCT);
+    }
+
+    @Test
+    @DisplayName("분리하면 DETACHED가 되고 7일 뒤 만료된다. 그 안에 다시 붙일 수 있다")
+    void detachesAndReattaches() {
+        StoredFile file = upload();
+        file.attachTo(FileOwnerType.PRODUCT, PRODUCT, UPLOADER, NOW);
+        Instant detachedAt = NOW.plus(Duration.ofDays(30));
+
+        assertThat(file.detach(detachedAt)).isTrue();
+        assertThat(file.detach(detachedAt)).isFalse();
+        assertThat(file.status()).isEqualTo(StoredFileStatus.DETACHED);
+        assertThat(file.isExpired(detachedAt.plus(Duration.ofDays(7)).minusSeconds(1))).isFalse();
+        assertThat(file.isExpired(detachedAt.plus(Duration.ofDays(7)))).isTrue();
+
+        assertThat(file.attachTo(FileOwnerType.PRODUCT, PRODUCT, UPLOADER, detachedAt))
+                .isEqualTo(AttachOutcome.ATTACHED);
+        assertThat(file.isExpired(detachedAt.plus(Duration.ofDays(8)))).isFalse();
+    }
+
+    @Test
+    @DisplayName("소유자 리비전은 커질 때만 오른다")
+    void ownerRevisionOnlyAdvances() {
+        FileOwner owner = FileOwner.create(FileOwnerType.PRODUCT, PRODUCT, 2, NOW);
+
+        assertThat(owner.advance(2, NOW)).isFalse();
+        assertThat(owner.advance(1, NOW)).isFalse();
+        assertThat(owner.advance(3, NOW)).isTrue();
+        assertThat(owner.revision()).isEqualTo(3);
     }
 
     @Test
