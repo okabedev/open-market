@@ -15,8 +15,13 @@ public interface JpaStoredFileRepository
     @Override
     @Query(
             value =
-                    "SELECT id FROM stored_file WHERE status = 'TEMP' AND created_at < :createdBefore"
-                            + " ORDER BY created_at LIMIT :limit",
+                    "SELECT id FROM stored_file WHERE (status = 'TEMP' AND created_at <="
+                            + " :tempCreatedBefore) OR (status = 'DETACHED' AND detached_at <="
+                            + " :detachedBefore) ORDER BY created_at LIMIT :limit",
             nativeQuery = true)
-    List<UUID> findExpiredTempIds(Instant createdBefore, int limit);
+    List<UUID> findExpiredIds(Instant tempCreatedBefore, Instant detachedBefore, int limit);
+
+    @Override
+    @Query("SELECT f FROM StoredFile f WHERE f.ownerId = :ownerId AND f.status = 'ATTACHED'")
+    List<StoredFile> findAttachedByOwnerId(UUID ownerId);
 }

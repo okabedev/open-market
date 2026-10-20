@@ -7,8 +7,21 @@
 1. 판매자 브라우저가 BFF Route Handler를 거쳐 `POST /api/file/v1/seller/files`(multipart `file`, `purpose=PRODUCT_IMAGE`)로 올린다. 경로 접두어로 gateway와 file 둘 다 `SELLER` 역할을 검사한다. 리뷰·클레임 사진(`REVIEW_IMAGE`, `CLAIM_IMAGE`)은 구매자 경로와 함께 M5·M4에서 더한다.
 2. file은 검사를 통과한 파일의 원본과 변형을 저장하고 `StoredFile`(`TEMP`)을 만든다. 응답은 `fileId`, 원본 크기, 변형 목록(이름, URL, 크기)이다.
 3. 클라이언트는 상품, 리뷰, 클레임을 저장할 때 `fileId`를 넣는다.
-4. 소유 서비스가 발행한 이벤트(`ProductPublished`, `ProductChanged`, `ReviewCreated`, `ClaimRequested`)에 든 `fileId`를 file이 받아 `ATTACHED`로 바꾼다. 소유자 ID와 함께 기록한다. 상품 수정으로 빠진 이미지는 `DETACHED`로 바꾸고 나중에 지운다(M2 첨부 PR).
-5. 24시간 지난 `TEMP` 파일은 정리 작업(`TempFileCleanupJob`, 10분마다, ShedLock)이 지운다. 7일 지난 `DETACHED` 파일은 첨부 PR에서 같은 방식으로 지운다.
+4. 소유 서비스가 발행한 이벤트에 든 `fileId`를 file이 받아 `ATTACHED`로 바꾸고 소유자를 기록한다. 소유자에서 빠진 파일은 `DETACHED`로 바꾼다(아래 "첨부").
+5. 정리 작업(`FileCleanupJob`, 10분마다, ShedLock)이 24시간 지난 `TEMP`와 분리된 지 7일 지난 `DETACHED` 파일을 지운다.
+
+## 첨부
+M2는 상품 이미지만 붙인다. 리뷰·클레임 사진(`ReviewCreated`, `ClaimRequested`)은 M5·M4에서 더한다.
+- `catalog.product`의 `ProductRegistered`, `ProductPublished`, `ProductChanged`(상품 스냅샷)를 받는다. 스냅샷의 `imageFileIds`가 그 상품에 붙어 있어야 할 파일 전체다.
+  - 목록에 있는 파일은 `ATTACHED`로 바꾸고 소유자(상품 ID)를 적는다. `DETACHED`였던 파일도 다시 붙는다(판매자가 뺐던 이미지를 7일 안에 다시 넣은 경우).
+  - 그 상품에 붙어 있던 파일 중 목록에 없는 것은 `DETACHED`로 바꾸고 분리 시각을 적는다.
+- 아래 파일은 붙이지 않고 건너뛴다. 이벤트는 실패로 보지 않는다. 경고 로그에 파일·상품 ID만 남긴다.
+  - 없는 파일(이미 지워졌거나 잘못된 ID)
+  - 업로더가 상품의 판매자가 아닌 파일. catalog는 `fileId`의 주인을 확인하지 않으므로 여기서 막는다([catalog.md](catalog.md) "규칙")
+  - 용도가 다른 파일(상품에는 `PRODUCT_IMAGE`만)
+  - 이미 다른 소유자에 붙은 파일
+- 소유자마다 마지막으로 반영한 상품 `revision`을 `FileOwner`에 둔다. 그보다 작거나 같은 revision의 이벤트는 무시한다(재처리로 오래된 스냅샷이 다시 와도 되돌리지 않는다). 같은 이벤트는 `processed_event`로 한 번만 처리한다.
+- 같은 파일을 두 상품이 동시에 붙이려 하면 `stored_file`의 버전 검사로 한쪽이 실패하고, 재시도에서 "이미 다른 소유자"로 건너뛴다.
 
 ## 검사
 싼 검사부터 한다. 규칙은 `UploadPolicy`에 있다.

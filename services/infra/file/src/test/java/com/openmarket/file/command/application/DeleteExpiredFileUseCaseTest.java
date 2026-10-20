@@ -2,6 +2,7 @@ package com.openmarket.file.command.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.openmarket.file.command.domain.FileOwnerType;
 import com.openmarket.file.command.domain.FilePurpose;
 import com.openmarket.file.command.domain.ImageDimensions;
 import com.openmarket.file.command.domain.ImageFormat;
@@ -15,7 +16,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-class DeleteExpiredTempFileUseCaseTest {
+class DeleteExpiredFileUseCaseTest {
 
     static final Instant UPLOADED_AT = Instant.parse("2026-10-18T08:00:00Z");
 
@@ -28,7 +29,7 @@ class DeleteExpiredTempFileUseCaseTest {
         StoredFile file = givenFile();
 
         useCaseAt(UPLOADED_AT.plus(Duration.ofHours(25)))
-                .execute(new DeleteExpiredTempFileCommand(file.id()));
+                .execute(new DeleteExpiredFileCommand(file.id()));
 
         assertThat(files.rows).isEmpty();
         assertThat(storage.objects).isEmpty();
@@ -40,9 +41,28 @@ class DeleteExpiredTempFileUseCaseTest {
         StoredFile file = givenFile();
 
         useCaseAt(UPLOADED_AT.plus(Duration.ofHours(23)))
-                .execute(new DeleteExpiredTempFileCommand(file.id()));
+                .execute(new DeleteExpiredFileCommand(file.id()));
 
         assertThat(files.rows).containsKey(file.id());
+        assertThat(storage.objects).hasSize(3);
+    }
+
+    @Test
+    @DisplayName("분리된 지 7일 지난 DETACHED 파일은 지우고, 붙어 있는 파일은 지우지 않는다")
+    void deletesExpiredDetachedFile() {
+        StoredFile detached = givenFile();
+        StoredFile attached = givenFile();
+        UUID product = UUID.randomUUID();
+        detached.attachTo(FileOwnerType.PRODUCT, product, detached.uploaderId(), UPLOADED_AT);
+        detached.detach(UPLOADED_AT.plus(Duration.ofDays(1)));
+        attached.attachTo(
+                FileOwnerType.PRODUCT, UUID.randomUUID(), attached.uploaderId(), UPLOADED_AT);
+        DeleteExpiredFileUseCase useCase = useCaseAt(UPLOADED_AT.plus(Duration.ofDays(8)));
+
+        useCase.execute(new DeleteExpiredFileCommand(detached.id()));
+        useCase.execute(new DeleteExpiredFileCommand(attached.id()));
+
+        assertThat(files.rows).containsOnlyKeys(attached.id());
         assertThat(storage.objects).hasSize(3);
     }
 
@@ -50,10 +70,10 @@ class DeleteExpiredTempFileUseCaseTest {
     @DisplayName("이미 지운 파일을 다시 지워도 아무 일도 없다")
     void deletingTwiceIsNoop() {
         StoredFile file = givenFile();
-        DeleteExpiredTempFileUseCase useCase = useCaseAt(UPLOADED_AT.plus(Duration.ofDays(2)));
+        DeleteExpiredFileUseCase useCase = useCaseAt(UPLOADED_AT.plus(Duration.ofDays(2)));
 
-        useCase.execute(new DeleteExpiredTempFileCommand(file.id()));
-        useCase.execute(new DeleteExpiredTempFileCommand(file.id()));
+        useCase.execute(new DeleteExpiredFileCommand(file.id()));
+        useCase.execute(new DeleteExpiredFileCommand(file.id()));
 
         assertThat(files.rows).isEmpty();
     }
@@ -65,7 +85,7 @@ class DeleteExpiredTempFileUseCaseTest {
         storage.objects.clear();
 
         useCaseAt(UPLOADED_AT.plus(Duration.ofDays(2)))
-                .execute(new DeleteExpiredTempFileCommand(file.id()));
+                .execute(new DeleteExpiredFileCommand(file.id()));
 
         assertThat(files.rows).isEmpty();
     }
@@ -87,7 +107,7 @@ class DeleteExpiredTempFileUseCaseTest {
         return file;
     }
 
-    private DeleteExpiredTempFileUseCase useCaseAt(Instant now) {
-        return new DeleteExpiredTempFileUseCase(files, storage, Clock.fixed(now, ZoneOffset.UTC));
+    private DeleteExpiredFileUseCase useCaseAt(Instant now) {
+        return new DeleteExpiredFileUseCase(files, storage, Clock.fixed(now, ZoneOffset.UTC));
     }
 }

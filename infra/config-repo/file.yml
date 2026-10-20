@@ -18,5 +18,5 @@ openmarket:
   file:
     # 파일 저장 위치. 컨테이너는 compose가 /data(볼륨 file-data)를, bootRun은 레포의 infra/compose/data/file(커밋하지 않는다)을 넣는다.
     storage-root: ${FILE_STORAGE_ROOT}
-    # 오래된 TEMP 파일을 찾는 주기(TempFileCleanupJob)
+    # 오래된 TEMP·DETACHED 파일을 찾는 주기(FileCleanupJob)
     cleanup-interval: 10m

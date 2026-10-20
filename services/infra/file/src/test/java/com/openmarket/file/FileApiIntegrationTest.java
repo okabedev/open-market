@@ -9,7 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.openmarket.common.test.container.PostgresContainerConfiguration;
 import com.openmarket.common.test.openapi.OpenApiSnapshot;
-import com.openmarket.file.infra.TempFileCleanupJob;
+import com.openmarket.file.infra.FileCleanupJob;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -60,7 +60,7 @@ class FileApiIntegrationTest {
 
     @Autowired JdbcClient jdbc;
 
-    @Autowired TempFileCleanupJob cleanupJob;
+    @Autowired FileCleanupJob cleanupJob;
 
     @Test
     @DisplayName("업로드는 판매자만 한다. 토큰이 없으면 401, 구매자면 403이다")

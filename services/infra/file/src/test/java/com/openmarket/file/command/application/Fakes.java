@@ -1,11 +1,14 @@
 package com.openmarket.file.command.application;
 
+import com.openmarket.file.command.domain.FileOwner;
+import com.openmarket.file.command.domain.FileOwnerRepository;
 import com.openmarket.file.command.domain.ImageDimensions;
 import com.openmarket.file.command.domain.ImageFormat;
 import com.openmarket.file.command.domain.ImageVariant;
 import com.openmarket.file.command.domain.InvalidImageException;
 import com.openmarket.file.command.domain.StoredFile;
 import com.openmarket.file.command.domain.StoredFileRepository;
+import com.openmarket.file.command.domain.StoredFileStatus;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -54,13 +57,39 @@ final class Fakes {
         }
 
         @Override
-        public List<UUID> findExpiredTempIds(Instant createdBefore, int limit) {
+        public List<UUID> findExpiredIds(
+                Instant tempCreatedBefore, Instant detachedBefore, int limit) {
+            Instant now = tempCreatedBefore.plus(StoredFile.TEMP_TTL);
             return rows.values().stream()
-                    .filter(file -> file.isExpiredTemp(createdBefore.plus(StoredFile.TEMP_TTL)))
+                    .filter(file -> file.isExpired(now))
                     .sorted(Comparator.comparing(StoredFile::createdAt))
                     .limit(limit)
                     .map(StoredFile::id)
                     .toList();
+        }
+
+        @Override
+        public List<StoredFile> findAttachedByOwnerId(UUID ownerId) {
+            return rows.values().stream()
+                    .filter(file -> file.status() == StoredFileStatus.ATTACHED)
+                    .filter(file -> ownerId.equals(file.ownerId()))
+                    .toList();
+        }
+    }
+
+    static final class FileOwners implements FileOwnerRepository {
+
+        final Map<UUID, FileOwner> rows = new HashMap<>();
+
+        @Override
+        public FileOwner save(FileOwner owner) {
+            rows.put(owner.ownerId(), owner);
+            return owner;
+        }
+
+        @Override
+        public Optional<FileOwner> findById(UUID ownerId) {
+            return Optional.ofNullable(rows.get(ownerId));
         }
     }
 

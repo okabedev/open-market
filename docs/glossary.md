@@ -33,6 +33,7 @@
 | 재고 조정 | `StockAdjustment` | catalog | 판매자의 입고·차감 이력. 증감 수량과 조정 뒤 실재고를 남긴다 |
 | 판매 가능 여부 | `ProductAvailability` | catalog | 상품 단위로 판매 가능한 SKU가 하나라도 있는가(`inStock`). 바뀔 때마다 판매 가능 리비전(`availabilityRevision`)이 1씩 오른다 |
 | 파일 | `StoredFile` | file | 업로드 파일 메타데이터. 상태: `TEMP` → `ATTACHED` → `DETACHED`(소유자에서 빠짐). 24시간 지난 `TEMP`와 7일 지난 `DETACHED`는 삭제 |
+| 파일 소유자 | `FileOwner` | file | 파일이 붙는 대상(M2는 상품, 리뷰·클레임은 M5·M4). 소유자마다 마지막으로 반영한 이벤트 리비전을 둔다 |
 | 파일 용도 | `FilePurpose` | file | 업로드 목적. 저장 디렉터리와 만들 변형이 정해진다. M2는 `PRODUCT_IMAGE`만 받는다 |
 | 이미지 변형 | `ImageVariant` | file | 공개로 제공하는 썸네일. 폭 300px(`w300`), 800px(`w800`) JPEG. 원본은 제공하지 않는다 |
 
