@@ -32,3 +32,34 @@ export function parseOptionValues(input: string): string[] {
     ),
   ];
 }
+
+/** 폼의 SKU 한 줄. 가격·재고는 입력 중인 문자열이다. `skuId`가 있으면 이미 있는 SKU(수정)다. */
+export type SkuRow = {
+  key: string;
+  skuId?: string;
+  optionValues: string[];
+  price: string;
+  initialStock: string;
+};
+
+let rowSeed = 0;
+
+/**
+ * SKU 줄을 만든다. 서버 페이지(초기값)와 클라이언트 폼(조합 만들기)이 함께 쓴다. 클라이언트 모듈(`"use client"`)의 함수는 서버에서
+ * 부를 수 없으므로 여기에 둔다. `key`는 목록 안에서만 겹치지 않으면 된다.
+ */
+export function newRow(
+  optionValues: string[],
+  skuId?: string,
+  price = "",
+  initialStock = "0",
+): SkuRow {
+  rowSeed += 1;
+  return {
+    key: skuId ?? `new-${rowSeed}`,
+    ...(skuId ? { skuId } : {}),
+    optionValues,
+    price,
+    initialStock,
+  };
+}

@@ -3,7 +3,8 @@ import { randomUUID } from "node:crypto";
 import { loadCategories } from "@/lib/catalog";
 import { requireSeller } from "@/lib/session";
 import { registerProduct } from "../actions";
-import { newRow, ProductForm } from "../product-form";
+import { newRow } from "@/lib/product-rules";
+import { ProductForm } from "../product-form";
 
 /** 상품 등록(CAT-1). 등록하면 상품은 등록 중(DRAFT)이고, 상세 화면에서 판매를 시작한다. */
 export default async function NewProductPage() {

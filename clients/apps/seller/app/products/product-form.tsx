@@ -14,21 +14,18 @@ import {
 } from "@openmarket/ui";
 import { useActionState, useState, type ReactNode } from "react";
 import { ProductImage } from "@/components/product-image";
-import { combineOptions, parseOptionValues, PRODUCT_LIMITS } from "@/lib/product-rules";
+import {
+  combineOptions,
+  newRow,
+  parseOptionValues,
+  PRODUCT_LIMITS,
+  type SkuRow,
+} from "@/lib/product-rules";
 
 export type CategoryOption = {
   categoryId: string;
   name: string;
   children: { categoryId: string; name: string }[];
-};
-
-/** SKU 한 줄. 가격·재고는 입력 중인 문자열이다. `skuId`가 있으면 이미 있는 SKU(수정)다. */
-export type SkuRow = {
-  key: string;
-  skuId?: string;
-  optionValues: string[];
-  price: string;
-  initialStock: string;
 };
 
 export type ProductFormInitial = {
@@ -50,24 +47,6 @@ type ProductFormProps = {
   hidden: Record<string, string>;
   submitText: string;
 };
-
-let rowSeed = 0;
-
-export function newRow(
-  optionValues: string[],
-  skuId?: string,
-  price = "",
-  initialStock = "0",
-): SkuRow {
-  rowSeed += 1;
-  return {
-    key: skuId ?? `new-${rowSeed}`,
-    ...(skuId ? { skuId } : {}),
-    optionValues,
-    price,
-    initialStock,
-  };
-}
 
 function sameValues(a: readonly string[], b: readonly string[]): boolean {
   return a.length === b.length && a.every((value, index) => value === b[index]);

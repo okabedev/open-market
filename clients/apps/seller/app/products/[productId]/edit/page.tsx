@@ -4,7 +4,8 @@ import { bff } from "@/lib/bff";
 import { loadCategories } from "@/lib/catalog";
 import { requireSeller } from "@/lib/session";
 import { updateProduct } from "../../actions";
-import { newRow, ProductForm } from "../../product-form";
+import { newRow } from "@/lib/product-rules";
+import { ProductForm } from "../../product-form";
 
 /** 상품 수정(CAT-2). 제재된 상품은 고칠 수 없어 상세로 돌려보낸다. */
 export default async function EditProductPage({ params }: PageProps<"/products/[productId]/edit">) {
