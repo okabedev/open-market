@@ -52,6 +52,7 @@
   - 25%·50%·60%와 512m·768m을 member로 비교했다. 부하 중 사용량은 325~345MB로 비슷했고, OOM이나 재시작은 없었다.
   - 2GB 미만 컨테이너라 JVM이 SerialGC를 고른다. 20,000건에 minor GC 41회, 합계 0.2s로 이 크기 힙에는 충분하다. 바꿀 필요가 생기면 서비스별로 `JDK_JAVA_OPTIONS`를 덮어쓴다.
 - Kafka, Connect, Elasticsearch는 이미지 설정으로 힙을 고정했으므로 `mem_limit`을 두지 않는다. 나머지는 사용량이 작아 두지 않는다.
+- M2(2026-10-20): `apps`에 catalog, file, search가 더해지고 Elasticsearch가 `apps` profile에서도 뜬다(search가 쓴다). search 컨테이너는 검색·색인 확인 중 327MB/512MB였다. 서비스 전체 재측정은 M3(주문·결제 서비스가 더해진 뒤)에 한다.
 - 예외: file은 `mem_limit: 768m`, 힙 40%(약 307MB), `-Djdk.nio.maxCachedBufferSize=262144`다(2026-10-19, M2).
   - 측정: `apps` profile에서 6000x4000 JPEG(6MB) 10건을 gateway로 동시에 올리기를 3번 반복했다. cgroup `memory.stat`의 `anon`, `memory.peak`, `memory.swap.current`를 봤다.
   - 512m·힙 50%: 익명 메모리 450~500MB, 상한 도달 5,902회, 스왑 103MB. 스왑이 없는 환경이면 OOM으로 죽는다.

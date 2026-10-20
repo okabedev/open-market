@@ -34,10 +34,10 @@ gateway 경로는 `/api/search` + 아래 경로다. 토큰 없이 연다(gateway
 | `categoryId` | 선택. 대분류를 주면 그 아래 소분류 상품도 나온다(`categoryPath`) |
 | `minPrice`, `maxPrice` | 선택, 0 이상. 상품 최저가(`minPrice`)로 거른다 |
 | `sort` | `RELEVANCE`(기본), `LATEST`(판매 시작 최신), `PRICE_ASC`, `PRICE_DESC`. 검색어가 없으면 `RELEVANCE`는 `LATEST`와 같다 |
-| `cursor`, `size` | 커서 페이징. `size` 1~100(기본 20). 응답의 `nextCursor`를 다음 요청에 넣는다. 마지막 쪽이면 `null` |
+| `cursor`, `size` | 커서 페이징([conventions.md](conventions.md) "REST API"). `size` 1~100(기본 20). 응답의 `nextCursor`를 다음 요청에 넣는다. 마지막 쪽이면 `null` |
 
 - 응답: `{items: [{productId, name, storeName, minPrice, inStock, thumbnailFileId, publishedAt}], totalCount, nextCursor}`. 이미지는 `/files/{thumbnailFileId}/w300`으로 받는다([file.md](file.md)).
 - 판매 중(`ON_SALE`)인 상품만 나온다. 판매 중지·제재·등록 중 상품은 빠진다(SRC-3).
 - 품절 상품(`inStock=false`)은 어떤 정렬에서도 판매 가능한 상품 뒤에 온다(SRC-3). 같은 값이면 productId 순이다.
 - 커서는 마지막 결과의 정렬 값을 담은 불투명한 문자열이다(`search_after`). 형식이 틀리면 400 `SEARCH_INVALID_CURSOR`다.
-- `totalCount`는 1만 건까지 정확하고, 넘으면 10000이다.
+- `totalCount`는 1만 건까지 정확하고, 넘으면 10000이다(Elasticsearch 기본 `track_total_hits`). 정확히 세려면 결과가 많을 때 모든 문서를 훑어야 해서 세지 않는다. 결과는 커서로 끝까지 넘길 수 있다.
