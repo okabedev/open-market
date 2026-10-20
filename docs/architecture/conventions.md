@@ -77,6 +77,8 @@ com.openmarket.<service>
 - 역할별 경로 접두어: 구매자·공개 `/v1/...`, 판매자 `/v1/seller/...`, 관리자 `/v1/admin/...`. Gateway와 서비스 둘 다 접두어로 역할을 검사한다.
 - 리소스는 복수형 명사, kebab-case를 쓴다. 상태 전이는 하위 동작 경로로 둔다. 예: `POST /v1/seller/seller-orders/{id}/ship`.
 - 목록은 커서 페이징(`?cursor=&size=`)이 기본이다. 관리자 화면처럼 쪽 번호가 필요한 곳만 오프셋을 쓴다.
+  - 커서 응답: `{items, totalCount, nextCursor}`. `nextCursor`는 불투명한 문자열이고 마지막 쪽이면 `null`이다. 형식이 틀린 커서는 400 `<SERVICE>_INVALID_CURSOR`다. 예: search(`search.md` "검색 API").
+  - 쪽 번호 응답: `{items, totalCount, page, size}`(page는 0부터).
 - 상태 변경 API 중 중복되면 안 되는 것은 `Idempotency-Key`를 필수로 받는다([data.md](data.md)).
 - 문서는 springdoc OpenAPI로 만든다. 프론트 `packages/api-client`가 이 문서에서 타입을 생성한다.
   - 서비스 앱 통합 테스트가 `/v3/api-docs`를 `clients/packages/api-client/openapi/<서비스>.json`과 비교한다(`common-test`의 `OpenApiSnapshot`). 서버 주소는 빼고 저장한다. 프론트는 gateway의 `/api/<서비스>` 아래로 부른다.
@@ -95,7 +97,7 @@ com.openmarket.<service>
 | 종류 | 대상 | 도구 |
 |---|---|---|
 | 단위 | `command.domain`, 유스케이스(포트는 가짜 구현) | JUnit 5, AssertJ |
-| 저장소·조회 | JPA 매핑, QueryDSL dao | Testcontainers PostgreSQL |
+| 저장소·조회 | JPA 매핑, QueryDSL dao, search의 Elasticsearch 색인·쿼리 | Testcontainers PostgreSQL, nori Elasticsearch(`infra/elasticsearch` Dockerfile로 만든 이미지) |
 | 메시징 | outbox 기록, 리스너 멱등성, 이벤트 JSON 예시 호환 | Testcontainers Kafka 또는 리스너 직접 호출 |
 | 웹 | 컨트롤러, 권한, 오류 응답 | MockMvc |
 | 아키텍처 | 위 의존 방향과 이름 규칙 | ArchUnit (`common-test`) |

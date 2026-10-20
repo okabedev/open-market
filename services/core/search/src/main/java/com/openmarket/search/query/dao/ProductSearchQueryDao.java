@@ -54,8 +54,9 @@ public class ProductSearchQueryDao {
                                 s.index(INDEX)
                                         .query(q -> q.bool(query(condition)))
                                         .sort(sort(condition))
-                                        .size(condition.size() + 1)
-                                        .trackTotalHits(t -> t.enabled(true));
+                                        // 전체 수는 Elasticsearch 기본값대로 1만 건까지만 센다. 그 이상을 정확히 세면
+                                        // 결과가 많을 때 모든 문서를 훑는다.
+                                        .size(condition.size() + 1);
                                 if (!after.isEmpty()) {
                                     s.searchAfter(after);
                                 }

@@ -7,6 +7,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
+import co.elastic.clients.elasticsearch.core.BulkRequest;
+import co.elastic.clients.elasticsearch.core.BulkResponse;
 import com.openmarket.common.test.container.KafkaContainerConfiguration;
 import com.openmarket.common.test.container.PostgresContainerConfiguration;
 import com.openmarket.common.test.openapi.OpenApiSnapshot;
@@ -18,6 +20,7 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -61,6 +64,10 @@ import tools.jackson.databind.node.ObjectNode;
 class SearchIntegrationTest {
 
     static final String PRODUCTS = "/v1/products";
+
+    /** Elasticsearch가 기본으로 세는 전체 수 상한(track_total_hits). */
+    static final int TOTAL_CAP = 10_000;
+
     static final Path PUBLISHER_EXAMPLES = Path.of("../catalog/src/test/resources/events");
 
     @TestConfiguration(proxyBeanMethods = false)
@@ -219,6 +226,47 @@ class SearchIntegrationTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("SEARCH_INVALID_CURSOR"));
         mockMvc.perform(category().param("size", "101")).andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("totalCount는 1만 건까지 센다. 넘으면 10000이고, 결과는 그대로 커서로 넘길 수 있다")
+    void capsTotalCount() throws Exception {
+        String publishedAt = "2026-10-20T00:00:00Z";
+        for (int start = 0; start < TOTAL_CAP + 5; start += 2_000) {
+            BulkRequest.Builder bulk = new BulkRequest.Builder();
+            for (int i = start; i < Math.min(start + 2_000, TOTAL_CAP + 5); i++) {
+                String productId = UUID.randomUUID().toString();
+                Map<String, Object> document = new HashMap<>();
+                document.put("productId", productId);
+                document.put("revision", 2);
+                document.put("status", "ON_SALE");
+                document.put("sellerId", UUID.randomUUID().toString());
+                document.put("storeName", "길동상회");
+                document.put("categoryId", leafCategory.toString());
+                document.put(
+                        "categoryPath", List.of(topCategory.toString(), leafCategory.toString()));
+                document.put("name", "대량 상품 " + i);
+                document.put("description", "대량 상품입니다.");
+                document.put("minPrice", 10_000 + i * 10L);
+                document.put("publishedAt", publishedAt);
+                document.put("inStock", true);
+                document.put("availabilityRevision", 1);
+                bulk.operations(
+                        op ->
+                                op.index(
+                                        idx ->
+                                                idx.index("products")
+                                                        .id(productId)
+                                                        .document(document)));
+            }
+            BulkResponse response = elasticsearch.bulk(bulk.build());
+            assertThat(response.errors()).isFalse();
+        }
+        elasticsearch.indices().refresh(r -> r.index("products"));
+
+        JsonNode page = search(category().param("size", "1"));
+        assertThat(page.get("totalCount").asLong()).isEqualTo(TOTAL_CAP);
+        assertThat(page.get("nextCursor").isNull()).isFalse();
     }
 
     @Test
