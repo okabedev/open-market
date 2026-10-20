@@ -14,9 +14,23 @@ public interface SkuCatalogPort {
     List<CatalogSku> findAll(Collection<UUID> skuIds);
 
     /**
-     * 커맨드가 판단에 쓰는 SKU 정보.
+     * 커맨드가 판단하고 주문 항목 스냅샷에 쓰는 SKU 정보.
      *
      * @param onSale 상품이 판매 중({@code ON_SALE})인가
+     * @param optionNames 상품의 옵션 이름. {@code optionValues}가 이 순서다
+     * @param price 지금 개당 가격(원)
+     * @param availableQuantity 판매 가능 수량
      */
-    record CatalogSku(UUID skuId, boolean onSale) {}
+    record CatalogSku(
+            UUID skuId,
+            UUID productId,
+            String productName,
+            boolean onSale,
+            UUID sellerId,
+            String storeName,
+            UUID categoryId,
+            List<String> optionNames,
+            List<String> optionValues,
+            long price,
+            int availableQuantity) {}
 }

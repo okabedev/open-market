@@ -52,7 +52,7 @@ public class CartItem {
 
     public static void checkQuantity(int quantity) {
         if (quantity < 1 || quantity > MAX_QUANTITY) {
-            throw new InvalidCartInputException("수량은 1부터 99까지입니다.");
+            throw new InvalidOrderInputException("수량은 1부터 99까지입니다.");
         }
     }
 

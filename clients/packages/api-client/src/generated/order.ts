@@ -18,6 +18,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["place"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/cart/items": {
         parameters: {
             query?: never;
@@ -28,6 +44,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["add"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/orders/{orderId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["order"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -58,11 +90,83 @@ export interface components {
             /** Format: int32 */
             quantity: number;
         };
+        Line: {
+            /** Format: uuid */
+            skuId: string;
+            /** Format: int32 */
+            quantity: number;
+            /** Format: int64 */
+            expectedPrice: number;
+        };
+        PlaceOrderRequest: {
+            lines: components["schemas"]["Line"][];
+            shipping: components["schemas"]["Shipping"];
+        };
+        Shipping: {
+            recipientName?: string;
+            recipientPhone?: string;
+            zipCode?: string;
+            baseAddress?: string;
+            detailAddress?: string;
+        };
+        PlaceOrderResponse: {
+            /** Format: uuid */
+            orderId?: string;
+        };
         AddCartItemRequest: {
             /** Format: uuid */
             skuId: string;
             /** Format: int32 */
             quantity: number;
+        };
+        OrderDetailView: {
+            /** Format: uuid */
+            orderId?: string;
+            /** @enum {string} */
+            status?: "PENDING" | "AWAITING_PAYMENT" | "PAID" | "CANCELLED";
+            /** @enum {string} */
+            cancelReason?: "STOCK_UNAVAILABLE" | "PAYMENT_TIMEOUT" | "BUYER_CANCELLED";
+            /** Format: int64 */
+            amount?: number;
+            orderName?: string;
+            shipping?: components["schemas"]["OrderShippingView"];
+            sellerOrders?: components["schemas"]["OrderSellerOrderView"][];
+            /** Format: date-time */
+            placedAt?: string;
+        };
+        OrderLineView: {
+            /** Format: uuid */
+            orderLineId?: string;
+            /** Format: uuid */
+            skuId?: string;
+            /** Format: uuid */
+            productId?: string;
+            productName?: string;
+            optionNames?: string[];
+            optionValues?: string[];
+            /** Format: int64 */
+            unitPrice?: number;
+            /** Format: int32 */
+            quantity?: number;
+            /** Format: int64 */
+            amount?: number;
+        };
+        OrderSellerOrderView: {
+            /** Format: uuid */
+            sellerOrderId?: string;
+            /** Format: uuid */
+            sellerId?: string;
+            storeName?: string;
+            /** Format: int64 */
+            amount?: number;
+            lines?: components["schemas"]["OrderLineView"][];
+        };
+        OrderShippingView: {
+            recipientName?: string;
+            recipientPhone?: string;
+            zipCode?: string;
+            baseAddress?: string;
+            detailAddress?: string;
         };
         CartItemView: {
             /** Format: uuid */
@@ -146,6 +250,30 @@ export interface operations {
             };
         };
     };
+    place: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlaceOrderRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlaceOrderResponse"];
+                };
+            };
+        };
+    };
     add: {
         parameters: {
             query?: never;
@@ -165,6 +293,28 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    order: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderDetailView"];
+                };
             };
         };
     };

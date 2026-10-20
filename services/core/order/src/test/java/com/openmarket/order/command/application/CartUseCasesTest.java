@@ -42,7 +42,7 @@ class CartUseCasesTest {
     @Test
     @DisplayName("판매 중인 SKU는 담긴다. 장바구니가 없으면 만들고 잠가서 바꾼다")
     void addsOnSaleSku() {
-        catalog.put(sku, new CatalogSku(sku, true));
+        catalog.put(sku, CatalogSkus.sku(sku, true));
 
         add.execute(new AddCartItemCommand(memberId, sku, 2));
 
@@ -64,7 +64,7 @@ class CartUseCasesTest {
                 .extracting("code")
                 .isEqualTo("ORDER_SKU_NOT_FOUND");
 
-        catalog.put(sku, new CatalogSku(sku, false));
+        catalog.put(sku, CatalogSkus.sku(sku, false));
         assertThatThrownBy(() -> add.execute(new AddCartItemCommand(memberId, sku, 1)))
                 .extracting("code")
                 .isEqualTo("ORDER_SKU_NOT_ON_SALE");
@@ -83,7 +83,7 @@ class CartUseCasesTest {
     @Test
     @DisplayName("수량 바꾸기와 빼기는 catalog를 부르지 않는다")
     void changeAndRemoveWithoutCatalog() {
-        catalog.put(sku, new CatalogSku(sku, true));
+        catalog.put(sku, CatalogSkus.sku(sku, true));
         add.execute(new AddCartItemCommand(memberId, sku, 1));
         catalogCalls.clear();
         catalog.clear();
