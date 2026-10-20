@@ -27,6 +27,7 @@
 | 옵션 조합 | `Sku` | catalog | 주문과 재고의 단위. 가격을 가진다. 상품의 옵션 이름(최대 2개, 예: 색상·사이즈)마다 값 하나씩을 갖는다 |
 | 판매 중지 사유 | `StopReason` | catalog | `SELLER`(판매자가 멈춤, 판매자가 다시 연다), `SELLER_SUSPENDED`(판매자 정지로 멈춤, 정지가 풀리면 다시 열린다) |
 | 상품 리비전 | `revision` | catalog | 상품 이벤트를 낼 때마다 1씩 오르는 번호. 소비자가 오래된 이벤트를 거른다 |
+| 검색 상품 | `SearchProduct` | search | 상품 이벤트와 품절 전환 이벤트로 만든 검색용 문서. 상품 `revision`과 판매 가능 리비전을 따로 두고 각각 커질 때만 반영한다 |
 | 판매자 사본 | `Seller` | catalog | member의 판매자 이벤트로 만든 사본. 상호와 판매 상태만 갖는다 |
 | 재고 | `Stock` | catalog | SKU별 `onHand`(실재고)와 `reserved`(예약 수량). 판매 가능 수량 = `onHand - reserved` |
 | 재고 예약 | `StockReservation` | catalog | 주문 하나에 대한 예약 묶음. 상태: `RESERVED` → `COMMITTED` 또는 `RELEASED` |

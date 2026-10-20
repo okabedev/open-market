@@ -41,7 +41,7 @@ flowchart LR
 | promotion | 8106 | promotion | 쿠폰 정책, 발급, 예약·사용·복원 | `Coupon`, `IssuedCoupon` |
 | review | 8107 | review | 리뷰, 답글, 별점 요약 | `Review`, `RatingSummary` |
 | settlement | 8108 | settlement | 정산 대상, 주간 정산 배치, 지급 기록, 수수료율 | `SettlementItem`, `Settlement` |
-| search | 8109 | search(오프셋·메타만) | Elasticsearch 읽기 모델, 검색, 자동완성 | (ES 인덱스 `products`) |
+| search | 8109 | search(멱등 기록 등 공통 테이블만) | Elasticsearch 읽기 모델, 검색, 자동완성([search.md](search.md)) | `SearchProduct`(ES 인덱스 `products`) |
 
 ### infra (`services/infra/<name>`)
 | 서비스 | 포트 | 스키마 | 책임 |

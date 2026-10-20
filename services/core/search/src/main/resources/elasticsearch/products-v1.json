@@ -1,0 +1,40 @@
+{
+  "settings": {
+    "number_of_shards": 1,
+    "number_of_replicas": 0,
+    "analysis": {
+      "tokenizer": {
+        "korean_mixed": {
+          "type": "nori_tokenizer",
+          "decompound_mode": "mixed"
+        }
+      },
+      "analyzer": {
+        "korean": {
+          "type": "custom",
+          "tokenizer": "korean_mixed",
+          "filter": ["nori_part_of_speech", "nori_readingform", "lowercase"]
+        }
+      }
+    }
+  },
+  "mappings": {
+    "dynamic": "strict",
+    "properties": {
+      "productId": { "type": "keyword" },
+      "revision": { "type": "long" },
+      "status": { "type": "keyword" },
+      "sellerId": { "type": "keyword" },
+      "storeName": { "type": "text", "analyzer": "korean" },
+      "categoryId": { "type": "keyword" },
+      "categoryPath": { "type": "keyword" },
+      "name": { "type": "text", "analyzer": "korean" },
+      "description": { "type": "text", "analyzer": "korean" },
+      "thumbnailFileId": { "type": "keyword", "index": false },
+      "minPrice": { "type": "long" },
+      "publishedAt": { "type": "date" },
+      "inStock": { "type": "boolean" },
+      "availabilityRevision": { "type": "long" }
+    }
+  }
+}

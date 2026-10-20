@@ -33,7 +33,7 @@ infra/
 | `docker compose up -d --wait` | 기본 profile을 띄우고 healthy가 될 때까지 기다린다. 처음에는 discovery·config·gateway·auth 이미지를 빌드한다 |
 | `docker compose up -d --wait --build discovery config gateway auth` | discovery·config·gateway·auth 코드를 바꾼 뒤 이미지를 다시 빌드한다. config-repo만 바꿨으면 빌드 없이 서비스만 재시작한다 |
 | `docker compose --profile search --profile obs up -d --wait` | Elasticsearch와 관측성 스택까지 띄운다. 멈출 때도 같은 `--profile`을 붙인다 |
-| `docker compose --profile apps up -d --wait --build` | 나머지 Spring 서비스까지 컨테이너로 띄운다(E2E). IDE로 띄울 서비스는 `docker compose stop <서비스>`로 멈춘다 |
+| `docker compose --profile apps up -d --wait --build` | 나머지 Spring 서비스까지 컨테이너로 띄운다(E2E). search가 쓰는 Elasticsearch도 함께 뜬다. IDE로 띄울 서비스는 `docker compose stop <서비스>`로 멈춘다 |
 | `infra/e2e/run.sh m1` | 마일스톤 완료 기준 E2E. 빈 볼륨의 별도 프로젝트(`openmarket-e2e`)를 띄워 돌리고 지운다. 개발용 스택과 앱은 먼저 멈춘다 |
 | `docker compose ps` | 상태 확인 |
 | `docker compose down` | 멈춤(데이터 유지) |
