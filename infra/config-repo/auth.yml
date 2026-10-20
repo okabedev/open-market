@@ -55,3 +55,5 @@ openmarket:
     service-clients:
       notification:
         secret: ${NOTIFICATION_CLIENT_SECRET}
+      order:
+        secret: ${ORDER_CLIENT_SECRET}

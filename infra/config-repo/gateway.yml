@@ -67,6 +67,12 @@ spring:
                 - Path=/api/catalog/**
               filters:
                 - StripPrefix=2
+            - id: order
+              uri: lb://order
+              predicates:
+                - Path=/api/order/**
+              filters:
+                - StripPrefix=2
             - id: search
               uri: lb://search
               predicates:

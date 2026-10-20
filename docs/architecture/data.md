@@ -12,10 +12,10 @@
   - `debezium` 스키마의 `heartbeat` 테이블은 커넥터가 10초마다 고친다. outbox에 쓰기가 없어도 복제 슬롯이 앞으로 가게 한다([messaging.md](messaging.md#발행-transactional-outbox--debezium)).
 - 복제 슬롯이 WAL을 붙잡아 디스크가 차지 않도록 `max_slot_wal_keep_size=1GB`를 둔다. 이 값을 넘으면 슬롯이 무효가 되어 커넥터를 다시 스냅샷해야 한다([risks.md](risks.md) R5).
 
-`order`는 SQL 예약어라서 스키마 이름을 따옴표로 감싸야 한다. 서비스 설정에서 아래 값을 지정해 쿼리에 스키마 이름이 직접 나오지 않게 한다.
-- `spring.datasource.hikari.schema`: 연결의 `search_path`. 공통 라이브러리의 JDBC 쿼리(outbox, 멱등 기록, ShedLock)는 스키마 이름 없이 테이블을 부르므로 꼭 필요하다
-- `spring.jpa.properties.hibernate.default_schema`
-- Flyway `schemas`와 `default-schema`
+서비스 설정에서 아래 값을 지정한다. 공통 라이브러리와 서비스의 SQL은 스키마 이름을 쓰지 않는다.
+- `spring.datasource.hikari.schema`: 연결의 `search_path`. 공통 라이브러리의 JDBC 쿼리(outbox, 멱등 기록, ShedLock)와 서비스의 네이티브 쿼리는 스키마 이름 없이 테이블을 부르므로 꼭 필요하다
+- `spring.jpa.properties.hibernate.default_schema`: Hibernate는 이 값을 테이블 이름 앞에 그대로 붙인다. `order`는 SQL 예약어라서 `order.yml`에서 따옴표로 감싼 `'"order"'`로 덮는다. 감싸지 않으면 모든 JPA 쿼리가 문법 오류다
+- Flyway `schemas`와 `default-schema`: Flyway와 JDBC 드라이버(`hikari.schema`)는 이름을 스스로 따옴표로 감싸므로 그대로 둔다
 
 예시는 `services/core/member`의 테스트 설정(`src/test/resources/config/application.yml`)이고, 실행 설정은 config-repo에 있다. 스키마·계정·search_path는 공통 `infra/config-repo/application.yml`이 서비스 이름(`${spring.application.name}`)으로 정하고, `<service>.yml`에는 비밀번호 자리 표시자만 둔다.
 

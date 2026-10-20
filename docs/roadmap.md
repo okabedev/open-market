@@ -130,10 +130,17 @@
 
 ## M3 — 장바구니·주문·결제
 - [x] R9 토스 테스트 환경 확인, ADR 0018(토스 연동과 E2E의 가짜 PG)
-- [ ] order: 장바구니, 주문 생성(가격 재확인, 멱등), 하위 주문, 만료, 결제 전 구매자 취소
-- [ ] catalog: SKU 일괄 조회(order용), 재고 예약·확정·해제, 동시성(CAT-4)
+- [ ] order
+  - [x] 골격, 장바구니(ORD-1, [order.md](architecture/order.md))
+  - [ ] 주문 생성(가격 재확인, 멱등), 하위 주문
+  - [ ] 만료, 결제 전 구매자 취소
+- [ ] catalog
+  - [x] SKU 일괄 조회(order용 내부 API)
+  - [ ] 재고 예약·확정·해제, 동시성(CAT-4)
 - [ ] payment: 토스 결제위젯 연동(R9), 금액 대조, 승인 타임아웃 처리, 보상 취소, 원장
 - [ ] 멱등성 키 필터(NFR-2), 동기 호출 타임아웃·서킷 브레이커(NFR-4)
+  - [x] 서비스 간 조회 클라이언트(OpenFeign, `client_credentials`, 타임아웃, 서킷 브레이커): order → catalog
+  - [ ] 주문 생성·결제 승인의 `Idempotency-Key`
 - [ ] member: 탈퇴의 진행 중 주문 확인을 order 내부 API로 연결(ACC-4)
 - [ ] 화면: shop 장바구니·주문서·결제·주문 목록·상세, seller 하위 주문 목록·상세(조회만)
 - [ ] 마일스톤 E2E `infra/e2e/run.sh m3`(가짜 PG), 메모리 전체 재측정(R6)

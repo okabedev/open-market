@@ -11,6 +11,7 @@ archunit = "1.5.1"
 shedlock = "7.10.1"
 uuid-creator = "6.1.1"
 twelvemonkeys = "3.15.2"
+wiremock = "3.13.2"
 opentelemetry-logback-appender = "2.28.1-alpha"
 spotless = "8.10.4"
 google-java-format = "1.36.1"
@@ -34,6 +35,8 @@ uuid-creator = { module = "com.github.f4b6a3:uuid-creator", version.ref = "uuid-
 # 이미지 읽기(JPEG CMYK·EXIF, WebP). 근거는 ADR 0017
 twelvemonkeys-imageio-jpeg = { module = "com.twelvemonkeys.imageio:imageio-jpeg", version.ref = "twelvemonkeys" }
 twelvemonkeys-imageio-webp = { module = "com.twelvemonkeys.imageio:imageio-webp", version.ref = "twelvemonkeys" }
+# 외부 HTTP API 흉내(서비스 간 호출, 토스). 근거는 ADR 0018
+wiremock-standalone = { module = "org.wiremock:wiremock-standalone", version.ref = "wiremock" }
 opentelemetry-logback-appender = { module = "io.opentelemetry.instrumentation:opentelemetry-logback-appender-1.0", version.ref = "opentelemetry-logback-appender" }
 
 # 정적 분석 (convention 플러그인이 사용)

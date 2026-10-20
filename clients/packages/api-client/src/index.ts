@@ -11,4 +11,5 @@ export type { components as AuthComponents, paths as AuthPaths } from "./generat
 export type { components as CatalogComponents, paths as CatalogPaths } from "./generated/catalog";
 export type { components as FileComponents, paths as FilePaths } from "./generated/file";
 export type { components as MemberComponents, paths as MemberPaths } from "./generated/member";
+export type { components as OrderComponents, paths as OrderPaths } from "./generated/order";
 export type { components as SearchComponents, paths as SearchPaths } from "./generated/search";

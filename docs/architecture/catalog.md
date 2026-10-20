@@ -102,3 +102,9 @@ gateway 경로는 `/api/catalog` + 아래 경로다. 판매자 API의 주체는 
 
 - 이미지는 `fileId`로만 준다. 화면은 `/files/{fileId}/w300`, `/files/{fileId}/w800`으로 받는다([file.md](file.md)).
 - 공개 경로는 gateway와 catalog의 `public-paths`에 같이 적는다([auth.md](auth.md) "인가").
+
+### 내부 API
+서비스 간 토큰(`internal` scope)으로만 부른다. gateway는 넘기지 않고, OpenAPI 문서(프론트 `api-client`)에도 넣지 않는다([auth.md](auth.md) "인가" 3).
+| 메서드 | 경로 | 설명 |
+|---|---|---|
+| GET | `/internal/v1/skus?ids=` | SKU 일괄 조회(order용). 쉼표로 구분한 1~100개, 어기면 400 `CATALOG_INVALID_INPUT`. SKU마다 상품 ID·이름·상태, 판매자 ID·상호, 카테고리 ID, 옵션 이름·값, 가격, 판매 가능 수량, 대표 이미지를 준다. 상품 상태와 상관없이 있는 SKU는 모두 주고, 없는 SKU는 빠진다. 주문할 수 있는지(`ON_SALE`, 수량)는 order가 판단한다 |

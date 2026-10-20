@@ -1,0 +1,63 @@
+# order 실행 설정. 공통 설정은 application.yml에 있다. 설계는 docs/architecture/order.md.
+server:
+  port: 8103
+spring:
+  datasource:
+    password: ${ORDER_DB_PASSWORD}
+  jpa:
+    properties:
+      hibernate:
+        # order는 SQL 예약어라 Hibernate가 붙이는 스키마 이름을 따옴표로 감싼다(docs/architecture/data.md).
+        default_schema: '"order"'
+  kafka:
+    consumer:
+      group-id: order
+  security:
+    oauth2:
+      client:
+        # catalog 내부 API를 부를 서비스 간 토큰(client_credentials, scope internal). auth.yml의 service-clients와 같은 시크릿이다.
+        registration:
+          order:
+            provider: auth
+            client-id: order
+            client-secret: ${ORDER_CLIENT_SECRET}
+            authorization-grant-type: client_credentials
+            scope: internal
+        provider:
+          auth:
+            token-uri: http://auth.openmarket.local:9000/oauth2/token
+  cloud:
+    openfeign:
+      oauth2:
+        enabled: true
+        client-registration-id: order
+      circuitbreaker:
+        enabled: true
+        alphanumeric-ids:
+          enabled: true
+      client:
+        config:
+          # 동기 조회의 타임아웃(NFR-4). 서킷 브레이커는 이 시간 안에 실패한 호출을 센다.
+          default:
+            connect-timeout: 1000
+            read-timeout: 2000
+    circuitbreaker:
+      resilience4j:
+        # 호출을 요청 스레드에서 그대로 한다. 시간 제한은 위의 Feign 타임아웃이 맡는다.
+        # 별도 스레드로 넘기면 트레이스·보안 컨텍스트가 끊긴다.
+        disable-time-limiter: true
+        disable-thread-pool: true
+
+resilience4j:
+  circuitbreaker:
+    configs:
+      # 최근 호출 20건 중 10건 이상에서 절반이 실패하면 10초 동안 바로 실패시킨다(503). 4xx는 실패로 세지 않는다.
+      default:
+        sliding-window-size: 20
+        minimum-number-of-calls: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 3
+        automatic-transition-from-open-to-half-open-enabled: true
+        ignore-exceptions:
+          - feign.FeignException$FeignClientException
