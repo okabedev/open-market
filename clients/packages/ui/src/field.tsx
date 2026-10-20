@@ -4,8 +4,13 @@ import { Label } from "./label";
 import { cn } from "./lib/cn";
 
 type FieldBaseProps = {
-  /** 폼 필드 이름. id와 오류 메시지 id도 여기서 만든다 */
+  /** 폼 필드 이름 */
   name: string;
+  /**
+   * 입력 id. 안내·오류 문구 id도 여기서 만든다. 기본은 `name`이다. 같은 이름의 필드가 한 화면에 여럿이면(목록 행마다 있는 폼) 따로
+   * 준다
+   */
+  id?: string | undefined;
   label: string;
   /** 서버가 돌려준 이 필드의 오류 */
   error?: string | undefined;
@@ -14,24 +19,24 @@ type FieldBaseProps = {
 };
 
 function FieldShell({
-  name,
+  id,
   label,
   error,
   hint,
   className,
   children,
-}: FieldBaseProps & { children: ReactNode }) {
+}: Omit<FieldBaseProps, "name"> & { id: string; children: ReactNode }) {
   return (
     <div className={cn("grid gap-1.5", className)}>
-      <Label htmlFor={name}>{label}</Label>
+      <Label htmlFor={id}>{label}</Label>
       {children}
       {hint && !error ? (
-        <p id={`${name}-hint`} className="text-xs text-muted-foreground">
+        <p id={`${id}-hint`} className="text-xs text-muted-foreground">
           {hint}
         </p>
       ) : null}
       {error ? (
-        <p id={`${name}-error`} className="text-xs text-destructive">
+        <p id={`${id}-error`} className="text-xs text-destructive">
           {error}
         </p>
       ) : null}
@@ -39,16 +44,17 @@ function FieldShell({
   );
 }
 
-function describedBy(name: string, error?: string, hint?: ReactNode): string | undefined {
+function describedBy(id: string, error?: string, hint?: ReactNode): string | undefined {
   if (error) {
-    return `${name}-error`;
+    return `${id}-error`;
   }
-  return hint ? `${name}-hint` : undefined;
+  return hint ? `${id}-hint` : undefined;
 }
 
 /** 이름표, 입력, 안내, 오류를 한 묶음으로 그린다. 오류가 있으면 입력에 `aria-invalid`와 `aria-describedby`를 붙인다. */
 export function TextField({
   name,
+  id = name,
   label,
   error,
   hint,
@@ -56,12 +62,12 @@ export function TextField({
   ...input
 }: FieldBaseProps & Omit<ComponentProps<"input">, "name" | "id" | "className">) {
   return (
-    <FieldShell name={name} label={label} error={error} hint={hint} className={className}>
+    <FieldShell id={id} label={label} error={error} hint={hint} className={className}>
       <Input
-        id={name}
+        id={id}
         name={name}
         aria-invalid={error ? true : undefined}
-        aria-describedby={describedBy(name, error, hint)}
+        aria-describedby={describedBy(id, error, hint)}
         {...input}
       />
     </FieldShell>
@@ -70,6 +76,7 @@ export function TextField({
 
 export function TextAreaField({
   name,
+  id = name,
   label,
   error,
   hint,
@@ -77,12 +84,12 @@ export function TextAreaField({
   ...textarea
 }: FieldBaseProps & Omit<ComponentProps<"textarea">, "name" | "id" | "className">) {
   return (
-    <FieldShell name={name} label={label} error={error} hint={hint} className={className}>
+    <FieldShell id={id} label={label} error={error} hint={hint} className={className}>
       <Textarea
-        id={name}
+        id={id}
         name={name}
         aria-invalid={error ? true : undefined}
-        aria-describedby={describedBy(name, error, hint)}
+        aria-describedby={describedBy(id, error, hint)}
         {...textarea}
       />
     </FieldShell>

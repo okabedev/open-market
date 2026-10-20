@@ -121,12 +121,17 @@ pnpm --filter @openmarket/shop dev     # http://localhost:3000 (seller 3001, adm
 
 ```bash
 docker compose --profile apps --profile obs --profile search stop   # 개발용 스택을 멈춘다(데이터는 남는다)
-infra/e2e/run.sh m1
+infra/e2e/run.sh m2   # 마일스톤마다 m1, m2 …
 ```
 
 - 별도 Compose 프로젝트(`openmarket-e2e`)를 빈 볼륨으로 띄우고(기본·`apps` profile), 앱 3개를 빌드해 `next start`로 띄운 뒤 시나리오를 돌린다. 끝나면 앱을 멈추고 프로젝트를 볼륨째 지운다. 남겨서 보려면 `E2E_KEEP=1 infra/e2e/run.sh m1`.
 - 호스트 포트가 같아서 개발용 스택이나 `pnpm dev`가 떠 있으면 시작하지 않는다.
 - 처음에는 서비스 이미지 빌드로 몇 분 걸린다. 그 뒤에는 시나리오까지 2~3분이다.
-- Playwright 브라우저(Chromium)는 스크립트가 받는다. 브라우저가 쓰는 시스템 라이브러리는 처음 한 번 설치한다: `cd clients && sudo corepack pnpm --filter @openmarket/e2e exec playwright install-deps chromium`.
+- Playwright 브라우저(Chromium)는 스크립트가 받는다. 브라우저가 쓰는 시스템 라이브러리(`libnspr4`, `libnss3` 등)는 처음 한 번 설치한다. `sudo`는 PATH를 바꿔 `corepack`을 찾지 못하므로, 필요한 패키지 목록만 뽑아 `apt`로 설치한다(2026-10-20 확인, Ubuntu 26.04 WSL).
+  ```bash
+  cd clients/e2e && ./node_modules/.bin/playwright install-deps --dry-run chromium   # 빠진 패키지 목록
+  sudo apt-get update && sudo apt-get install -y <위 목록>
+  ```
+  라이브러리가 없으면 시나리오가 `error while loading shared libraries: libnspr4.so`로 바로 실패한다.
 - 결과: 터미널 목록과 `clients/e2e/playwright-report`(HTML). 실패한 시나리오는 `clients/e2e/test-results`에 trace와 스크린샷이 남는다(`corepack pnpm --filter @openmarket/e2e exec playwright show-trace <파일>`). 앱 로그는 `infra/e2e/.out`.
 - CI에서는 돌리지 않는다(2026-10-18 결정). 마일스톤 마감과 큰 변경 뒤에 돌린다.
