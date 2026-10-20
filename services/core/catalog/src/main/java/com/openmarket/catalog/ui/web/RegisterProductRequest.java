@@ -1,5 +1,6 @@
 package com.openmarket.catalog.ui.web;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import java.util.List;
@@ -29,5 +30,6 @@ public record RegisterProductRequest(
      * @param price 원. 100원부터 1억 원까지 10원 단위
      * @param initialStock 초기 재고 0~999,999
      */
+    @Schema(name = "RegisterProductSkuRequest")
     public record Sku(@NotNull List<String> optionValues, long price, int initialStock) {}
 }

@@ -1,5 +1,6 @@
 package com.openmarket.catalog.query.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -35,6 +36,7 @@ public record SellerProductView(
      * @param reserved 주문으로 예약된 수량
      * @param available 판매 가능 수량({@code onHand - reserved})
      */
+    @Schema(name = "SellerProductSkuView")
     public record Sku(
             UUID skuId,
             List<String> optionValues,

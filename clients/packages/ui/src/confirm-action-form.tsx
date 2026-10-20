@@ -1,6 +1,8 @@
 "use client";
 
-import { ConfirmSubmit, FormAlert, idleState, type FormState } from "@openmarket/ui";
+import { ConfirmSubmit } from "./confirm-submit";
+import { FormAlert } from "./form-alert";
+import { idleState, type FormState } from "./form-state";
 import { useActionState, type ComponentProps } from "react";
 
 type ConfirmActionFormProps = Omit<ComponentProps<typeof ConfirmSubmit>, "size"> & {
@@ -8,7 +10,7 @@ type ConfirmActionFormProps = Omit<ComponentProps<typeof ConfirmSubmit>, "size">
   hidden: Record<string, string>;
 };
 
-/** 한 번 더 묻고 실행하는 관리자 작업(승인, 정지 해제). 실패하면 그 자리에 문구를 보여 준다. */
+/** 한 번 더 묻고 실행하는 작업(승인, 정지 해제, 판매 시작·중지). 실패하면 그 자리에 문구를 보여 준다. */
 export function ConfirmActionForm({ action, hidden, ...confirm }: ConfirmActionFormProps) {
   const [state, formAction] = useActionState(action, idleState);
   return (

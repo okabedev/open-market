@@ -166,7 +166,15 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        Sku: {
+        UpdateProductRequest: {
+            /** Format: uuid */
+            categoryId: string;
+            name: string;
+            description: string;
+            imageFileIds: string[];
+            skus: components["schemas"]["UpdateProductSkuRequest"][];
+        };
+        UpdateProductSkuRequest: {
             /** Format: uuid */
             skuId?: string;
             optionValues: string[];
@@ -175,14 +183,6 @@ export interface components {
             /** Format: int32 */
             initialStock?: number;
         };
-        UpdateProductRequest: {
-            /** Format: uuid */
-            categoryId: string;
-            name: string;
-            description: string;
-            imageFileIds: string[];
-            skus: components["schemas"]["Sku"][];
-        };
         RegisterProductRequest: {
             /** Format: uuid */
             categoryId: string;
@@ -190,7 +190,14 @@ export interface components {
             description: string;
             imageFileIds: string[];
             optionNames?: string[];
-            skus: components["schemas"]["Sku"][];
+            skus: components["schemas"]["RegisterProductSkuRequest"][];
+        };
+        RegisterProductSkuRequest: {
+            optionValues: string[];
+            /** Format: int64 */
+            price?: number;
+            /** Format: int32 */
+            initialStock?: number;
         };
         RegisterProductResponse: {
             /** Format: uuid */
@@ -245,6 +252,19 @@ export interface components {
             categoryId?: string;
             name?: string;
         };
+        SellerProductSkuView: {
+            /** Format: uuid */
+            skuId?: string;
+            optionValues?: string[];
+            /** Format: int64 */
+            price?: number;
+            /** Format: int32 */
+            onHand?: number;
+            /** Format: int32 */
+            reserved?: number;
+            /** Format: int32 */
+            available?: number;
+        };
         SellerProductView: {
             /** Format: uuid */
             productId?: string;
@@ -258,7 +278,7 @@ export interface components {
             categoryPath?: components["schemas"]["CategoryRefView"][];
             imageFileIds?: string[];
             optionNames?: string[];
-            skus?: components["schemas"]["Sku"][];
+            skus?: components["schemas"]["SellerProductSkuView"][];
             /** Format: date-time */
             publishedAt?: string;
             /** Format: date-time */
@@ -286,6 +306,14 @@ export interface components {
             /** Format: date-time */
             adjustedAt?: string;
         };
+        ProductDetailSkuView: {
+            /** Format: uuid */
+            skuId?: string;
+            optionValues?: string[];
+            /** Format: int64 */
+            price?: number;
+            inStock?: boolean;
+        };
         ProductDetailView: {
             /** Format: uuid */
             productId?: string;
@@ -299,7 +327,7 @@ export interface components {
             storeName?: string;
             imageFileIds?: string[];
             optionNames?: string[];
-            skus?: components["schemas"]["Sku"][];
+            skus?: components["schemas"]["ProductDetailSkuView"][];
             /** Format: int64 */
             minPrice?: number;
             inStock?: boolean;

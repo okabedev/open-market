@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { isSeller } from "./access";
 import { bff } from "./bff";
 
 /**
@@ -13,6 +14,15 @@ export async function requireSession(returnTo: string) {
   const session = await currentSession();
   if (!session) {
     redirect(`/auth/login?returnTo=${encodeURIComponent(returnTo)}`);
+  }
+  return session;
+}
+
+/** 판매자만 쓰는 화면. 판매자 역할이 없으면 첫 화면(권한 안내)으로 보낸다. */
+export async function requireSeller(returnTo: string) {
+  const session = await requireSession(returnTo);
+  if (!isSeller(session.roles)) {
+    redirect("/");
   }
   return session;
 }

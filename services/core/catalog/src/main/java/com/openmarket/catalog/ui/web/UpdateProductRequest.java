@@ -1,5 +1,6 @@
 package com.openmarket.catalog.ui.web;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import java.util.List;
@@ -25,6 +26,7 @@ public record UpdateProductRequest(
      * @param skuId 기존 조합의 ID. 새 조합이면 비운다
      * @param initialStock 새 조합의 초기 재고. 기존 조합이면 무시한다
      */
+    @Schema(name = "UpdateProductSkuRequest")
     public record Sku(
             @Nullable UUID skuId,
             @NotNull List<String> optionValues,

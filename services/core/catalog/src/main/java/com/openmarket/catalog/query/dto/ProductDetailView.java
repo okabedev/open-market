@@ -1,5 +1,6 @@
 package com.openmarket.catalog.query.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -33,5 +34,6 @@ public record ProductDetailView(
      *
      * @param inStock 판매 가능 수량이 있는가
      */
+    @Schema(name = "ProductDetailSkuView")
     public record Sku(UUID skuId, List<String> optionValues, long price, boolean inStock) {}
 }

@@ -2,8 +2,13 @@ import {
   Alert,
   Badge,
   Card,
+  ConfirmActionForm,
   formatDateTime,
+  listQuery,
+  PAGE_SIZE,
   PageHeader,
+  Pager,
+  StatusTabs,
   Table,
   TableBody,
   TableCell,
@@ -11,12 +16,8 @@ import {
   TableHeader,
   TableRow,
 } from "@openmarket/ui";
-import { ConfirmActionForm } from "@/components/confirm-action-form";
-import { Pager } from "@/components/pager";
 import { ReasonForm } from "@/components/reason-form";
-import { StatusTabs } from "@/components/status-tabs";
 import { bff } from "@/lib/bff";
-import { listQuery, PAGE_SIZE } from "@/lib/list";
 import { noticeMessage } from "@/lib/review";
 import { requireSession } from "@/lib/session";
 import { reinstate, suspend } from "./actions";
