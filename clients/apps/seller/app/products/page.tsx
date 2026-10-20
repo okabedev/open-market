@@ -16,17 +16,18 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  ProductImage,
+  ProductStatusBadge,
+  PRODUCT_STATUSES,
+  PRODUCT_STATUS_LABELS,
 } from "@openmarket/ui";
-import { ProductImage } from "@/components/product-image";
-import { StatusBadge } from "@/components/status-badge";
 import { bff } from "@/lib/bff";
-import { STATUSES, STATUS_LABELS } from "@/lib/product-form";
 import { requireSeller } from "@/lib/session";
 
 /** 본인 상품 목록(최근 수정 순, 쪽 번호). 상태로 거른다. */
 export default async function ProductsPage({ searchParams }: PageProps<"/products">) {
   await requireSeller("/products");
-  const { status, page } = listQuery(await searchParams, STATUSES, undefined);
+  const { status, page } = listQuery(await searchParams, PRODUCT_STATUSES, undefined);
   const catalog = await bff.serviceClient("catalog");
   const { data, response } = await catalog.GET("/v1/seller/products", {
     params: { query: { ...(status ? { status } : {}), page, size: PAGE_SIZE } },
@@ -47,7 +48,10 @@ export default async function ProductsPage({ searchParams }: PageProps<"/product
         current={status}
         tabs={[
           { status: undefined, label: "전체" },
-          ...STATUSES.map((value) => ({ status: value, label: STATUS_LABELS[value] })),
+          ...PRODUCT_STATUSES.map((value) => ({
+            status: value,
+            label: PRODUCT_STATUS_LABELS[value],
+          })),
         ]}
       />
       {!response.ok || !data ? (
@@ -80,7 +84,7 @@ export default async function ProductsPage({ searchParams }: PageProps<"/product
                     </Link>
                   </TableCell>
                   <TableCell>
-                    <StatusBadge status={item.status} />
+                    <ProductStatusBadge status={item.status} />
                   </TableCell>
                   <TableCell className="text-right whitespace-nowrap">
                     {formatPrice(item.minPrice)}

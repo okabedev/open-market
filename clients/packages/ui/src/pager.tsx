@@ -6,18 +6,25 @@ type PagerProps = {
   page: number;
   size: number;
   totalCount: number;
+  /** 쪽을 넘겨도 남길 다른 목록 조건. 예: 판매자 필터 */
+  query?: Record<string, string | undefined>;
 };
 
 /** 이전·다음 쪽 링크. 관리자·판매자 관리 목록은 쪽 번호를 쓴다(conventions.md "REST API"). */
-export function Pager({ basePath, status, page, size, totalCount }: PagerProps) {
+export function Pager({ basePath, status, page, size, totalCount, query = {} }: PagerProps) {
   const lastPage = Math.max(0, Math.ceil(totalCount / size) - 1);
   const href = (target: number) => {
-    const query = new URLSearchParams();
-    if (status) {
-      query.set("status", status);
+    const params = new URLSearchParams();
+    for (const [name, value] of Object.entries(query)) {
+      if (value) {
+        params.set(name, value);
+      }
     }
-    query.set("page", String(target));
-    return `${basePath}?${query.toString()}`;
+    if (status) {
+      params.set("status", status);
+    }
+    params.set("page", String(target));
+    return `${basePath}?${params.toString()}`;
   };
   return (
     <nav

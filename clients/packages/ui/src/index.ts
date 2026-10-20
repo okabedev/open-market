@@ -15,6 +15,14 @@ export { ConfirmSubmit } from "./confirm-submit";
 export { ConfirmActionForm } from "./confirm-action-form";
 export { StatusTabs } from "./status-tabs";
 export { Pager } from "./pager";
+export { ProductImage } from "./product-image";
+export {
+  ProductStatusBadge,
+  productStatusLabel,
+  PRODUCT_STATUSES,
+  PRODUCT_STATUS_LABELS,
+  type ProductStatus,
+} from "./product-status-badge";
 export { AccountBar, loginErrorMessage } from "./account-bar";
 export { AppShell, PageHeader, type NavItem } from "./app-shell";
 export { FormAlert } from "./form-alert";

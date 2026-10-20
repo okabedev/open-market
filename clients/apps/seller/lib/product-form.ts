@@ -147,22 +147,6 @@ export const stockAdjustmentSchema = z.object({
   reason: z.string().trim().max(100, "사유는 100자까지입니다."),
 });
 
-/** 상품 상태 이름(docs/glossary.md "상품"). */
-export const STATUS_LABELS = {
-  DRAFT: "등록 중",
-  ON_SALE: "판매 중",
-  STOPPED: "판매 중지",
-  BANNED: "판매 제한",
-} as const;
-
-export type ProductStatus = keyof typeof STATUS_LABELS;
-
-export const STATUSES = Object.keys(STATUS_LABELS) as ProductStatus[];
-
-export function statusLabel(status: string | undefined): string {
-  return status && status in STATUS_LABELS ? STATUS_LABELS[status as ProductStatus] : "-";
-}
-
 /** 판매 중지 사유(docs/glossary.md "판매 중지 사유"). */
 export const STOP_REASON_LABELS: Record<string, string> = {
   SELLER: "직접 중지했습니다.",

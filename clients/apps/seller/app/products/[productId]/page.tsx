@@ -16,11 +16,11 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  ProductImage,
+  ProductStatusBadge,
 } from "@openmarket/ui";
 import { randomUUID } from "node:crypto";
 import { notFound } from "next/navigation";
-import { ProductImage } from "@/components/product-image";
-import { StatusBadge } from "@/components/status-badge";
 import { bff } from "@/lib/bff";
 import { noticeMessage } from "@/lib/notice";
 import { STOP_REASON_LABELS } from "@/lib/product-form";
@@ -140,7 +140,7 @@ export default async function ProductPage({
             <dl className="grid grid-cols-[8rem_1fr] gap-y-3 text-sm">
               <dt className="text-muted-foreground">상태</dt>
               <dd>
-                <StatusBadge status={product.status} />
+                <ProductStatusBadge status={product.status} />
               </dd>
               <dt className="text-muted-foreground">설명</dt>
               <dd className="whitespace-pre-wrap">{product.description}</dd>
