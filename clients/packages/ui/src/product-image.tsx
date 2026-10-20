@@ -1,4 +1,4 @@
-import { cn } from "@openmarket/ui";
+import { cn } from "./lib/cn";
 
 type ProductImageProps = {
   fileId: string | undefined | null;
@@ -10,7 +10,7 @@ type ProductImageProps = {
 };
 
 /**
- * 상품 이미지 변형. 같은 Origin의 `/files/{fileId}/{variant}`로 받는다(next.config.ts의 rewrites). 이미지가 없으면 빈 칸을
+ * 상품 이미지 변형. 같은 Origin의 `/files/{fileId}/{variant}`로 받는다(앱 next.config.ts의 rewrites). 이미지가 없으면 빈 칸을
  * 그린다. 변형이 이미 줄인 JPEG이라 Next.js 이미지 최적화는 쓰지 않는다.
  */
 export function ProductImage({

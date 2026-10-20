@@ -16,6 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from "@openmarket/ui";
+import Link from "next/link";
 import { ReasonForm } from "@/components/reason-form";
 import { bff } from "@/lib/bff";
 import { noticeMessage } from "@/lib/review";
@@ -39,7 +40,7 @@ export default async function SellersPage({ searchParams }: PageProps<"/sellers"
     <>
       <PageHeader
         title="판매자"
-        description="최근 승인 순입니다. 정지하면 판매자 역할이 빠지고, 상품 판매 중지는 M2부터 함께 일어납니다."
+        description="최근 승인 순입니다. 정지하면 판매자 역할이 빠지고, 판매 중인 상품이 모두 판매 중지됩니다. 정지를 풀면 정지로 멈춘 상품만 다시 열립니다."
       />
       {notice ? (
         <Alert variant="success" className="mb-4">
@@ -75,7 +76,17 @@ export default async function SellersPage({ searchParams }: PageProps<"/sellers"
             <TableBody>
               {(data.items ?? []).map((item) => (
                 <TableRow key={item.sellerId}>
-                  <TableCell className="font-medium">{item.storeName}</TableCell>
+                  <TableCell className="font-medium">
+                    <div className="grid gap-1">
+                      {item.storeName}
+                      <Link
+                        href={`/products?sellerId=${item.sellerId}`}
+                        className="text-xs font-normal text-primary hover:underline"
+                      >
+                        상품 보기
+                      </Link>
+                    </div>
+                  </TableCell>
                   <TableCell>{item.businessNumber}</TableCell>
                   <TableCell>{item.representativeName}</TableCell>
                   <TableCell className="whitespace-nowrap">

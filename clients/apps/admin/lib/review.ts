@@ -12,6 +12,7 @@ export const NOTICES = {
   rejected: "반려했습니다.",
   suspended: "정지했습니다.",
   reinstated: "정지를 풀었습니다.",
+  banned: "상품을 제재했습니다. 구매자 검색에서 몇 초 안에 빠집니다.",
 } as const;
 
 export type Notice = keyof typeof NOTICES;

@@ -11,9 +11,9 @@ import {
   TextAreaField,
   TextField,
   type FormState,
+  ProductImage,
 } from "@openmarket/ui";
 import { useActionState, useState, type ReactNode } from "react";
-import { ProductImage } from "@/components/product-image";
 import {
   combineOptions,
   newRow,

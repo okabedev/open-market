@@ -11,6 +11,7 @@ export const metadata: Metadata = {
 const NAV: NavItem[] = [
   { href: "/seller-applications", label: "입점 심사" },
   { href: "/sellers", label: "판매자" },
+  { href: "/products", label: "상품" },
 ];
 
 // 세션(쿠키)을 읽으므로 요청마다 그린다.
