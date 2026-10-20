@@ -1,11 +1,12 @@
 # search profile: Elasticsearch. `docker compose --profile search up -d --wait`로 띄운다.
+# apps profile의 search 서비스가 쓰므로 apps profile에서도 뜬다.
 # 공식 이미지에 nori 플러그인을 더한 커스텀 이미지다(infra/elasticsearch, R10).
 services:
   elasticsearch:
     build:
       context: ../elasticsearch
     image: openmarket/elasticsearch:9.4.6
-    profiles: [search]
+    profiles: [search, apps]
     environment:
       cluster.name: openmarket
       discovery.type: single-node

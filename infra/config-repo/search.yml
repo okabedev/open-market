@@ -1,0 +1,20 @@
+# search 실행 설정. 공통 설정은 application.yml에 있다.
+server:
+  port: 8109
+spring:
+  datasource:
+    password: ${SEARCH_DB_PASSWORD}
+  kafka:
+    consumer:
+      group-id: search
+  elasticsearch:
+    # 컨테이너로 띄우면 compose가 http://elasticsearch:9200을 넣는다. 로컬은 인증 없이 연다(infra/compose/search.yaml).
+    uris: ${ELASTICSEARCH_URL:http://localhost:9200}
+
+openmarket:
+  # 토큰 없이 여는 서비스 경로(common-security). gateway.yml의 public-paths에도 gateway 기준 경로로 적는다.
+  security:
+    public-paths:
+      # 구매자 상품 검색(docs/architecture/search.md "검색 API")
+      - method: GET
+        pattern: /v1/products

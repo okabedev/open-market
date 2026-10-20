@@ -1,0 +1,142 @@
+{
+  "openapi" : "3.1.0",
+  "info" : {
+    "title" : "OpenAPI definition",
+    "version" : "v0"
+  },
+  "paths" : {
+    "/v1/products" : {
+      "get" : {
+        "tags" : [ "product-search-query-controller" ],
+        "operationId" : "search",
+        "parameters" : [ {
+          "name" : "q",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "maxLength" : 100,
+            "minLength" : 0
+          }
+        }, {
+          "name" : "categoryId",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "minPrice",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64",
+            "minimum" : 0
+          }
+        }, {
+          "name" : "maxPrice",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64",
+            "minimum" : 0
+          }
+        }, {
+          "name" : "sort",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "default" : "RELEVANCE",
+            "enum" : [ "RELEVANCE", "LATEST", "PRICE_ASC", "PRICE_DESC" ]
+          }
+        }, {
+          "name" : "cursor",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "size",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 20,
+            "maximum" : 100,
+            "minimum" : 1
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProductSearchResultView"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "ProductSearchItemView" : {
+        "type" : "object",
+        "properties" : {
+          "productId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "storeName" : {
+            "type" : "string"
+          },
+          "minPrice" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "inStock" : {
+            "type" : "boolean"
+          },
+          "thumbnailFileId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "publishedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "ProductSearchResultView" : {
+        "type" : "object",
+        "properties" : {
+          "items" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ProductSearchItemView"
+            }
+          },
+          "totalCount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "nextCursor" : {
+            "type" : "string"
+          }
+        }
+      }
+    }
+  }
+}

@@ -58,7 +58,7 @@ docker compose ps
 # 필요할 때 profile을 더한다. 멈출 때도 같은 --profile을 붙여야 그 컨테이너까지 내려간다.
 docker compose --profile search up -d --wait               # Elasticsearch
 docker compose --profile obs up -d --wait                  # 관측성 스택
-docker compose --profile apps up -d --wait --build         # Spring 서비스 전체를 컨테이너로(E2E). 코드를 바꿨으면 --build
+docker compose --profile apps up -d --wait --build         # Spring 서비스 전체를 컨테이너로(E2E). search가 쓰는 Elasticsearch도 함께 뜬다. 코드를 바꿨으면 --build
 docker compose --profile search --profile obs --profile apps down
 ```
 
@@ -75,7 +75,7 @@ docker compose --profile search --profile obs --profile apps down
 | gateway | http://localhost:8080 | 외부 진입점. 토큰 없이 부를 수 있는 것은 가입·이메일 인증 API뿐이다(예는 6절). 관리 포트 8081은 호스트에 열지 않는다 |
 | auth | http://auth.openmarket.local:9000 | 인가 서버. 로그인 화면 `/login`, discovery `/.well-known/openid-configuration`. hosts 항목이 필요하다(3절). 관리자 시드 계정은 `.env`의 `ADMIN_SEED_*`. 관리 포트 9001은 호스트에 열지 않는다 |
 | Spring 서비스 (`apps`) | 호스트에 열지 않음 | gateway(8080)로 부른다. 목록은 `infra/compose/apps.yaml` |
-| Elasticsearch (`search`) | http://localhost:9200 | 인증 없음. nori 플러그인을 넣은 이미지를 처음 띄울 때 빌드한다 |
+| Elasticsearch (`search`, `apps`) | http://localhost:9200 | 인증 없음. nori 플러그인을 넣은 이미지를 처음 띄울 때 빌드한다. 상품 인덱스는 search 서비스가 뜰 때 만든다([search.md](architecture/search.md)) |
 | OTel Collector (`obs`) | OTLP gRPC `localhost:4317`, HTTP `localhost:4318` | 서비스가 트레이스와 로그를 보낸다. `obs`를 띄우지 않으면 서비스 로그에 `Failed to export` ERROR가 가끔 남는다(OTel이 빈도를 제한한다). 무시해도 된다 |
 | Prometheus (`obs`) | http://localhost:9090 | |
 | Grafana (`obs`) | http://localhost:3003 | 로그인 없음. 데이터 소스 Prometheus, Tempo, Loki가 미리 등록된다 |
