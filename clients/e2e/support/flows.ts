@@ -21,10 +21,12 @@ export async function signUpVerifyAndLogin(
   await page.getByRole("main").getByRole("link", { name: "로그인" }).click();
   await loginAtAuth(page, email, password);
   await page.waitForURL(`${env.shop}/my`);
-  // 회원은 가입 이벤트로 비동기로 만들어진다(member.md "회원 생성").
+  // 회원 생성과 인증 시각 기록은 서로 다른 이벤트로 비동기로 반영된다(member.md "회원 생성"). 인증 이벤트가 회원보다 먼저 오면
+  // 재시도 뒤에 반영되므로, 회원이 보이는 것만으로는 부족하고 인증됨까지 기다린다. 기다리지 않으면 입점 신청 화면이 인증 전으로 보인다.
   await expect(async () => {
     await page.reload();
     await expect(page.getByRole("heading", { name: "내 정보" })).toBeVisible({ timeout: 1_000 });
+    await expect(page.getByText("인증됨")).toBeVisible({ timeout: 1_000 });
   }).toPass({ timeout: 30_000 });
 }
 
