@@ -11,6 +11,7 @@ import com.openmarket.catalog.query.dto.ProductDetailView;
 import com.openmarket.catalog.query.dto.ProductStatus;
 import com.openmarket.catalog.query.dto.SellerProductSummaryView;
 import com.openmarket.catalog.query.dto.SellerProductView;
+import com.openmarket.catalog.query.dto.SkuSummaryView;
 import com.openmarket.catalog.query.dto.StopReason;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.Tuple;
@@ -248,6 +249,62 @@ public class ProductQueryDao {
                             Objects.requireNonNull(r.get(product.updatedAt))));
         }
         return new PageView<>(items, total, page, size);
+    }
+
+    /** SKU 일괄 조회(order용). 상품 상태와 상관없이 있는 SKU를 모두 준다. */
+    public List<SkuSummaryView> findSkuSummaries(List<UUID> skuIds) {
+        List<Tuple> rows =
+                query.select(
+                                sku.id,
+                                product.id,
+                                product.name,
+                                product.status.stringValue(),
+                                product.sellerId,
+                                seller.storeName,
+                                product.categoryId,
+                                product.optionName1,
+                                product.optionName2,
+                                sku.optionValue1,
+                                sku.optionValue2,
+                                sku.price,
+                                stock.onHand,
+                                stock.reserved)
+                        .from(sku)
+                        .join(sku.product, product)
+                        .join(seller)
+                        .on(seller.id.eq(product.sellerId))
+                        .leftJoin(stock)
+                        .on(stock.skuId.eq(sku.id))
+                        .where(sku.id.in(skuIds))
+                        .fetch();
+        Map<UUID, UUID> thumbnails =
+                thumbnails(
+                        rows.stream()
+                                .map(r -> Objects.requireNonNull(r.get(product.id)))
+                                .distinct()
+                                .toList());
+        return rows.stream()
+                .map(
+                        r -> {
+                            UUID productId = Objects.requireNonNull(r.get(product.id));
+                            return new SkuSummaryView(
+                                    Objects.requireNonNull(r.get(sku.id)),
+                                    productId,
+                                    Objects.requireNonNull(r.get(product.name)),
+                                    ProductStatus.valueOf(
+                                            Objects.requireNonNull(r.get(3, String.class))),
+                                    Objects.requireNonNull(r.get(product.sellerId)),
+                                    Objects.requireNonNull(r.get(seller.storeName)),
+                                    Objects.requireNonNull(r.get(product.categoryId)),
+                                    optionNames(
+                                            r.get(product.optionName1), r.get(product.optionName2)),
+                                    optionNames(r.get(sku.optionValue1), r.get(sku.optionValue2)),
+                                    Objects.requireNonNull(r.get(sku.price)),
+                                    Objects.requireNonNullElse(r.get(stock.onHand), 0)
+                                            - Objects.requireNonNullElse(r.get(stock.reserved), 0),
+                                    thumbnails.get(productId));
+                        })
+                .toList();
     }
 
     private static @Nullable StopReason stopReason(@Nullable String name) {
