@@ -22,6 +22,7 @@ include(":libs:common-test")
 include(":core:member")
 include(":core:catalog")
 include(":core:search")
+include(":core:order")
 
 include(":infra:discovery")
 include(":infra:config")
