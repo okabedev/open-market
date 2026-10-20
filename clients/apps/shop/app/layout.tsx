@@ -8,7 +8,10 @@ export const metadata: Metadata = {
   title: "오픈 마켓",
 };
 
+const PUBLIC_NAV: NavItem[] = [{ href: "/products", label: "상품" }];
+
 const NAV: NavItem[] = [
+  ...PUBLIC_NAV,
   { href: "/my", label: "내 정보" },
   { href: "/my/addresses", label: "배송지" },
   { href: "/my/seller", label: "입점 신청" },
@@ -22,7 +25,12 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   return (
     <html lang="ko">
       <body>
-        <AppShell appName="오픈 마켓" nav={session ? NAV : []} roles={session?.roles ?? null}>
+        <AppShell
+          appName="오픈 마켓"
+          width="wide"
+          nav={session ? NAV : PUBLIC_NAV}
+          roles={session?.roles ?? null}
+        >
           {children}
         </AppShell>
       </body>
