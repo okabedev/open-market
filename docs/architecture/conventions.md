@@ -82,6 +82,7 @@ com.openmarket.<service>
   - 서비스 앱 통합 테스트가 `/v3/api-docs`를 `clients/packages/api-client/openapi/<서비스>.json`과 비교한다(`common-test`의 `OpenApiSnapshot`). 서버 주소는 빼고 저장한다. 프론트는 gateway의 `/api/<서비스>` 아래로 부른다.
   - API를 바꾸면 `OPENAPI_UPDATE=true`로 테스트를 돌려 문서를 고치고, `pnpm --filter @openmarket/api-client generate`로 타입을 다시 만든다. CI는 `generate:check`로 둘이 맞는지 본다.
   - 응답 타입을 따로 적지 않은 API도 `application/json`으로 문서화한다(`springdoc.default-produces-media-type`).
+  - springdoc은 스키마 이름에 클래스의 단순 이름을 쓴다. 요청·View의 중첩 record 이름이 서비스 안에서 겹치면(예: 여러 `Sku`) 하나로 합쳐져 생성 타입이 틀린다. 겹치는 이름에는 `@Schema(name = "<바깥 이름><중첩 이름>")`을 붙인다.
 
 ## 오류
 - 베이스 예외는 `common-core`의 `BusinessException`이다. `ErrorType`(`INVALID`, `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `CONFLICT`, `UNPROCESSABLE`, `TOO_MANY_REQUESTS`, `UNAVAILABLE`)과 오류 코드 문자열을 가진다. HTTP 상태는 모른다.

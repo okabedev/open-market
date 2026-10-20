@@ -430,30 +430,6 @@
   },
   "components" : {
     "schemas" : {
-      "Sku" : {
-        "type" : "object",
-        "properties" : {
-          "skuId" : {
-            "type" : "string",
-            "format" : "uuid"
-          },
-          "optionValues" : {
-            "type" : "array",
-            "items" : {
-              "type" : "string"
-            }
-          },
-          "price" : {
-            "type" : "integer",
-            "format" : "int64"
-          },
-          "initialStock" : {
-            "type" : "integer",
-            "format" : "int32"
-          }
-        },
-        "required" : [ "optionValues" ]
-      },
       "UpdateProductRequest" : {
         "type" : "object",
         "properties" : {
@@ -477,11 +453,35 @@
           "skus" : {
             "type" : "array",
             "items" : {
-              "$ref" : "#/components/schemas/Sku"
+              "$ref" : "#/components/schemas/UpdateProductSkuRequest"
             }
           }
         },
         "required" : [ "categoryId", "description", "imageFileIds", "name", "skus" ]
+      },
+      "UpdateProductSkuRequest" : {
+        "type" : "object",
+        "properties" : {
+          "skuId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "optionValues" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "price" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "initialStock" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        },
+        "required" : [ "optionValues" ]
       },
       "RegisterProductRequest" : {
         "type" : "object",
@@ -512,11 +512,31 @@
           "skus" : {
             "type" : "array",
             "items" : {
-              "$ref" : "#/components/schemas/Sku"
+              "$ref" : "#/components/schemas/RegisterProductSkuRequest"
             }
           }
         },
         "required" : [ "categoryId", "description", "imageFileIds", "name", "skus" ]
+      },
+      "RegisterProductSkuRequest" : {
+        "type" : "object",
+        "properties" : {
+          "optionValues" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "price" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "initialStock" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        },
+        "required" : [ "optionValues" ]
       },
       "RegisterProductResponse" : {
         "type" : "object",
@@ -641,6 +661,37 @@
           }
         }
       },
+      "SellerProductSkuView" : {
+        "type" : "object",
+        "properties" : {
+          "skuId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "optionValues" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "price" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "onHand" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "reserved" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "available" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }
+      },
       "SellerProductView" : {
         "type" : "object",
         "properties" : {
@@ -687,7 +738,7 @@
           "skus" : {
             "type" : "array",
             "items" : {
-              "$ref" : "#/components/schemas/Sku"
+              "$ref" : "#/components/schemas/SellerProductSkuView"
             }
           },
           "publishedAt" : {
@@ -751,6 +802,28 @@
           }
         }
       },
+      "ProductDetailSkuView" : {
+        "type" : "object",
+        "properties" : {
+          "skuId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "optionValues" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "price" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "inStock" : {
+            "type" : "boolean"
+          }
+        }
+      },
       "ProductDetailView" : {
         "type" : "object",
         "properties" : {
@@ -797,7 +870,7 @@
           "skus" : {
             "type" : "array",
             "items" : {
-              "$ref" : "#/components/schemas/Sku"
+              "$ref" : "#/components/schemas/ProductDetailSkuView"
             }
           },
           "minPrice" : {

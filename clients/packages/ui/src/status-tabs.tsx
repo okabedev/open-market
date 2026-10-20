@@ -1,4 +1,4 @@
-import { cn } from "@openmarket/ui";
+import { cn } from "./lib/cn";
 
 type StatusTabsProps = {
   basePath: string;

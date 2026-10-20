@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   Alert,
   Badge,
@@ -55,7 +56,12 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
     <>
       <PageHeader
         title={seller.storeName ?? "판매자"}
-        description="상품 등록과 주문 관리는 다음 마일스톤에서 열립니다."
+        description="상품을 등록하고 판매 상태와 재고를 관리합니다. 주문 관리는 다음 마일스톤에서 열립니다."
+        actions={
+          <Button asChild>
+            <Link href="/products">상품 관리</Link>
+          </Button>
+        }
       />
       {seller.status === "SUSPENDED" ? (
         <Alert variant="destructive" className="mb-6">

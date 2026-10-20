@@ -1,4 +1,4 @@
-import { Button } from "@openmarket/ui";
+import { Button } from "./button";
 
 type PagerProps = {
   basePath: string;
@@ -8,7 +8,7 @@ type PagerProps = {
   totalCount: number;
 };
 
-/** 이전·다음 쪽 링크. 관리자 목록은 쪽 번호를 쓴다(conventions.md "REST API"). */
+/** 이전·다음 쪽 링크. 관리자·판매자 관리 목록은 쪽 번호를 쓴다(conventions.md "REST API"). */
 export function Pager({ basePath, status, page, size, totalCount }: PagerProps) {
   const lastPage = Math.max(0, Math.ceil(totalCount / size) - 1);
   const href = (target: number) => {
