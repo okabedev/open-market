@@ -7,3 +7,12 @@ spring:
   kafka:
     consumer:
       group-id: fulfillment
+
+openmarket:
+  fulfillment:
+    # 배송 시뮬레이터(ShipmentSimulatorJob, docs/architecture/fulfillment.md "배송 시뮬레이터"). 택배사 연동 대신 시간이 지나면 배송 중, 배송 완료로 바꾼다.
+    # E2E만 환경 변수로 짧게 준다(infra/e2e/run.sh).
+    simulator:
+      interval: ${FULFILLMENT_SIMULATOR_INTERVAL:1m}
+      in-transit-after: ${FULFILLMENT_IN_TRANSIT_AFTER:10m}
+      deliver-after: ${FULFILLMENT_DELIVER_AFTER:1h}

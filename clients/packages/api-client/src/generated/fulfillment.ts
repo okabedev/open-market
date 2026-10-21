@@ -2,6 +2,38 @@
 // 원본: openapi/fulfillment.json
 
 export interface paths {
+    "/v1/seller/seller-orders/{sellerOrderId}/ship": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ship"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/seller/seller-orders/{sellerOrderId}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["accept"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/seller/seller-orders/{sellerOrderId}": {
         parameters: {
             query?: never;
@@ -22,13 +54,28 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        ShipShipmentRequest: {
+            carrier: string;
+            trackingNumber: string;
+        };
         SellerFulfillmentShipmentView: {
             /** Format: uuid */
             shipmentId?: string;
             /** @enum {string} */
             status?: "READY" | "ACCEPTED" | "SHIPPED" | "IN_TRANSIT" | "DELIVERED" | "CANCELLED";
+            /** @enum {string} */
+            carrier?: "CJ_LOGISTICS" | "HANJIN" | "LOTTE" | "LOGEN" | "KOREA_POST";
+            trackingNumber?: string;
             /** Format: date-time */
             createdAt?: string;
+            /** Format: date-time */
+            acceptedAt?: string;
+            /** Format: date-time */
+            shippedAt?: string;
+            /** Format: date-time */
+            inTransitAt?: string;
+            /** Format: date-time */
+            deliveredAt?: string;
         };
         SellerFulfillmentView: {
             /** Format: uuid */
@@ -48,6 +95,50 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    ship: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sellerOrderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShipShipmentRequest"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    accept: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sellerOrderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     detail: {
         parameters: {
             query?: never;

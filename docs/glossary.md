@@ -44,6 +44,7 @@
 | 장바구니 | `Cart`, `CartItem` | order | 회원당 하나 |
 | 주문 | `Order` | order | 구매자의 결제 단위. 상태: `PENDING`(예약 중) → `AWAITING_PAYMENT` → `PAID`, 또는 `CANCELLED`. 화면 이름은 재고 확인 중, 결제 대기, 결제 완료, 취소됨이다(하위 주문도 같다) |
 | 하위 주문 | `SellerOrder` | order | 주문을 판매자별로 나눈 단위. 배송, 클레임, 정산의 기준이다 |
+| 하위 주문 진행 상태 | `SellerOrderProgress` | order | 결제된 하위 주문의 배송 진행. `PAID` → `ACCEPTED` → `SHIPPED` → `IN_TRANSIT` → `DELIVERED`. fulfillment 배송 이벤트로 바뀐다 |
 | 주문 항목 | `OrderLine` | order | SKU 하나와 수량, 주문 당시 가격 스냅샷 |
 | 취소 사유 | `CancelReason` | order | 결제 전 주문 취소의 이유. `STOCK_UNAVAILABLE`(재고 예약 실패), `PAYMENT_TIMEOUT`(주문 만료), `BUYER_CANCELLED`(구매자 취소) |
 | 주문 만료 | `OrderExpiryJob` | order | 결제 기한(주문 후 15분) 안에 결제하지 않은 주문. 취소 사유 `PAYMENT_TIMEOUT`으로 `CANCELLED`가 된다 |
@@ -60,7 +61,7 @@
 |---|---|---|---|
 | 배송 | `Shipment` | fulfillment | 하위 주문 하나당 하나(교환 재발송은 새 배송). 상태: `READY` → `ACCEPTED`(발주 확인) → `SHIPPED` → `IN_TRANSIT` → `DELIVERED`. 발송 전 취소 클레임이면 `CANCELLED`. 화면 이름은 결제 완료, 상품 준비 중, 발송, 배송 중, 배송 완료, 취소됨이다 |
 | 배송 시뮬레이터 | `ShipmentSimulatorJob` | fulfillment | 택배사 연동 대신 발송한 배송을 시간이 지나면 배송 중, 배송 완료로 바꾸는 작업 |
-| 송장 | `TrackingInfo` | fulfillment | 택배사 코드와 송장 번호 |
+| 송장 | `TrackingInfo` | fulfillment | 택배사(`Carrier`) 코드와 송장 번호 |
 | 구매확정 | `PurchaseConfirmation` | fulfillment | 하위 주문당 한 번. 구매자 확정, 또는 배송 완료 7일 뒤 자동 확정(`PurchaseConfirmJob`). 이후에는 클레임을 신청할 수 없다 |
 | 클레임 | `Claim` | fulfillment | 하위 주문 전체가 대상이다. 유형: `CANCEL`(발송 전 취소), `RETURN`(반품), `EXCHANGE`(같은 SKU 교환). 상태: `REQUESTED` → `APPROVED` → `COMPLETED`, 또는 `REJECTED` → `MEDIATING`(중재) → `APPROVED` 또는 `REJECTED` |
 | 클레임 사유 | `ClaimReason` | fulfillment | `CHANGE_OF_MIND`, `DEFECTIVE`, `WRONG_ITEM`, `NOT_AS_DESCRIBED`, `BUYER_CANCEL`. 사유가 귀책을 정한다 |

@@ -139,6 +139,9 @@ class OrderListApiIntegrationTest {
         jdbc.sql("UPDATE orders SET status = 'AWAITING_PAYMENT' WHERE id = :id")
                 .param("id", awaiting)
                 .update();
+        jdbc.sql("UPDATE seller_order SET progress = 'SHIPPED' WHERE order_id = :id")
+                .param("id", paid)
+                .update();
 
         JsonNode page =
                 json.readTree(
@@ -152,6 +155,7 @@ class OrderListApiIntegrationTest {
         JsonNode item = page.get("items").get(0);
         assertThat(item.get("orderId").asString()).isEqualTo(paid.toString());
         assertThat(item.get("status").asString()).isEqualTo("PAID");
+        assertThat(item.get("progress").asString()).isEqualTo("SHIPPED");
         assertThat(item.get("amount").asLong()).isEqualTo(39_800);
         assertThat(item.get("firstProductName").asString()).isEqualTo("반팔 티셔츠");
         assertThat(item.get("lineCount").asInt()).isEqualTo(1);
@@ -162,6 +166,7 @@ class OrderListApiIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.orderId").value(paid.toString()))
                 .andExpect(jsonPath("$.status").value("PAID"))
+                .andExpect(jsonPath("$.progress").value("SHIPPED"))
                 .andExpect(jsonPath("$.amount").value(39_800))
                 .andExpect(jsonPath("$.paidAt").value("2026-10-21T01:00:00Z"))
                 .andExpect(jsonPath("$.shipping.recipientName").value("홍길동"))

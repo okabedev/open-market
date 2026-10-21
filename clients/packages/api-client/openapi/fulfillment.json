@@ -5,6 +5,56 @@
     "version" : "v0"
   },
   "paths" : {
+    "/v1/seller/seller-orders/{sellerOrderId}/ship" : {
+      "post" : {
+        "tags" : [ "seller-shipment-command-controller" ],
+        "operationId" : "ship",
+        "parameters" : [ {
+          "name" : "sellerOrderId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ShipShipmentRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        }
+      }
+    },
+    "/v1/seller/seller-orders/{sellerOrderId}/accept" : {
+      "post" : {
+        "tags" : [ "seller-shipment-command-controller" ],
+        "operationId" : "accept",
+        "parameters" : [ {
+          "name" : "sellerOrderId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        }
+      }
+    },
     "/v1/seller/seller-orders/{sellerOrderId}" : {
       "get" : {
         "tags" : [ "seller-fulfillment-query-controller" ],
@@ -35,6 +85,18 @@
   },
   "components" : {
     "schemas" : {
+      "ShipShipmentRequest" : {
+        "type" : "object",
+        "properties" : {
+          "carrier" : {
+            "type" : "string"
+          },
+          "trackingNumber" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "carrier", "trackingNumber" ]
+      },
       "SellerFulfillmentShipmentView" : {
         "type" : "object",
         "properties" : {
@@ -46,7 +108,30 @@
             "type" : "string",
             "enum" : [ "READY", "ACCEPTED", "SHIPPED", "IN_TRANSIT", "DELIVERED", "CANCELLED" ]
           },
+          "carrier" : {
+            "type" : "string",
+            "enum" : [ "CJ_LOGISTICS", "HANJIN", "LOTTE", "LOGEN", "KOREA_POST" ]
+          },
+          "trackingNumber" : {
+            "type" : "string"
+          },
           "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "acceptedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "shippedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "inTransitAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "deliveredAt" : {
             "type" : "string",
             "format" : "date-time"
           }

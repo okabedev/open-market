@@ -2,9 +2,11 @@ package com.openmarket.fulfillment.query.dao;
 
 import static com.openmarket.fulfillment.command.domain.QShipment.shipment;
 
+import com.openmarket.fulfillment.query.dto.Carrier;
 import com.openmarket.fulfillment.query.dto.SellerFulfillmentView;
 import com.openmarket.fulfillment.query.dto.ShipmentStatus;
 import com.querydsl.core.Tuple;
+import com.querydsl.core.types.dsl.StringExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import java.util.List;
 import java.util.Objects;
@@ -15,6 +17,9 @@ import org.springframework.stereotype.Repository;
 /** 배송 조회. 하위 주문의 배송은 만든 순서로 읽는다(shipment_seller_order_idx). */
 @Repository
 public class FulfillmentQueryDao {
+
+    private static final StringExpression STATUS = shipment.status.stringValue();
+    private static final StringExpression CARRIER = shipment.trackingInfo.carrier.stringValue();
 
     private final JPAQueryFactory query;
 
@@ -28,8 +33,14 @@ public class FulfillmentQueryDao {
                 query.select(
                                 shipment.id,
                                 shipment.orderId,
-                                shipment.status.stringValue(),
-                                shipment.createdAt)
+                                STATUS,
+                                CARRIER,
+                                shipment.trackingInfo.trackingNumber,
+                                shipment.createdAt,
+                                shipment.acceptedAt,
+                                shipment.shippedAt,
+                                shipment.inTransitAt,
+                                shipment.deliveredAt)
                         .from(shipment)
                         .where(
                                 shipment.sellerOrderId.eq(sellerOrderId),
@@ -40,15 +51,7 @@ public class FulfillmentQueryDao {
             return Optional.empty();
         }
         List<SellerFulfillmentView.Shipment> shipments =
-                rows.stream()
-                        .map(
-                                row ->
-                                        new SellerFulfillmentView.Shipment(
-                                                Objects.requireNonNull(row.get(shipment.id)),
-                                                status(row),
-                                                Objects.requireNonNull(
-                                                        row.get(shipment.createdAt))))
-                        .toList();
+                rows.stream().map(FulfillmentQueryDao::toShipment).toList();
         return Optional.of(
                 new SellerFulfillmentView(
                         sellerOrderId,
@@ -57,7 +60,17 @@ public class FulfillmentQueryDao {
                         shipments));
     }
 
-    private static ShipmentStatus status(Tuple row) {
-        return ShipmentStatus.valueOf(Objects.requireNonNull(row.get(2, String.class)));
+    private static SellerFulfillmentView.Shipment toShipment(Tuple row) {
+        String carrier = row.get(CARRIER);
+        return new SellerFulfillmentView.Shipment(
+                Objects.requireNonNull(row.get(shipment.id)),
+                ShipmentStatus.valueOf(Objects.requireNonNull(row.get(STATUS))),
+                carrier == null ? null : Carrier.valueOf(carrier),
+                row.get(shipment.trackingInfo.trackingNumber),
+                Objects.requireNonNull(row.get(shipment.createdAt)),
+                row.get(shipment.acceptedAt),
+                row.get(shipment.shippedAt),
+                row.get(shipment.inTransitAt),
+                row.get(shipment.deliveredAt));
     }
 }

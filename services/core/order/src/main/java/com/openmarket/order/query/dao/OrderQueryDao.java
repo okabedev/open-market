@@ -14,10 +14,12 @@ import com.openmarket.order.query.dto.OrderStatus;
 import com.openmarket.order.query.dto.OrderSummaryView;
 import com.openmarket.order.query.dto.PageView;
 import com.openmarket.order.query.dto.SellerOrderDetailView;
+import com.openmarket.order.query.dto.SellerOrderProgress;
 import com.openmarket.order.query.dto.SellerOrderSummaryView;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.Tuple;
 import com.querydsl.core.types.Predicate;
+import com.querydsl.core.types.dsl.StringExpression;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import java.nio.charset.StandardCharsets;
@@ -38,6 +40,8 @@ import org.springframework.stereotype.Repository;
 /** 주문 조회. 주문 한 건은 주문 행, 하위 주문, 항목을 따로 읽는다(항목 50개 상한). */
 @Repository
 public class OrderQueryDao {
+
+    private static final StringExpression PROGRESS = sellerOrder.progress.stringValue();
 
     private final JPAQueryFactory query;
 
@@ -158,7 +162,8 @@ public class OrderQueryDao {
                                         .from(counted)
                                         .where(counted.sellerOrder.id.eq(sellerOrder.id)),
                                 order.placedAt,
-                                order.paidAt)
+                                order.paidAt,
+                                PROGRESS)
                         .from(sellerOrder)
                         .join(sellerOrder.order, order)
                         .where(where)
@@ -175,6 +180,7 @@ public class OrderQueryDao {
                                                 OrderStatus.valueOf(
                                                         Objects.requireNonNull(
                                                                 t.get(2, String.class))),
+                                                progress(t),
                                                 Objects.requireNonNull(t.get(sellerOrder.amount)),
                                                 Objects.requireNonNull(t.get(4, String.class)),
                                                 Objects.requireNonNull(t.get(5, Long.class))
@@ -205,7 +211,8 @@ public class OrderQueryDao {
                                 order.shippingAddress.baseAddress,
                                 order.shippingAddress.detailAddress,
                                 order.placedAt,
-                                order.paidAt)
+                                order.paidAt,
+                                PROGRESS)
                         .from(sellerOrder)
                         .join(sellerOrder.order, order)
                         .where(sellerOrder.id.eq(sellerOrderId), sellerVisible(sellerId, statuses))
@@ -218,6 +225,7 @@ public class OrderQueryDao {
                         sellerOrderId,
                         Objects.requireNonNull(row.get(order.id)),
                         OrderStatus.valueOf(Objects.requireNonNull(row.get(1, String.class))),
+                        progress(row),
                         Objects.requireNonNull(row.get(sellerOrder.amount)),
                         shipping(row),
                         List.copyOf(
@@ -256,7 +264,8 @@ public class OrderQueryDao {
                                 sellerOrder.id,
                                 sellerOrder.sellerId,
                                 sellerOrder.storeName,
-                                sellerOrder.amount)
+                                sellerOrder.amount,
+                                PROGRESS)
                         .from(sellerOrder)
                         .where(sellerOrder.order.id.eq(orderId))
                         .orderBy(sellerOrder.position.asc())
@@ -272,9 +281,16 @@ public class OrderQueryDao {
                                     Objects.requireNonNull(r.get(sellerOrder.sellerId)),
                                     Objects.requireNonNull(r.get(sellerOrder.storeName)),
                                     Objects.requireNonNull(r.get(sellerOrder.amount)),
+                                    progress(r),
                                     List.copyOf(lines.getOrDefault(id, List.of())));
                         })
                 .toList();
+    }
+
+    /** 하위 주문 진행 상태. 결제 전이면 비어 있다. */
+    private static @Nullable SellerOrderProgress progress(Tuple row) {
+        String progress = row.get(PROGRESS);
+        return progress == null ? null : SellerOrderProgress.valueOf(progress);
     }
 
     /** 항목을 하위 주문별로 묶는다. 하위 주문 안에서는 주문한 순서다. */

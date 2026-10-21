@@ -91,6 +91,7 @@ class OrderApiIntegrationTest {
                 .andExpect(jsonPath("$.sellerOrders.length()").value(2))
                 .andExpect(jsonPath("$.sellerOrders[0].storeName").value("길동상회"))
                 .andExpect(jsonPath("$.sellerOrders[0].amount").value(39_800))
+                .andExpect(jsonPath("$.sellerOrders[0].progress").doesNotExist())
                 .andExpect(jsonPath("$.sellerOrders[0].lines[0].skuId").value(shirt.toString()))
                 .andExpect(jsonPath("$.sellerOrders[0].lines[0].optionNames[0]").value("색상"))
                 .andExpect(jsonPath("$.sellerOrders[0].lines[0].optionValues[0]").value("블랙"))

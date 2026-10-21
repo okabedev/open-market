@@ -396,6 +396,10 @@
             "type" : "string",
             "enum" : [ "PENDING", "AWAITING_PAYMENT", "PAID", "CANCELLED" ]
           },
+          "progress" : {
+            "type" : "string",
+            "enum" : [ "PAID", "ACCEPTED", "SHIPPED", "IN_TRANSIT", "DELIVERED" ]
+          },
           "amount" : {
             "type" : "integer",
             "format" : "int64"
@@ -495,6 +499,10 @@
           "status" : {
             "type" : "string",
             "enum" : [ "PENDING", "AWAITING_PAYMENT", "PAID", "CANCELLED" ]
+          },
+          "progress" : {
+            "type" : "string",
+            "enum" : [ "PAID", "ACCEPTED", "SHIPPED", "IN_TRANSIT", "DELIVERED" ]
           },
           "amount" : {
             "type" : "integer",
@@ -623,6 +631,10 @@
           "amount" : {
             "type" : "integer",
             "format" : "int64"
+          },
+          "progress" : {
+            "type" : "string",
+            "enum" : [ "PAID", "ACCEPTED", "SHIPPED", "IN_TRANSIT", "DELIVERED" ]
           },
           "lines" : {
             "type" : "array",

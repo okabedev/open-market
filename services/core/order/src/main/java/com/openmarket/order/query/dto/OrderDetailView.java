@@ -33,10 +33,19 @@ public record OrderDetailView(
             String baseAddress,
             @Nullable String detailAddress) {}
 
-    /** 하위 주문. 진행 상태(배송 등)는 M4에서 더한다. */
+    /**
+     * 하위 주문.
+     *
+     * @param progress 진행 상태(docs/architecture/order.md "하위 주문 진행 상태"). 결제 전이면 비어 있다
+     */
     @Schema(name = "OrderSellerOrderView")
     public record SellerOrder(
-            UUID sellerOrderId, UUID sellerId, String storeName, long amount, List<Line> lines) {}
+            UUID sellerOrderId,
+            UUID sellerId,
+            String storeName,
+            long amount,
+            @Nullable SellerOrderProgress progress,
+            List<Line> lines) {}
 
     /**
      * 주문 항목.

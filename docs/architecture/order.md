@@ -96,6 +96,21 @@ order는 `payment.payment`에서 결제 결과를 받는다([payment.md](payment
 - `PAID`가 되면 같은 트랜잭션에서 구매자 장바구니를 잠그고 주문한 SKU의 줄을 뺀다. 담은 수량이 주문 수량과 달라도 줄을 뺀다. order는 주문이 장바구니에서 왔는지 상품 하나를 바로 주문했는지 구분하지 않아서, 바로 주문한 SKU도 장바구니에 있으면 빠진다. 장바구니가 없으면 아무것도 하지 않는다.
 - `OrderPaid`에는 하위 주문(판매자, 금액, 항목의 SKU·상품·카테고리·개당 가격·수량·금액)과 배송지가 실린다. 필드는 [context-map.md](context-map.md) "order.order".
 
+### 하위 주문 진행 상태(`SellerOrderProgress`)
+결제된 주문의 하위 주문마다 배송 진행을 따로 갖는다(ORD-3 "판매자별 진행 상태"). fulfillment의 배송 이벤트(`fulfillment.shipment`)로 바꾼다([fulfillment.md](fulfillment.md) "배송").
+| 진행 상태 | 화면 이름 | 바뀌는 때 |
+|---|---|---|
+| `PAID` | 결제 완료 | 주문이 결제 완료가 될 때 모든 하위 주문 |
+| `ACCEPTED` | 상품 준비 중 | `ShipmentAccepted` |
+| `SHIPPED` | 발송 | `ShipmentShipped` |
+| `IN_TRANSIT` | 배송 중 | `ShipmentInTransit` |
+| `DELIVERED` | 배송 완료 | `ShipmentDelivered` |
+
+- 결제 전 주문의 하위 주문은 진행 상태가 없다(`null`). 화면은 주문 상태를 보여 준다.
+- 앞으로만 간다. 지금보다 앞이거나 같은 단계의 이벤트(재처리, 늦게 온 이벤트)는 넘긴다. 구매확정과 클레임은 M4의 다음 PR에서 더한다.
+- 리스너는 처리 기록으로 같은 이벤트를 한 번만 처리하고, 주문 행을 잠그고 바꾼다. 리스너 이름은 `order.shipment-<단계>`다(예: `order.shipment-accepted`). order가 모르는 주문·하위 주문이면 경고 로그만 남긴다.
+- 진행 상태를 바꿔도 이벤트를 내지 않는다.
+
 ### 만료와 결제 전 취소
 - **결제 기한**은 주문 시각부터 15분이다(`openmarket.order.payment-timeout`, config-repo `order.yml`). E2E만 환경 변수 `ORDER_PAYMENT_TIMEOUT`과 `ORDER_EXPIRY_INTERVAL`로 줄인다([dev-setup.md](../dev-setup.md) "E2E"). `PENDING`과 `AWAITING_PAYMENT` 모두 기한이 지나면 취소된다. 기한을 예약 결과가 온 시각이 아니라 주문 시각에서 세는 것은, catalog가 멈춰 예약 결과가 오지 않아도 `PENDING` 주문이 남지 않게 하고 구매자에게 보이는 기한을 주문할 때 정하기 위해서다.
 - **만료 작업**(`OrderExpiryJob`)은 1분마다(`openmarket.order.expiry-interval`) 돌고 ShedLock으로 한 인스턴스에서만 돈다. 기한이 지난 결제 전 주문을 오래된 순으로 100건씩 읽어, 주문마다 트랜잭션을 따로 열고 `PAYMENT_TIMEOUT`으로 취소한다. 다 못 하면 다음 주기에 이어 한다. 결제 전 주문만 담는 부분 인덱스(`orders_unpaid_placed_idx`)로 찾는다.
@@ -116,17 +131,17 @@ order는 `payment.payment`에서 결제 결과를 받는다([payment.md](payment
 | 메서드 | 경로 | 설명 |
 |---|---|---|
 | GET | `/v1/orders?cursor=&size=` | 본인 주문 목록. 모든 상태를 최근 주문 순으로 준다(주문 시각이 같으면 주문 ID 역순). 줄은 상태, 취소 사유, 금액, 주문명, 주문 시각이다. 커서 페이징이고 `size`는 1~50(기본 20)이다. 형식이 틀린 커서는 400 `ORDER_INVALID_CURSOR` |
-| GET | `/v1/orders/{orderId}` | 본인 주문 상세. 상태, 취소 사유, 금액, 주문명, 배송지, 하위 주문(판매자, 상호, 금액, 항목), 주문 시각, 결제 시각(결제됐을 때만). 다른 회원의 주문은 404 `ORDER_NOT_FOUND`다. 화면은 주문을 만든 뒤 이 API로 `AWAITING_PAYMENT`가 될 때까지 기다린다 |
+| GET | `/v1/orders/{orderId}` | 본인 주문 상세. 상태, 취소 사유, 금액, 주문명, 배송지, 하위 주문(판매자, 상호, 금액, 진행 상태, 항목), 주문 시각, 결제 시각(결제됐을 때만). 다른 회원의 주문은 404 `ORDER_NOT_FOUND`다. 화면은 주문을 만든 뒤 이 API로 `AWAITING_PAYMENT`가 될 때까지 기다린다 |
 
 판매자(ORD-4). `SELLER` 역할이 있어야 하고, 주체는 토큰의 `sub`(= sellerId)다.
 | 메서드 | 경로 | 설명 |
 |---|---|---|
-| GET | `/v1/seller/orders?page=&size=` | 본인 하위 주문 목록. 최근 결제 순, 쪽 번호. `size`는 1~100(기본 20)이다. 줄은 주문 ID, 상태, 하위 주문 금액, 첫 상품명, 항목 수, 주문 시각, 결제 시각이다 |
-| GET | `/v1/seller/orders/{sellerOrderId}` | 본인 하위 주문 상세. 상태, 금액, 배송지, 항목, 주문 시각, 결제 시각. 다른 판매자의 것이거나 보이지 않는 상태면 404 `ORDER_NOT_FOUND` |
+| GET | `/v1/seller/orders?page=&size=` | 본인 하위 주문 목록. 최근 결제 순, 쪽 번호. `size`는 1~100(기본 20)이다. 줄은 주문 ID, 상태, 진행 상태, 하위 주문 금액, 첫 상품명, 항목 수, 주문 시각, 결제 시각이다 |
+| GET | `/v1/seller/orders/{sellerOrderId}` | 본인 하위 주문 상세. 상태, 진행 상태, 금액, 배송지, 항목, 주문 시각, 결제 시각. 다른 판매자의 것이거나 보이지 않는 상태면 404 `ORDER_NOT_FOUND` |
 
 - 판매자는 결제된(`PAID`) 주문의 하위 주문만 본다. 결제 전 주문은 판매자가 처리할 것이 없고, 재고 부족이나 만료로 사라질 수 있기 때문이다. 판매자는 다른 판매자의 하위 주문, 주문 전체 금액, 구매자 ID를 보지 않는다. 배송지는 발송에 필요해서 준다.
 - 판매자 목록은 결제 시각 순이다(같으면 하위 주문 ID 역순). 판매자가 처리할 일은 결제로 생기고, 주문 후 결제까지 최대 15분이 걸려 주문 시각 순이면 새로 결제된 주문이 첫 쪽 아래에 끼어든다.
-- 하위 주문의 진행 상태(배송 등)는 M4 fulfillment가 생기면 더한다. M3 하위 주문은 주문 상태를 따른다. 하위 주문 처리(발주 확인, 발송)도 M4에서 한다.
+- 하위 주문의 진행 상태는 위 "하위 주문 진행 상태"다. 하위 주문 처리(발주 확인, 발송)는 fulfillment가 한다([fulfillment.md](fulfillment.md) "API").
 
 ## 내부 API
 서비스 간 조회다. `internal` scope 토큰만 부를 수 있고 gateway는 넘기지 않는다. 프론트 api-client(OpenAPI 문서)에 넣지 않는다.
