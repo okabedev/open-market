@@ -18,4 +18,14 @@ final class OrderTokens {
                                 token.subject(memberId.toString()).claim("roles", List.of("BUYER")))
                 .authorities(new SimpleGrantedAuthority("ROLE_BUYER"));
     }
+
+    static RequestPostProcessor seller(UUID sellerId) {
+        return jwt().jwt(
+                        token ->
+                                token.subject(sellerId.toString())
+                                        .claim("roles", List.of("BUYER", "SELLER")))
+                .authorities(
+                        new SimpleGrantedAuthority("ROLE_BUYER"),
+                        new SimpleGrantedAuthority("ROLE_SELLER"));
+    }
 }

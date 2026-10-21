@@ -25,7 +25,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        get: operations["orders"];
         put?: never;
         post: operations["place"];
         delete?: never;
@@ -44,6 +44,38 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["add"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/seller/orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/seller/orders/{sellerOrderId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["detail"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -119,18 +151,27 @@ export interface components {
             /** Format: int32 */
             quantity: number;
         };
-        OrderDetailView: {
+        PageViewSellerOrderSummaryView: {
+            items?: components["schemas"]["SellerOrderSummaryView"][];
+            /** Format: int64 */
+            totalCount?: number;
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+        };
+        SellerOrderSummaryView: {
+            /** Format: uuid */
+            sellerOrderId?: string;
             /** Format: uuid */
             orderId?: string;
             /** @enum {string} */
             status?: "PENDING" | "AWAITING_PAYMENT" | "PAID" | "CANCELLED";
-            /** @enum {string} */
-            cancelReason?: "STOCK_UNAVAILABLE" | "PAYMENT_TIMEOUT" | "BUYER_CANCELLED";
             /** Format: int64 */
             amount?: number;
-            orderName?: string;
-            shipping?: components["schemas"]["OrderShippingView"];
-            sellerOrders?: components["schemas"]["OrderSellerOrderView"][];
+            firstProductName?: string;
+            /** Format: int32 */
+            lineCount?: number;
             /** Format: date-time */
             placedAt?: string;
         };
@@ -151,6 +192,61 @@ export interface components {
             /** Format: int64 */
             amount?: number;
         };
+        OrderShippingView: {
+            recipientName?: string;
+            recipientPhone?: string;
+            zipCode?: string;
+            baseAddress?: string;
+            detailAddress?: string;
+        };
+        SellerOrderDetailView: {
+            /** Format: uuid */
+            sellerOrderId?: string;
+            /** Format: uuid */
+            orderId?: string;
+            /** @enum {string} */
+            status?: "PENDING" | "AWAITING_PAYMENT" | "PAID" | "CANCELLED";
+            /** Format: int64 */
+            amount?: number;
+            shipping?: components["schemas"]["OrderShippingView"];
+            lines?: components["schemas"]["OrderLineView"][];
+            /** Format: date-time */
+            placedAt?: string;
+        };
+        CursorPageViewOrderSummaryView: {
+            items?: components["schemas"]["OrderSummaryView"][];
+            /** Format: int64 */
+            totalCount?: number;
+            nextCursor?: string;
+        };
+        OrderSummaryView: {
+            /** Format: uuid */
+            orderId?: string;
+            /** @enum {string} */
+            status?: "PENDING" | "AWAITING_PAYMENT" | "PAID" | "CANCELLED";
+            /** @enum {string} */
+            cancelReason?: "STOCK_UNAVAILABLE" | "PAYMENT_TIMEOUT" | "BUYER_CANCELLED";
+            /** Format: int64 */
+            amount?: number;
+            orderName?: string;
+            /** Format: date-time */
+            placedAt?: string;
+        };
+        OrderDetailView: {
+            /** Format: uuid */
+            orderId?: string;
+            /** @enum {string} */
+            status?: "PENDING" | "AWAITING_PAYMENT" | "PAID" | "CANCELLED";
+            /** @enum {string} */
+            cancelReason?: "STOCK_UNAVAILABLE" | "PAYMENT_TIMEOUT" | "BUYER_CANCELLED";
+            /** Format: int64 */
+            amount?: number;
+            orderName?: string;
+            shipping?: components["schemas"]["OrderShippingView"];
+            sellerOrders?: components["schemas"]["OrderSellerOrderView"][];
+            /** Format: date-time */
+            placedAt?: string;
+        };
         OrderSellerOrderView: {
             /** Format: uuid */
             sellerOrderId?: string;
@@ -160,13 +256,6 @@ export interface components {
             /** Format: int64 */
             amount?: number;
             lines?: components["schemas"]["OrderLineView"][];
-        };
-        OrderShippingView: {
-            recipientName?: string;
-            recipientPhone?: string;
-            zipCode?: string;
-            baseAddress?: string;
-            detailAddress?: string;
         };
         CartItemView: {
             /** Format: uuid */
@@ -250,6 +339,29 @@ export interface operations {
             };
         };
     };
+    orders: {
+        parameters: {
+            query?: {
+                cursor?: string;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CursorPageViewOrderSummaryView"];
+                };
+            };
+        };
+    };
     place: {
         parameters: {
             query?: never;
@@ -293,6 +405,51 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    list: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageViewSellerOrderSummaryView"];
+                };
+            };
+        };
+    };
+    detail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sellerOrderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SellerOrderDetailView"];
+                };
             };
         };
     };

@@ -54,6 +54,41 @@
       }
     },
     "/v1/orders" : {
+      "get" : {
+        "tags" : [ "order-query-controller" ],
+        "operationId" : "orders",
+        "parameters" : [ {
+          "name" : "cursor",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "size",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 20,
+            "maximum" : 50,
+            "minimum" : 1
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CursorPageViewOrderSummaryView"
+                }
+              }
+            }
+          }
+        }
+      },
       "post" : {
         "tags" : [ "order-command-controller" ],
         "operationId" : "place",
@@ -98,6 +133,73 @@
         "responses" : {
           "204" : {
             "description" : "No Content"
+          }
+        }
+      }
+    },
+    "/v1/seller/orders" : {
+      "get" : {
+        "tags" : [ "seller-order-query-controller" ],
+        "operationId" : "list",
+        "parameters" : [ {
+          "name" : "page",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 0,
+            "minimum" : 0
+          }
+        }, {
+          "name" : "size",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 20,
+            "maximum" : 100,
+            "minimum" : 1
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PageViewSellerOrderSummaryView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/seller/orders/{sellerOrderId}" : {
+      "get" : {
+        "tags" : [ "seller-order-query-controller" ],
+        "operationId" : "detail",
+        "parameters" : [ {
+          "name" : "sellerOrderId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SellerOrderDetailView"
+                }
+              }
+            }
           }
         }
       }
@@ -236,9 +338,36 @@
         },
         "required" : [ "quantity", "skuId" ]
       },
-      "OrderDetailView" : {
+      "PageViewSellerOrderSummaryView" : {
         "type" : "object",
         "properties" : {
+          "items" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/SellerOrderSummaryView"
+            }
+          },
+          "totalCount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "page" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "size" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }
+      },
+      "SellerOrderSummaryView" : {
+        "type" : "object",
+        "properties" : {
+          "sellerOrderId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
           "orderId" : {
             "type" : "string",
             "format" : "uuid"
@@ -247,25 +376,16 @@
             "type" : "string",
             "enum" : [ "PENDING", "AWAITING_PAYMENT", "PAID", "CANCELLED" ]
           },
-          "cancelReason" : {
-            "type" : "string",
-            "enum" : [ "STOCK_UNAVAILABLE", "PAYMENT_TIMEOUT", "BUYER_CANCELLED" ]
-          },
           "amount" : {
             "type" : "integer",
             "format" : "int64"
           },
-          "orderName" : {
+          "firstProductName" : {
             "type" : "string"
           },
-          "shipping" : {
-            "$ref" : "#/components/schemas/OrderShippingView"
-          },
-          "sellerOrders" : {
-            "type" : "array",
-            "items" : {
-              "$ref" : "#/components/schemas/OrderSellerOrderView"
-            }
+          "lineCount" : {
+            "type" : "integer",
+            "format" : "int32"
           },
           "placedAt" : {
             "type" : "string",
@@ -317,6 +437,143 @@
           }
         }
       },
+      "OrderShippingView" : {
+        "type" : "object",
+        "properties" : {
+          "recipientName" : {
+            "type" : "string"
+          },
+          "recipientPhone" : {
+            "type" : "string"
+          },
+          "zipCode" : {
+            "type" : "string"
+          },
+          "baseAddress" : {
+            "type" : "string"
+          },
+          "detailAddress" : {
+            "type" : "string"
+          }
+        }
+      },
+      "SellerOrderDetailView" : {
+        "type" : "object",
+        "properties" : {
+          "sellerOrderId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "orderId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "status" : {
+            "type" : "string",
+            "enum" : [ "PENDING", "AWAITING_PAYMENT", "PAID", "CANCELLED" ]
+          },
+          "amount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "shipping" : {
+            "$ref" : "#/components/schemas/OrderShippingView"
+          },
+          "lines" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/OrderLineView"
+            }
+          },
+          "placedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "CursorPageViewOrderSummaryView" : {
+        "type" : "object",
+        "properties" : {
+          "items" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/OrderSummaryView"
+            }
+          },
+          "totalCount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "nextCursor" : {
+            "type" : "string"
+          }
+        }
+      },
+      "OrderSummaryView" : {
+        "type" : "object",
+        "properties" : {
+          "orderId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "status" : {
+            "type" : "string",
+            "enum" : [ "PENDING", "AWAITING_PAYMENT", "PAID", "CANCELLED" ]
+          },
+          "cancelReason" : {
+            "type" : "string",
+            "enum" : [ "STOCK_UNAVAILABLE", "PAYMENT_TIMEOUT", "BUYER_CANCELLED" ]
+          },
+          "amount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "orderName" : {
+            "type" : "string"
+          },
+          "placedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "OrderDetailView" : {
+        "type" : "object",
+        "properties" : {
+          "orderId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "status" : {
+            "type" : "string",
+            "enum" : [ "PENDING", "AWAITING_PAYMENT", "PAID", "CANCELLED" ]
+          },
+          "cancelReason" : {
+            "type" : "string",
+            "enum" : [ "STOCK_UNAVAILABLE", "PAYMENT_TIMEOUT", "BUYER_CANCELLED" ]
+          },
+          "amount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "orderName" : {
+            "type" : "string"
+          },
+          "shipping" : {
+            "$ref" : "#/components/schemas/OrderShippingView"
+          },
+          "sellerOrders" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/OrderSellerOrderView"
+            }
+          },
+          "placedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
       "OrderSellerOrderView" : {
         "type" : "object",
         "properties" : {
@@ -340,26 +597,6 @@
             "items" : {
               "$ref" : "#/components/schemas/OrderLineView"
             }
-          }
-        }
-      },
-      "OrderShippingView" : {
-        "type" : "object",
-        "properties" : {
-          "recipientName" : {
-            "type" : "string"
-          },
-          "recipientPhone" : {
-            "type" : "string"
-          },
-          "zipCode" : {
-            "type" : "string"
-          },
-          "baseAddress" : {
-            "type" : "string"
-          },
-          "detailAddress" : {
-            "type" : "string"
           }
         }
       },
