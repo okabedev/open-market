@@ -1,0 +1,85 @@
+{
+  "openapi" : "3.1.0",
+  "info" : {
+    "title" : "OpenAPI definition",
+    "version" : "v0"
+  },
+  "paths" : {
+    "/v1/payments/confirm" : {
+      "post" : {
+        "tags" : [ "payment-command-controller" ],
+        "operationId" : "confirm",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ConfirmPaymentRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ConfirmPaymentResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "ConfirmPaymentRequest" : {
+        "type" : "object",
+        "properties" : {
+          "orderId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "paymentKey" : {
+            "type" : "string",
+            "maxLength" : 200,
+            "minLength" : 0
+          },
+          "amount" : {
+            "type" : "integer",
+            "format" : "int64",
+            "minimum" : 0
+          }
+        },
+        "required" : [ "amount", "orderId", "paymentKey" ]
+      },
+      "ConfirmPaymentResponse" : {
+        "type" : "object",
+        "properties" : {
+          "paymentId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "orderId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "status" : {
+            "type" : "string",
+            "enum" : [ "APPROVED", "IN_PROGRESS" ]
+          },
+          "amount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "method" : {
+            "type" : "string"
+          }
+        }
+      }
+    }
+  }
+}

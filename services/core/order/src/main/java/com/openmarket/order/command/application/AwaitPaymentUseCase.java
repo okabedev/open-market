@@ -45,7 +45,8 @@ public class AwaitPaymentUseCase {
                         PlaceOrderUseCase.TOPIC,
                         order.id().toString(),
                         OrderAwaitingPayment.TYPE,
-                        new OrderAwaitingPayment(order.id(), order.amount(), order.orderName()));
+                        new OrderAwaitingPayment(
+                                order.id(), order.buyerId(), order.amount(), order.orderName()));
             }
             case ALREADY -> {}
             case INVALID ->

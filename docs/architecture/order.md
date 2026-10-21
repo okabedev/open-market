@@ -76,7 +76,7 @@ gateway 경로는 `/api/order` + 아래 경로다.
 order는 `catalog.stock`에서 예약 결과를 받는다([messaging.md](messaging.md) "주문·결제 Saga"). M3는 쿠폰이 없어 재고 예약 결과 하나로 정한다.
 | 받는 이벤트 | 주문 | 내는 이벤트 |
 |---|---|---|
-| `StockReserved` | `PENDING` → `AWAITING_PAYMENT` | `OrderAwaitingPayment`(orderId, amount, orderName) |
+| `StockReserved` | `PENDING` → `AWAITING_PAYMENT` | `OrderAwaitingPayment`(orderId, buyerId, amount, orderName) |
 | `StockReservationFailed` | `PENDING` → `CANCELLED`(사유 `STOCK_UNAVAILABLE`) | `OrderCancelled` |
 
 - 리스너는 처리 기록(`processed_event`)으로 같은 이벤트를 한 번만 처리한다. 주문 행을 잠그고 상태를 바꾼다.
