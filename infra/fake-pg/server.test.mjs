@@ -46,11 +46,11 @@ function confirm(body, key = "confirm-1", headers = AUTH) {
   });
 }
 
-function cancel(paymentKey, key = "cancel-1") {
+function cancel(paymentKey, key = "cancel-1", cancelAmount = undefined) {
   return fetch(`${base}/v1/payments/${paymentKey}/cancel`, {
     method: "POST",
     headers: { ...AUTH, "Content-Type": "application/json", "Idempotency-Key": key },
-    body: JSON.stringify({ cancelReason: "주문 취소" }),
+    body: JSON.stringify({ cancelReason: cancelAmount ? "클레임 환불" : "주문 취소", cancelAmount }),
   });
 }
 
@@ -223,6 +223,37 @@ describe("취소 POST /v1/payments/{paymentKey}/cancel", () => {
     const other = await cancel(payment.paymentKey, "cancel-2");
     assert.equal(other.status, 400);
     assert.equal((await other.json()).code, "ALREADY_CANCELED_PAYMENT");
+  });
+
+  test("취소 금액을 주면 부분취소한다. 남은 금액을 모두 부분취소해도 상태는 PARTIAL_CANCELED다(R9)", async () => {
+    const payment = await authenticatedPayment();
+    await confirm(payment);
+    const first = await cancel(payment.paymentKey, "refund-1", 10000);
+    assert.equal(first.status, 200);
+    const partial = await first.json();
+    assert.equal(partial.status, "PARTIAL_CANCELED");
+    assert.equal(partial.balanceAmount, 29800);
+    assert.equal(partial.cancels.length, 1);
+    assert.equal(partial.cancels[0].cancelAmount, 10000);
+    assert.equal(partial.cancels[0].cancelReason, "클레임 환불");
+
+    const rest = await (await cancel(payment.paymentKey, "refund-2", 29800)).json();
+    assert.equal(rest.status, "PARTIAL_CANCELED");
+    assert.equal(rest.balanceAmount, 0);
+    assert.equal(rest.cancels.length, 2);
+    assert.equal(rest.lastTransactionKey, rest.cancels[1].transactionKey);
+  });
+
+  test("남은 금액보다 큰 부분취소는 403 NOT_CANCELABLE_AMOUNT, 같은 키로 다시 보내면 같은 응답이다", async () => {
+    const payment = await authenticatedPayment();
+    await confirm(payment);
+    const once = await (await cancel(payment.paymentKey, "refund-1", 10000)).json();
+    assert.deepEqual(await (await cancel(payment.paymentKey, "refund-1", 10000)).json(), once);
+    assert.equal(once.balanceAmount, 29800);
+
+    const over = await cancel(payment.paymentKey, "refund-2", 29801);
+    assert.equal(over.status, 403);
+    assert.equal((await over.json()).code, "NOT_CANCELABLE_AMOUNT");
   });
 
   test("승인하지 않은 결제는 403 NOT_CANCELABLE_PAYMENT", async () => {

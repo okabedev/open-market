@@ -53,7 +53,7 @@
 | 결제 원장 | `PaymentLedgerEntry` | payment | 승인, 조회, 취소 요청과 PG 응답의 추가 전용 기록 |
 | 결제 재조회 | `PaymentReconcileJob` | payment | 승인 결과를 확인하지 못한 `IN_PROGRESS` 결제를 토스 결제 조회로 확정하는 작업 |
 | 보상 취소 | `PaymentCancelJob` | payment | 결제 전에 취소된 주문의 승인된 결제를 토스에서 전액 취소하는 작업(PAY-3). 결과로 `PaymentCancelled`를 낸다 |
-| 환불 | `Refund` | payment | 하위 주문 단위 부분취소. 클레임 ID로 멱등 처리한다 |
+| 환불 | `Refund` | payment | 하위 주문 단위 부분취소. 클레임 ID로 멱등 처리한다. 상태: `REQUESTED` → `COMPLETED` 또는 `FAILED`. 토스 호출은 환불 작업(`RefundJob`)이 한다 |
 | 금액 | `Money` | 공통 | 원(KRW) 단위 `long`. 소수점은 쓰지 않는다 |
 
 ## 배송·클레임

@@ -11,6 +11,7 @@ import com.openmarket.payment.command.application.PaymentGatewayPort.Approved;
 import com.openmarket.payment.command.application.PaymentGatewayPort.CancelRejected;
 import com.openmarket.payment.command.application.PaymentGatewayPort.Cancelled;
 import com.openmarket.payment.command.application.PaymentGatewayPort.Pending;
+import com.openmarket.payment.command.application.PaymentGatewayPort.Refunded;
 import com.openmarket.payment.command.application.PaymentGatewayPort.Rejected;
 import com.openmarket.payment.command.application.PaymentGatewayPort.Result;
 import com.openmarket.payment.command.application.PaymentGatewayPort.Unknown;
@@ -218,5 +219,50 @@ class TossPaymentGatewayAdapterTest {
                 1_500,
                 TossStub.cancelledPayment(paymentKey, orderId, 59_700, "CANCELED", 0));
         assertThat(adapter.cancel(paymentKey, "주문 취소", "k")).isEqualTo(new Unknown("TIMEOUT"));
+    }
+
+    @Test
+    @DisplayName("환불은 취소 금액과 사유, 환불의 토스 Idempotency-Key로 부분취소하고 남은 금액이 있어도 환불됐다")
+    void refunds() {
+        TossStub.cancelReturns(
+                paymentKey,
+                200,
+                TossStub.cancelledPayment(paymentKey, orderId, 19_900, "PARTIAL_CANCELED", 39_800));
+
+        assertThat(adapter.refund(paymentKey, 19_900, "클레임 환불", "refund-1-1"))
+                .isEqualTo(new Refunded("PARTIAL_CANCELED", "txrd_a01k8zcancel00000000000000"));
+        TossStub.SERVER.verify(
+                postRequestedFor(urlPathEqualTo(TossStub.cancelPath(paymentKey)))
+                        .withHeader("Idempotency-Key", equalTo("refund-1-1"))
+                        .withRequestBody(
+                                equalToJson(
+                                        "{\"cancelReason\":\"클레임 환불\",\"cancelAmount\":19900}")));
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "500, FAILED_INTERNAL_SYSTEM_PROCESSING",
+        "400, PROVIDER_ERROR",
+        "409, IDEMPOTENT_REQUEST_PROCESSING"
+    })
+    @DisplayName("일시적인 환불 오류는 알 수 없음이다(다시 시도한다)")
+    void unknownRefund(int status, String code) {
+        TossStub.cancelReturns(paymentKey, status, TossStub.error(code, "메시지"));
+
+        assertThat(adapter.refund(paymentKey, 1_000, "클레임 환불", "k")).isEqualTo(new Unknown(code));
+    }
+
+    @Test
+    @DisplayName("취소할 수 없는 금액, 이미 전액 취소된 결제는 환불 거절이다")
+    void rejectedRefund() {
+        TossStub.cancelReturns(
+                paymentKey, 403, TossStub.error("NOT_CANCELABLE_AMOUNT", "취소 할 수 없는 금액 입니다."));
+        assertThat(adapter.refund(paymentKey, 1_000, "클레임 환불", "k"))
+                .isEqualTo(new CancelRejected("NOT_CANCELABLE_AMOUNT", "취소 할 수 없는 금액 입니다."));
+
+        TossStub.cancelReturns(
+                paymentKey, 400, TossStub.error("ALREADY_CANCELED_PAYMENT", "이미 취소된 결제 입니다."));
+        assertThat(adapter.refund(paymentKey, 1_000, "클레임 환불", "k"))
+                .isEqualTo(new CancelRejected("ALREADY_CANCELED_PAYMENT", "이미 취소된 결제 입니다."));
     }
 }

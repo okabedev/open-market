@@ -117,6 +117,7 @@ services:
       # E2E(infra/e2e/run.sh)만 준다(가짜 PG 주소, 짧은 보상 취소 주기). 값이 없으면 넘기지 않고 config-repo 기본값을 쓴다.
       TOSS_API_URL:
       PAYMENT_CANCEL_INTERVAL:
+      PAYMENT_REFUND_INTERVAL:
     healthcheck:
       test: ["CMD", "curl", "-fs", "http://localhost:8104/actuator/health"]
       interval: 5s

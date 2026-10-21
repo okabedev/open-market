@@ -1,0 +1,11 @@
+{
+  "claimId": "019a3100-0000-7000-8000-00000000d001",
+  "type": "RETURN",
+  "orderId": "019a2c3d-4e5f-7a60-8b1c-2d3e4f5a6b70",
+  "sellerOrderId": "019a2c3d-4e60-7b71-8c2d-3e4f5a6b7c81",
+  "sellerId": "019a2b00-0000-7000-8000-00000000a001",
+  "buyerId": "019a2c3d-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
+  "fault": "BUYER",
+  "refundAmount": 13900,
+  "approvedAt": "2026-10-23T05:00:00Z"
+}

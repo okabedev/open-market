@@ -64,6 +64,10 @@ public class Payment {
     @Column(name = "cancel_failure_code")
     private @Nullable String cancelFailureCode;
 
+    // 환불(부분취소)로 돌려준 금액의 합(원).
+    @Column(name = "refunded_amount", nullable = false)
+    private long refundedAmount;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -110,7 +114,7 @@ public class Payment {
         return switch (status) {
             case CANCELLED -> throw new PaymentCancelledException();
             case IN_PROGRESS -> sameKey(paymentKey, ConfirmRequest.PENDING);
-            case APPROVED -> sameKey(paymentKey, ConfirmRequest.APPROVED);
+            case APPROVED, PARTIALLY_CANCELLED -> sameKey(paymentKey, ConfirmRequest.APPROVED);
             case READY, FAILED -> {
                 if (amount != this.amount) {
                     throw new PaymentAmountMismatchException();
@@ -222,6 +226,37 @@ public class Payment {
         cancelFailureCode = code;
         updatedAt = now;
         return Transition.APPLIED;
+    }
+
+    /** 환불(부분취소)할 수 있는가. 승인됐거나 일부를 환불했고, 결제 전 취소(보상 취소) 대상이 아니다. */
+    public boolean isRefundable() {
+        return (status == PaymentStatus.APPROVED || status == PaymentStatus.PARTIALLY_CANCELLED)
+                && !isCancelRequested();
+    }
+
+    /** 결제 금액에서 환불한 금액을 뺀 남은 금액(원). */
+    public long remainingAmount() {
+        return amount - refundedAmount;
+    }
+
+    /**
+     * 토스 부분취소가 끝났다(docs/architecture/payment.md "환불 작업"). 남은 금액이 0이면 {@code CANCELLED}, 아니면 {@code
+     * PARTIALLY_CANCELLED}다.
+     *
+     * @throws IllegalStateException 환불할 수 없는 결제이거나 남은 금액보다 크다. 환불 요청에서 막으므로 생기면 버그다
+     */
+    public void refunded(long refundAmount, Instant now) {
+        if (!isRefundable() || refundAmount > remainingAmount()) {
+            throw new IllegalStateException("환불을 반영할 수 없다: paymentId=" + id + ", status=" + status);
+        }
+        refundedAmount += refundAmount;
+        if (remainingAmount() == 0) {
+            status = PaymentStatus.CANCELLED;
+            cancelledAt = now;
+        } else {
+            status = PaymentStatus.PARTIALLY_CANCELLED;
+        }
+        updatedAt = now;
     }
 
     private boolean isCancelRequested() {

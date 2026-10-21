@@ -89,6 +89,10 @@ public class PaymentLedgerEntry {
         return kind;
     }
 
+    public @Nullable Long amount() {
+        return amount;
+    }
+
     public Outcome outcome() {
         return outcome;
     }
@@ -104,7 +108,9 @@ public class PaymentLedgerEntry {
         /** 결제 조회 */
         QUERY,
         /** 전액 취소 */
-        CANCEL
+        CANCEL,
+        /** 부분취소(환불) */
+        REFUND
     }
 
     /** 토스 응답의 해석. */

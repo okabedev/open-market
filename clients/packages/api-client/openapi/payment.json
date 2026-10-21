@@ -116,7 +116,7 @@
           },
           "status" : {
             "type" : "string",
-            "enum" : [ "READY", "IN_PROGRESS", "APPROVED", "FAILED", "CANCELLED" ]
+            "enum" : [ "READY", "IN_PROGRESS", "APPROVED", "PARTIALLY_CANCELLED", "FAILED", "CANCELLED" ]
           },
           "amount" : {
             "type" : "integer",
