@@ -19,6 +19,12 @@ final class OrderTokens {
                 .authorities(new SimpleGrantedAuthority("ROLE_BUYER"));
     }
 
+    /** 서비스 간 토큰. 역할 없이 {@code internal} scope만 있다. */
+    static RequestPostProcessor internal() {
+        return jwt().jwt(token -> token.subject("member").claim("scope", "internal"))
+                .authorities(new SimpleGrantedAuthority("SCOPE_internal"));
+    }
+
     static RequestPostProcessor seller(UUID sellerId) {
         return jwt().jwt(
                         token ->

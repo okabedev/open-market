@@ -45,7 +45,7 @@ cp .env.example .env
 ```
 - auth 값(`AUTH_SIGNING_KEY_SECRET`, `*_CLIENT_SECRET`, `ADMIN_SEED_*`)은 예시 값 그대로 써도 된다. `AUTH_SIGNING_KEY_SECRET`을 바꾸면 저장된 서명 키를 읽지 못해 auth가 뜨지 않는다. 이때는 볼륨을 지우거나 `auth.signing_key` 행을 지운다.
 - 토스페이먼츠 키(`TOSS_CLIENT_KEY`, `TOSS_SECRET_KEY`)는 `.env.example`의 문서용 공개 테스트 키를 그대로 쓴다. 주문서형 연동 키는 전자결제 신청(사업자 정보) 뒤에만 발급되기 때문이다([ADR 0018](adr/0018-toss-payments-integration.md)). 내 상점 키가 있으면 바꾼다. `test_`로 시작하는 키만 쓴다.
-- `.env.example`에 새 변수가 생기면(예: M3의 `ORDER_CLIENT_SECRET`) 이미 만든 `.env`에도 더한다. compose는 빠진 변수가 있으면 뜨지 않는다.
+- `.env.example`에 새 변수가 생기면(예: M3의 `ORDER_CLIENT_SECRET`, `MEMBER_CLIENT_SECRET`) 이미 만든 `.env`에도 더한다. compose는 빠진 변수가 있으면 뜨지 않는다.
 - `.env`는 커밋하지 않는다.
 
 ## 5. 실행

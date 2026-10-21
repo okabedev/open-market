@@ -53,6 +53,8 @@ openmarket:
         required-role: ADMIN
     # 서비스 간 호출용 client_credentials 클라이언트(aud=internal, scope=internal). 다른 서비스를 동기 호출하는 서비스만 더한다(add-service skill).
     service-clients:
+      member:
+        secret: ${MEMBER_CLIENT_SECRET}
       notification:
         secret: ${NOTIFICATION_CLIENT_SECRET}
       order:

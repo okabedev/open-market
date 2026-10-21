@@ -39,7 +39,9 @@ gateway 경로는 `/api/member` + 아래 경로다. 모두 사용자 토큰이 �
 ## 탈퇴 (ACC-4)
 `POST /v1/members/me/withdraw`(204). 이미 탈퇴했어도 204다.
 1. 판매자면 422 `MEMBER_SELLER_CANNOT_WITHDRAW`다(2026-10-18 결정). 판매자 정리(폐점·미정산 처리)는 정산이 생기는 M5에서 정한다.
-2. 진행 중인 주문·클레임이 있으면 422 `MEMBER_ONGOING_ORDERS`다. 확인은 `OngoingOrderPort`가 한다. M1·M2는 항상 "없음"이라고 답하는 구현(`StubOngoingOrderAdapter`)이고, M3에서 order 내부 API로 바꾼다.
+2. 진행 중인 주문·클레임이 있으면 422 `MEMBER_ONGOING_ORDERS`다. member가 order 내부 API로 확인한다([order.md](order.md) "내부 API"). 어떤 주문이 진행 중인지는 order가 정한다.
+   - 호출 방식(OpenFeign, `client_credentials` 클라이언트 ID `member`, 타임아웃, 연결 실패만 한 번 재시도, 서킷 브레이커)은 order의 catalog 조회와 같다([order.md](order.md) "catalog 조회"). 값은 config-repo `member.yml`에 있다.
+   - order를 부를 수 없으면(타임아웃, 5xx, 서킷 열림) 탈퇴하지 않고 503 `MEMBER_ORDER_UNAVAILABLE`이다. 확인하지 못한 채 탈퇴시키면 되돌릴 수 없기 때문이다.
 3. 회원을 가명 처리한다. 이름은 `탈퇴회원`, 이메일은 `withdrawn-<id>@withdrawn.invalid`, 연락처는 비우고 배송지는 모두 지운다. 행은 남긴다(거래 기록이 memberId를 가리킨다).
 4. 그 회원의 입점 신청은 모두 대표자·예금주·계좌 번호를 지운다. 심사 중이던 신청은 `CANCELLED`로 닫는다.
 5. `MemberWithdrawn`을 낸다. auth가 계정을 비활성화하고 이메일을 가명으로 바꾸고 리프레시 토큰을 무효로 한다([auth.md](auth.md)). shop은 탈퇴 직후 로그아웃해서 BFF 세션과 auth 로그인 세션을 끝낸다. 같은 이메일로 바로 다시 가입할 수 있다(새 계정, 새 ID).

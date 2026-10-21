@@ -38,6 +38,7 @@ services:
       <<: *spring-env
       MEMBER_DB_PASSWORD: ${MEMBER_DB_PASSWORD:?}
       MEMBER_ACCOUNT_NUMBER_KEY: ${MEMBER_ACCOUNT_NUMBER_KEY:?}
+      MEMBER_CLIENT_SECRET: ${MEMBER_CLIENT_SECRET:?}
     # 호스트에 포트를 열지 않는다. 바깥 요청은 gateway(8080)로 들어온다.
     healthcheck:
       test: ["CMD", "curl", "-fs", "http://localhost:8101/actuator/health"]

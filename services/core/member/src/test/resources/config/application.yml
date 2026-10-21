@@ -19,6 +19,18 @@ spring:
         default_schema: member
   security:
     oauth2:
+      # 서비스 간 토큰. token-uri는 테스트가 WireMock 주소로 덮는다(WithdrawalIntegrationTest).
+      client:
+        registration:
+          member:
+            provider: auth
+            client-id: member
+            client-secret: test-secret
+            authorization-grant-type: client_credentials
+            scope: internal
+        provider:
+          auth:
+            token-uri: http://localhost:1/oauth2/token
       resourceserver:
         jwt:
           # 테스트는 spring-security-test의 jwt()로 인증을 넣어 디코더를 쓰지 않는다. 토큰 검증 자체는 common-security가 테스트한다.
@@ -45,3 +57,34 @@ eureka:
 openmarket:
   member:
     account-number-key: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+# 아래 OpenFeign·서킷 브레이커 값은 infra/config-repo/member.yml과 같게 둔다.
+spring.cloud:
+  openfeign:
+    oauth2:
+      enabled: true
+      client-registration-id: member
+    circuitbreaker:
+      enabled: true
+      alphanumeric-ids:
+        enabled: true
+    client:
+      config:
+        default:
+          connect-timeout: 1000
+          read-timeout: 2000
+  circuitbreaker:
+    resilience4j:
+      disable-time-limiter: true
+      disable-thread-pool: true
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        sliding-window-size: 20
+        minimum-number-of-calls: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 3
+        automatic-transition-from-open-to-half-open-enabled: true
+        ignore-exceptions:
+          - feign.FeignException$FeignClientException
