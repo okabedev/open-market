@@ -101,7 +101,7 @@ order가 결제 전에 주문을 취소하면(`OrderCancelled`: 재고 부족, �
 | 200, 남은 금액(`balanceAmount`) 0 | `CANCELLED` + `PaymentCancelled`. 전액 취소인지는 상태가 아니라 남은 금액으로 정한다(ADR 0018) |
 | 400 `ALREADY_CANCELED_PAYMENT` | 이미 취소됐다. 위와 같다 |
 | 5xx, 연결 실패, 타임아웃, 400 `PROVIDER_ERROR`, 403 `FORBIDDEN_CONSECUTIVE_REQUEST`, 409 `IDEMPOTENT_REQUEST_PROCESSING` | 정하지 못했다. `APPROVED`로 두고 다음 주기에 같은 멱등 키로 다시 부른다 |
-| 그 밖의 4xx(`NOT_CANCELABLE_PAYMENT` 등), 200인데 남은 금액이 있다(`BALANCE_REMAINING`) | 토스가 취소를 거절했다. 실패 코드(`cancel_failure_code`)를 남기고 `APPROVED`로 둔다. 자동으로 다시 부르지 않고 ERROR 로그를 남긴다. 운영자가 처리하는 방법은 M4에서 환불 실패(`RefundFailed`)의 관리자 재시도와 함께 정한다 |
+| 그 밖의 4xx(`NOT_CANCELABLE_PAYMENT` 등), 200인데 남은 금액이 있다(`BALANCE_REMAINING`) | 토스가 취소를 거절했다. 실패 코드(`cancel_failure_code`)를 남기고 `APPROVED`로 둔다. 자동으로 다시 부르지 않고 ERROR 로그를 남긴다. 관리자가 환불 실패(`RefundFailed`)와 같은 화면에서 다시 시도한다(M4, 2026-10-21 결정. API는 구현할 때 이 문서에 더한다) |
 
 ## 토스 연동(`TossPaymentGatewayAdapter`)
 - 토스 API 형식은 `infra` 어댑터 밖으로 내보내지 않는다(ACL). `command.application`의 `PaymentGatewayPort`는 승인·조회 결과로 승인됨, 거절됨, 미정, 알 수 없음을, 취소 결과로 취소됨, 취소 거절, 알 수 없음을 안다.

@@ -37,7 +37,7 @@ flowchart LR
 | catalog | 8102 | catalog | 카테고리, 상품, SKU, 재고와 재고 예약 | `Category`, `Product`, `Stock`, `StockReservation` |
 | order | 8103 | order | 장바구니, 주문과 하위 주문, 주문 만료([order.md](order.md)) | `Cart`, `Order` |
 | payment | 8104 | payment | 토스 결제 승인·취소·환불, 결제 원장([payment.md](payment.md)) | `Payment` |
-| fulfillment | 8105 | fulfillment | 배송, 구매확정, 클레임 | `Shipment`, `Claim` |
+| fulfillment | 8105 | fulfillment | 배송, 구매확정, 클레임([fulfillment.md](fulfillment.md)) | `Shipment`, `Claim` |
 | promotion | 8106 | promotion | 쿠폰 정책, 발급, 예약·사용·복원 | `Coupon`, `IssuedCoupon` |
 | review | 8107 | review | 리뷰, 답글, 별점 요약 | `Review`, `RatingSummary` |
 | settlement | 8108 | settlement | 정산 대상, 주간 정산 배치, 지급 기록, 수수료율 | `SettlementItem`, `Settlement` |
@@ -98,4 +98,4 @@ flowchart LR
 ## 관련 문서
 - [context-map.md](context-map.md): 컨텍스트 관계와 이벤트 목록
 - [conventions.md](conventions.md): 패키지 규약과 명명 규칙
-- [data.md](data.md), [messaging.md](messaging.md), [auth.md](auth.md), [member.md](member.md), [catalog.md](catalog.md), [file.md](file.md), [notification.md](notification.md), [observability.md](observability.md), [risks.md](risks.md)
+- [data.md](data.md), [messaging.md](messaging.md), [auth.md](auth.md), [member.md](member.md), [catalog.md](catalog.md), [order.md](order.md), [payment.md](payment.md), [fulfillment.md](fulfillment.md), [file.md](file.md), [notification.md](notification.md), [observability.md](observability.md), [risks.md](risks.md)

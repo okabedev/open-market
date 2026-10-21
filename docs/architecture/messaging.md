@@ -163,16 +163,16 @@ sequenceDiagram
   F--)O: ClaimRequested (하위 주문 상태 표시)
   Note over F: 판매자 회수·검수 후 승인
   F--)Y: ClaimApproved(환불 금액)
-  Y->>Y: Refund(claimId로 멱등) → 토스 부분취소
+  Y->>Y: Refund(claimId로 멱등) → 환불 작업이 토스 부분취소
   Y--)F: RefundCompleted
   F-->>F: Claim COMPLETED
   F--)C: ClaimCompleted → 재입고
   F--)O: ClaimCompleted
 ```
 - 발송 전 취소(`CANCEL`)는 신청과 동시에 승인된다. 배송은 취소 상태가 된다.
-- 교환(`EXCHANGE`)은 환불하지 않는다. 회수 검수 후 새 `Shipment`를 만든다.
-- 환불 금액은 fulfillment가 계산한다(하위 주문 금액 − 귀책에 따른 배송비). 주문 단위 쿠폰 할인은 주문 항목 금액 비율로 나눠 반영한다. 계산식은 M4에서 확정해 이 문서에 적는다.
-- `RefundFailed`면 클레임은 `APPROVED`로 남고, 관리자 알림이 간다. 관리자가 재시도한다.
+- 교환(`EXCHANGE`)은 환불하지 않는다. 회수 검수 후 새 `Shipment`를 만들고, 새 배송을 발송하면 `ClaimCompleted`다.
+- 환불 금액은 fulfillment가 계산해 `ClaimApproved`에 싣는다. 계산식은 [fulfillment.md](fulfillment.md) "환불 금액"에 있다(2026-10-21 확정).
+- `RefundFailed`면 클레임은 `APPROVED`로 남고, 관리자 알림이 간다. 관리자가 payment에서 재시도한다. 보상 취소를 토스가 거절한 결제(`cancel_failure_code`)도 같은 관리자 화면에서 재시도한다.
 - 쿠폰 복원: 결제 전 취소(`OrderCancelled`)는 promotion이 바로 복원한다. 결제 후 클레임으로 주문의 하위 주문이 모두 취소된 경우에도 복원할지는 M5에서 정해 이 문서와 PRM-3에 적는다.
 
 ## 시간 기반 작업
@@ -181,7 +181,9 @@ sequenceDiagram
 | 주문 만료 | order | 1분 |
 | 결제 상태 재조회(`IN_PROGRESS`) | payment | 1분 |
 | 결제 보상 취소(취소된 주문의 승인 결제) | payment | 1분 |
+| 배송 시뮬레이터(발송 → 배송 중 → 배송 완료) | fulfillment | 1분 |
 | 자동 구매확정(배송 완료 + 7일) | fulfillment | 1시간 |
+| 환불(토스 부분취소) | payment | 1분 |
 | 주간 정산 확정 | settlement | 매주 월요일 03:00 |
 | 미첨부 파일 삭제 | file | 1시간 |
 | 발행된 outbox 행(7일), `processed_event`(30일) 정리 | 각 서비스(`common-messaging`) | 매일 04:00 |
