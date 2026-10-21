@@ -116,6 +116,26 @@
         }
       }
     },
+    "/v1/orders/{orderId}/cancel" : {
+      "post" : {
+        "tags" : [ "order-command-controller" ],
+        "operationId" : "cancel",
+        "parameters" : [ {
+          "name" : "orderId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        }
+      }
+    },
     "/v1/cart/items" : {
       "post" : {
         "tags" : [ "cart-command-controller" ],

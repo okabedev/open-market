@@ -1,6 +1,6 @@
 # 주문 (order 서비스)
 
-장바구니, 주문과 하위 주문, 주문 만료를 갖는다(ORD-1~4). 주문 만료·구매자 취소, 결제 연동은 M3의 다음 PR에서 이 문서에 더한다. 주문 흐름 전체(Saga)는 [messaging.md](messaging.md)에 있다.
+장바구니, 주문과 하위 주문, 주문 만료를 갖는다(ORD-1~4). 결제 연동은 M3의 다음 PR에서 이 문서에 더한다. 주문 흐름 전체(Saga)는 [messaging.md](messaging.md)에 있다.
 
 ## 장바구니(ORD-1)
 - 회원당 하나다(`Cart`). 처음 담을 때 만든다. 담긴 줄(`CartItem`)은 SKU와 수량만 갖는다. 상품명, 가격, 판매자, 판매 가능 수량은 저장하지 않고 볼 때마다 catalog에서 읽는다(아래 "catalog 조회"). 장바구니는 주문이 아니라서 가격을 고정하지 않는다. 가격 스냅샷은 주문할 때 만든다.
@@ -83,12 +83,20 @@ order는 `catalog.stock`에서 예약 결과를 받는다([messaging.md](messagi
 - `PENDING`이 아닌 주문에 결과가 오면(이미 같은 상태면 조용히, 다른 상태면 경고 로그) 넘긴다. order가 모르는 주문이면 경고 로그를 남기고 넘긴다.
 - `StockAvailabilityChanged`는 받지 않는다.
 
+### 만료와 결제 전 취소
+- **결제 기한**은 주문 시각부터 15분이다(`openmarket.order.payment-timeout`, config-repo `order.yml`. E2E만 짧게 준다). `PENDING`과 `AWAITING_PAYMENT` 모두 기한이 지나면 취소된다. 기한을 예약 결과가 온 시각이 아니라 주문 시각에서 세는 것은, catalog가 멈춰 예약 결과가 오지 않아도 `PENDING` 주문이 남지 않게 하고 구매자에게 보이는 기한을 주문할 때 정하기 위해서다.
+- **만료 작업**(`OrderExpiryJob`)은 1분마다(`openmarket.order.expiry-interval`) 돌고 ShedLock으로 한 인스턴스에서만 돈다. 기한이 지난 결제 전 주문을 오래된 순으로 100건씩 읽어, 주문마다 트랜잭션을 따로 열고 `PAYMENT_TIMEOUT`으로 취소한다. 다 못 하면 다음 주기에 이어 한다. 결제 전 주문만 담는 부분 인덱스(`orders_unpaid_placed_idx`)로 찾는다.
+- **구매자 취소**: `POST /v1/orders/{orderId}/cancel`. `PENDING`, `AWAITING_PAYMENT` 주문을 `BUYER_CANCELLED`로 취소한다. 204다.
+  - 이미 취소된 주문이면 사유를 바꾸지 않고 204다. 다시 눌러도 결과가 같아 `Idempotency-Key`는 받지 않는다.
+  - 결제가 끝난 주문은 409 `ORDER_NOT_CANCELLABLE`이다. 결제 후 취소는 클레임(M4)이다. 다른 회원의 주문은 404 `ORDER_NOT_FOUND`다.
+- 만료와 구매자 취소 모두 주문 행을 잠그고 바꾸고 `OrderCancelled`를 낸다. 같은 순간 결제 승인이 끝나 `PAID`가 되었으면 만료는 넘기고(경고 로그), 구매자 취소는 409다. 결제가 진행 중인데 취소가 먼저 되면 payment가 승인 뒤 보상 취소한다([messaging.md](messaging.md) "실패와 보상").
+
 ### 취소 사유(`CancelReason`)
 | 사유 | 언제 |
 |---|---|
 | `STOCK_UNAVAILABLE` | 재고 예약 실패 |
-| `PAYMENT_TIMEOUT` | 결제 대기 15분 초과(만료 PR) |
-| `BUYER_CANCELLED` | 결제 전 구매자 취소(만료 PR) |
+| `PAYMENT_TIMEOUT` | 결제 기한(주문 후 15분) 초과 |
+| `BUYER_CANCELLED` | 결제 전 구매자 취소 |
 
 ### 조회
 구매자(ORD-3)

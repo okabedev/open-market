@@ -3,6 +3,7 @@ package com.openmarket.order.command.application;
 import com.openmarket.common.messaging.outbox.Outbox;
 import com.openmarket.order.command.domain.Order;
 import com.openmarket.order.command.domain.OrderRepository;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -27,6 +28,11 @@ final class OrderFakes {
         @Override
         public Optional<Order> findForUpdateById(UUID id) {
             return Optional.ofNullable(rows.get(id));
+        }
+
+        @Override
+        public List<UUID> findUnpaidIdsPlacedBefore(Instant placedBefore, int limit) {
+            throw new UnsupportedOperationException("통합 테스트에서 확인한다");
         }
     }
 

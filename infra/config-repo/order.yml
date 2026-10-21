@@ -48,6 +48,13 @@ spring:
         disable-time-limiter: true
         disable-thread-pool: true
 
+openmarket:
+  order:
+    # 결제 기한. 주문 시각부터 센다. E2E만 짧게 준다(docs/architecture/order.md "만료와 결제 전 취소").
+    payment-timeout: 15m
+    # 만료 작업 주기
+    expiry-interval: 1m
+
 resilience4j:
   circuitbreaker:
     configs:
