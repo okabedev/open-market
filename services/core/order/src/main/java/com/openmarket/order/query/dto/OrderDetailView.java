@@ -11,6 +11,7 @@ import org.jspecify.annotations.Nullable;
  *
  * @param cancelReason 취소됐을 때만
  * @param amount 결제 금액(원). M3는 배송비가 없다
+ * @param paidAt 결제 시각(토스 승인 시각). 결제됐을 때만
  */
 public record OrderDetailView(
         UUID orderId,
@@ -20,7 +21,8 @@ public record OrderDetailView(
         String orderName,
         Shipping shipping,
         List<SellerOrder> sellerOrders,
-        Instant placedAt) {
+        Instant placedAt,
+        @Nullable Instant paidAt) {
 
     /** 주문 당시 배송지. */
     @Schema(name = "OrderShippingView")

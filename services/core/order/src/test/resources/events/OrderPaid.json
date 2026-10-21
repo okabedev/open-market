@@ -1,0 +1,46 @@
+{
+  "orderId": "019a2c3d-4e5f-7a60-8b1c-2d3e4f5a6b70",
+  "buyerId": "019a2c3d-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
+  "amount": 59700,
+  "orderName": "반팔 티셔츠 외 1건",
+  "paidAt": "2026-10-21T03:04:05Z",
+  "sellerOrders": [
+    {
+      "sellerOrderId": "019a2c3d-4e60-7b71-8c2d-3e4f5a6b7c81",
+      "sellerId": "019a2b00-0000-7000-8000-00000000a001",
+      "amount": 19900,
+      "lines": [
+        {
+          "skuId": "019a2b10-0000-7000-8000-0000000000b1",
+          "productId": "019a2b10-0000-7000-8000-0000000000a1",
+          "categoryId": "0199f000-0000-7000-8000-000000000101",
+          "unitPrice": 19900,
+          "quantity": 1,
+          "amount": 19900
+        }
+      ]
+    },
+    {
+      "sellerOrderId": "019a2c3d-4e61-7c82-8d3e-4f5a6b7c8d92",
+      "sellerId": "019a2b00-0000-7000-8000-00000000a002",
+      "amount": 39800,
+      "lines": [
+        {
+          "skuId": "019a2b10-0000-7000-8000-0000000000b2",
+          "productId": "019a2b10-0000-7000-8000-0000000000a2",
+          "categoryId": "0199f000-0000-7000-8000-000000000102",
+          "unitPrice": 19900,
+          "quantity": 2,
+          "amount": 39800
+        }
+      ]
+    }
+  ],
+  "shippingAddress": {
+    "recipientName": "홍길동",
+    "recipientPhone": "010-1234-5678",
+    "zipCode": "06236",
+    "baseAddress": "서울 강남구 테헤란로 1",
+    "detailAddress": "101호"
+  }
+}

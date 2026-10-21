@@ -10,6 +10,7 @@ import java.util.UUID;
  * @param amount 하위 주문 금액(원)
  * @param firstProductName 첫 항목의 상품명(주문 당시)
  * @param lineCount 하위 주문의 항목 수
+ * @param paidAt 결제 시각. 목록은 이 순서다
  */
 public record SellerOrderSummaryView(
         UUID sellerOrderId,
@@ -18,4 +19,5 @@ public record SellerOrderSummaryView(
         long amount,
         String firstProductName,
         int lineCount,
-        Instant placedAt) {}
+        Instant placedAt,
+        Instant paidAt) {}

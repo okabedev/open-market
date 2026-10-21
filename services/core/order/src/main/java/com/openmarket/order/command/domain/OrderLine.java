@@ -92,6 +92,18 @@ public class OrderLine {
         return skuId;
     }
 
+    public UUID productId() {
+        return productId;
+    }
+
+    public UUID categoryId() {
+        return categoryId;
+    }
+
+    public long unitPrice() {
+        return unitPrice;
+    }
+
     public String productName() {
         return productName;
     }

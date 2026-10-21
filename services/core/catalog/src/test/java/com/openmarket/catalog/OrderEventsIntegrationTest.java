@@ -168,8 +168,7 @@ class OrderEventsIntegrationTest {
         send(UUID.randomUUID(), "OrderPlaced", placed(cancelledOrder, skuL, 1), cancelledOrder);
         send(UUID.randomUUID(), "OrderPlaced", placed(paidOrder, skuM, 1), paidOrder);
         send(UUID.randomUUID(), "OrderCancelled", cancelled(cancelledOrder), cancelledOrder);
-        // OrderPaid 예시는 결제 승인을 반영할 때 order에 생긴다(context-map "order.order"). catalog는 orderId만 읽는다.
-        send(UUID.randomUUID(), "OrderPaid", "{\"orderId\":\"" + paidOrder + "\"}", paidOrder);
+        send(UUID.randomUUID(), "OrderPaid", paid(paidOrder), paidOrder);
         send(UUID.randomUUID(), "OrderAwaitingPayment", "{}", paidOrder);
 
         await().atMost(Duration.ofSeconds(15))
@@ -233,6 +232,16 @@ class OrderEventsIntegrationTest {
                         json.readTree(
                                 Files.readString(
                                         PUBLISHER_EXAMPLES.resolve("OrderCancelled.json")));
+        node.put("orderId", orderId.toString());
+        return json.writeValueAsString(node);
+    }
+
+    /** catalog는 orderId만 읽는다. 나머지 필드는 예시 그대로 두어 역직렬화가 깨지지 않는지 본다. */
+    private String paid(UUID orderId) throws IOException {
+        ObjectNode node =
+                (ObjectNode)
+                        json.readTree(
+                                Files.readString(PUBLISHER_EXAMPLES.resolve("OrderPaid.json")));
         node.put("orderId", orderId.toString());
         return json.writeValueAsString(node);
     }

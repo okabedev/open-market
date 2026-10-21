@@ -96,6 +96,47 @@ class OrderTest {
     }
 
     @Test
+    @DisplayName("결제 대기 주문은 결제가 승인되면 결제 완료가 되고 승인 시각이 결제 시각이다. 다시 와도 그대로다")
+    void pay() {
+        Order order = Order.place(buyerId, List.of(item(sellerA, "청바지", 1_000, 2)), address, NOW);
+        order.awaitPayment(NOW);
+        Instant approvedAt = NOW.plusSeconds(60);
+
+        assertThat(order.pay(2_000, approvedAt, NOW.plusSeconds(61)))
+                .isEqualTo(Order.Transition.APPLIED);
+        assertThat(order.status()).isEqualTo(OrderStatus.PAID);
+        assertThat(order.paidAt()).isEqualTo(approvedAt);
+        assertThat(order.pay(2_000, NOW.plusSeconds(120), NOW.plusSeconds(121)))
+                .isEqualTo(Order.Transition.ALREADY);
+        assertThat(order.paidAt()).isEqualTo(approvedAt);
+        assertThat(order.cancel(CancelReason.PAYMENT_TIMEOUT, NOW))
+                .isEqualTo(Order.Transition.INVALID);
+    }
+
+    @Test
+    @DisplayName("결제 대기가 아닌 주문(예약 중, 취소됨)은 결제 완료가 되지 않는다. 금액이 다르면 예외다")
+    void payRejected() {
+        Order pending = Order.place(buyerId, List.of(item(sellerA, "청바지", 1_000, 1)), address, NOW);
+        assertThat(pending.pay(1_000, NOW, NOW)).isEqualTo(Order.Transition.INVALID);
+        assertThat(pending.status()).isEqualTo(OrderStatus.PENDING);
+
+        Order cancelled =
+                Order.place(buyerId, List.of(item(sellerA, "청바지", 1_000, 1)), address, NOW);
+        cancelled.awaitPayment(NOW);
+        cancelled.cancel(CancelReason.PAYMENT_TIMEOUT, NOW);
+        assertThat(cancelled.pay(1_000, NOW, NOW)).isEqualTo(Order.Transition.INVALID);
+        assertThat(cancelled.status()).isEqualTo(OrderStatus.CANCELLED);
+        assertThat(cancelled.paidAt()).isNull();
+
+        Order awaiting =
+                Order.place(buyerId, List.of(item(sellerA, "청바지", 1_000, 1)), address, NOW);
+        awaiting.awaitPayment(NOW);
+        assertThatThrownBy(() -> awaiting.pay(999, NOW, NOW))
+                .isInstanceOf(IllegalStateException.class);
+        assertThat(awaiting.status()).isEqualTo(OrderStatus.AWAITING_PAYMENT);
+    }
+
+    @Test
     @DisplayName("배송지 규칙: 받는 사람, 연락처 형식, 우편번호 5자리, 기본 주소. 어기면 ORDER_INVALID_INPUT이다")
     void shippingAddressRules() {
         assertThatThrownBy(() -> ShippingAddress.of(" ", "010-1234-5678", "06236", "주소", null))

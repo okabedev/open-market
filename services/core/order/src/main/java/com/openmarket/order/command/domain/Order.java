@@ -60,6 +60,9 @@ public class Order {
     @Column(name = "placed_at", nullable = false)
     private Instant placedAt;
 
+    @Column(name = "paid_at")
+    private @Nullable Instant paidAt;
+
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
@@ -137,6 +140,29 @@ public class Order {
         return Transition.APPLIED;
     }
 
+    /**
+     * 결제가 승인돼 결제 완료가 된다. {@code AWAITING_PAYMENT}에서만 바뀐다.
+     *
+     * @param amount 승인된 금액(원). payment가 주문 금액을 고정하므로 다르면 버그다
+     * @param approvedAt 토스 승인 시각. 결제 시각이 된다
+     * @throws IllegalStateException 결제 대기 주문인데 금액이 주문 금액과 다르다
+     */
+    public Transition pay(long amount, Instant approvedAt, Instant now) {
+        if (status == OrderStatus.PAID) {
+            return Transition.ALREADY;
+        }
+        if (status != OrderStatus.AWAITING_PAYMENT) {
+            return Transition.INVALID;
+        }
+        if (amount != this.amount) {
+            throw new IllegalStateException("승인 금액이 주문 금액과 다르다: orderId=" + id);
+        }
+        status = OrderStatus.PAID;
+        paidAt = approvedAt;
+        updatedAt = now;
+        return Transition.APPLIED;
+    }
+
     /** 결제 전에 취소한다. {@code PENDING}, {@code AWAITING_PAYMENT}에서만 바뀐다. 이미 취소됐으면 처음 사유가 남는다. */
     public Transition cancel(CancelReason reason, Instant now) {
         if (status == OrderStatus.CANCELLED) {
@@ -178,6 +204,10 @@ public class Order {
 
     public String orderName() {
         return orderName;
+    }
+
+    public @Nullable Instant paidAt() {
+        return paidAt;
     }
 
     public ShippingAddress shippingAddress() {

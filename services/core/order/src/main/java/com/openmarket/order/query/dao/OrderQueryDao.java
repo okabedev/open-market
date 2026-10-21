@@ -58,7 +58,8 @@ public class OrderQueryDao {
                                 order.shippingAddress.zipCode,
                                 order.shippingAddress.baseAddress,
                                 order.shippingAddress.detailAddress,
-                                order.placedAt)
+                                order.placedAt,
+                                order.paidAt)
                         .from(order)
                         .where(order.id.eq(orderId), order.buyerId.eq(buyerId))
                         .fetchOne();
@@ -74,7 +75,8 @@ public class OrderQueryDao {
                         Objects.requireNonNull(row.get(order.orderName)),
                         shipping(row),
                         sellerOrders(orderId),
-                        Objects.requireNonNull(row.get(order.placedAt))));
+                        Objects.requireNonNull(row.get(order.placedAt)),
+                        row.get(order.paidAt)));
     }
 
     /**
@@ -131,7 +133,10 @@ public class OrderQueryDao {
         return new CursorPageView<>(List.copyOf(items), total == null ? 0 : total, nextCursor);
     }
 
-    /** 판매자 본인 하위 주문 목록. 주문 상태가 {@code statuses} 중 하나인 것만. 최근 주문 순, 쪽 번호. */
+    /**
+     * 판매자 본인 하위 주문 목록. 주문 상태가 {@code statuses} 중 하나인 것만. 최근 결제 순(같으면 하위 주문 ID 역순), 쪽 번호. {@code
+     * statuses}는 결제된 상태만 준다.
+     */
     public PageView<SellerOrderSummaryView> findSellerOrders(
             UUID sellerId, Collection<OrderStatus> statuses, int page, int size) {
         Predicate where = sellerVisible(sellerId, statuses);
@@ -152,11 +157,12 @@ public class OrderQueryDao {
                                 JPAExpressions.select(counted.count())
                                         .from(counted)
                                         .where(counted.sellerOrder.id.eq(sellerOrder.id)),
-                                order.placedAt)
+                                order.placedAt,
+                                order.paidAt)
                         .from(sellerOrder)
                         .join(sellerOrder.order, order)
                         .where(where)
-                        .orderBy(order.placedAt.desc(), sellerOrder.id.desc())
+                        .orderBy(order.paidAt.desc(), sellerOrder.id.desc())
                         .offset((long) page * size)
                         .limit(size)
                         .fetch()
@@ -173,7 +179,8 @@ public class OrderQueryDao {
                                                 Objects.requireNonNull(t.get(4, String.class)),
                                                 Objects.requireNonNull(t.get(5, Long.class))
                                                         .intValue(),
-                                                Objects.requireNonNull(t.get(order.placedAt))))
+                                                Objects.requireNonNull(t.get(order.placedAt)),
+                                                Objects.requireNonNull(t.get(order.paidAt))))
                         .toList();
         Long total =
                 query.select(sellerOrder.count())
@@ -197,7 +204,8 @@ public class OrderQueryDao {
                                 order.shippingAddress.zipCode,
                                 order.shippingAddress.baseAddress,
                                 order.shippingAddress.detailAddress,
-                                order.placedAt)
+                                order.placedAt,
+                                order.paidAt)
                         .from(sellerOrder)
                         .join(sellerOrder.order, order)
                         .where(sellerOrder.id.eq(sellerOrderId), sellerVisible(sellerId, statuses))
@@ -215,7 +223,8 @@ public class OrderQueryDao {
                         List.copyOf(
                                 lines(orderLine.sellerOrder.id.eq(sellerOrderId))
                                         .getOrDefault(sellerOrderId, List.of())),
-                        Objects.requireNonNull(row.get(order.placedAt))));
+                        Objects.requireNonNull(row.get(order.placedAt)),
+                        Objects.requireNonNull(row.get(order.paidAt))));
     }
 
     /** 구매자의 주문 중 상태가 {@code statuses} 중 하나인 것이 있는지. */

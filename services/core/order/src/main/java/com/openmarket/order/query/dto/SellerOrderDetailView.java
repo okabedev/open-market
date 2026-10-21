@@ -9,6 +9,7 @@ import java.util.UUID;
  *
  * @param status 주문 상태. M3 하위 주문은 주문 상태를 따른다
  * @param amount 하위 주문 금액(원)
+ * @param paidAt 결제 시각
  */
 public record SellerOrderDetailView(
         UUID sellerOrderId,
@@ -17,4 +18,5 @@ public record SellerOrderDetailView(
         long amount,
         OrderDetailView.Shipping shipping,
         List<OrderDetailView.Line> lines,
-        Instant placedAt) {}
+        Instant placedAt,
+        Instant paidAt) {}

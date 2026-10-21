@@ -410,6 +410,10 @@
           "placedAt" : {
             "type" : "string",
             "format" : "date-time"
+          },
+          "paidAt" : {
+            "type" : "string",
+            "format" : "date-time"
           }
         }
       },
@@ -508,6 +512,10 @@
           "placedAt" : {
             "type" : "string",
             "format" : "date-time"
+          },
+          "paidAt" : {
+            "type" : "string",
+            "format" : "date-time"
           }
         }
       },
@@ -589,6 +597,10 @@
             }
           },
           "placedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "paidAt" : {
             "type" : "string",
             "format" : "date-time"
           }

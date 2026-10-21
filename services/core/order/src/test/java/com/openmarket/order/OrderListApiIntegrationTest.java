@@ -30,7 +30,10 @@ import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
-/** 구매자 주문 목록(ORD-3)과 판매자 하위 주문 조회(ORD-4). 결제 반영 전이라 PAID는 DB에서 직접 바꾼다. */
+/**
+ * 구매자 주문 목록(ORD-3)과 판매자 하위 주문 조회(ORD-4). 결제 반영은 PaymentEventsIntegrationTest가 보고, 여기서는 PAID를 DB에서
+ * 바꾼다.
+ */
 @SpringBootTest(properties = "spring.kafka.listener.auto-startup=false")
 @AutoConfigureMockMvc
 @Import(PostgresContainerConfiguration.class)
@@ -132,7 +135,7 @@ class OrderListApiIntegrationTest {
     void sellerOrders() throws Exception {
         UUID paid = place(buyerId, line(shirt, 2, 19_900), line(pants, 1, 39_900));
         UUID awaiting = place(buyerId, line(shirt, 1, 19_900));
-        jdbc.sql("UPDATE orders SET status = 'PAID' WHERE id = :id").param("id", paid).update();
+        markPaid(paid, "2026-10-21T01:00:00Z");
         jdbc.sql("UPDATE orders SET status = 'AWAITING_PAYMENT' WHERE id = :id")
                 .param("id", awaiting)
                 .update();
@@ -152,6 +155,7 @@ class OrderListApiIntegrationTest {
         assertThat(item.get("amount").asLong()).isEqualTo(39_800);
         assertThat(item.get("firstProductName").asString()).isEqualTo("반팔 티셔츠");
         assertThat(item.get("lineCount").asInt()).isEqualTo(1);
+        assertThat(item.get("paidAt").asString()).isEqualTo("2026-10-21T01:00:00Z");
         String sellerOrderId = item.get("sellerOrderId").asString();
 
         mockMvc.perform(get("/v1/seller/orders/{id}", sellerOrderId).with(seller(sellerA)))
@@ -159,6 +163,7 @@ class OrderListApiIntegrationTest {
                 .andExpect(jsonPath("$.orderId").value(paid.toString()))
                 .andExpect(jsonPath("$.status").value("PAID"))
                 .andExpect(jsonPath("$.amount").value(39_800))
+                .andExpect(jsonPath("$.paidAt").value("2026-10-21T01:00:00Z"))
                 .andExpect(jsonPath("$.shipping.recipientName").value("홍길동"))
                 .andExpect(jsonPath("$.lines.length()").value(1))
                 .andExpect(jsonPath("$.lines[0].skuId").value(shirt.toString()))
@@ -172,6 +177,40 @@ class OrderListApiIntegrationTest {
                                 .with(seller(sellerA)))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("ORDER_NOT_FOUND"));
+    }
+
+    @Test
+    @DisplayName("판매자 하위 주문 목록은 최근 결제 순이다. 먼저 주문했어도 나중에 결제했으면 앞에 온다")
+    void sellerListByPaidAt() throws Exception {
+        UUID placedFirst = place(buyerId, line(shirt, 1, 19_900));
+        UUID placedSecond = place(buyerId, line(shirt, 2, 19_900));
+        markPaid(placedFirst, "2026-10-21T02:00:00Z");
+        markPaid(placedSecond, "2026-10-21T01:00:00Z");
+
+        JsonNode page =
+                json.readTree(
+                        mockMvc.perform(get("/v1/seller/orders").with(seller(sellerA)))
+                                .andExpect(status().isOk())
+                                .andReturn()
+                                .getResponse()
+                                .getContentAsString());
+
+        assertThat(ids(page, "orderId")).containsExactly(placedFirst, placedSecond);
+    }
+
+    @Test
+    @DisplayName("구매자 주문 상세는 결제된 주문에만 결제 시각이 있다")
+    void buyerDetailPaidAt() throws Exception {
+        UUID paid = place(buyerId, line(shirt, 1, 19_900));
+        UUID pending = place(buyerId, line(shirt, 1, 19_900));
+        markPaid(paid, "2026-10-21T01:00:00Z");
+
+        mockMvc.perform(get("/v1/orders/{id}", paid).with(buyer(buyerId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.paidAt").value("2026-10-21T01:00:00Z"));
+        mockMvc.perform(get("/v1/orders/{id}", pending).with(buyer(buyerId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.paidAt").doesNotExist());
     }
 
     @Test
@@ -198,6 +237,13 @@ class OrderListApiIntegrationTest {
         List<UUID> ids = new ArrayList<>();
         page.get("items").forEach(item -> ids.add(UUID.fromString(item.get(field).asString())));
         return ids;
+    }
+
+    private void markPaid(UUID orderId, String paidAt) {
+        jdbc.sql("UPDATE orders SET status = 'PAID', paid_at = :paidAt::timestamptz WHERE id = :id")
+                .param("paidAt", paidAt)
+                .param("id", orderId)
+                .update();
     }
 
     private UUID sellerOrderIdOf(UUID orderId) {
