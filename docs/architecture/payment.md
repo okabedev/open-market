@@ -94,7 +94,7 @@ order가 결제 전에 주문을 취소하면(`OrderCancelled`: 재고 부족, �
 ### 취소 작업(`PaymentCancelJob`)
 - 1분마다(`openmarket.payment.cancel-interval`) 돌고 ShedLock(`payment-cancel`)으로 한 인스턴스에서만 돈다. 취소 요청이 있고 토스가 거절한 적 없는 `APPROVED` 결제를 오래된 요청 순으로 100건씩 읽는다.
 - 결제마다 토스 `POST /v1/payments/{paymentKey}/cancel`(전액, `cancelReason` "주문 취소")을 트랜잭션 밖에서 부르고, 원장에 남긴 뒤 결제를 다시 잠가 반영한다. 토스 `Idempotency-Key`는 `<결제 ID>-cancel`이다. 전액 취소는 결제마다 한 번이라 결제 ID로 만든다(부분취소 환불은 M4에서 환불 ID로 만든다).
-- 리스너에서 바로 부르지 않고 작업으로 미룬 것은, 토스 호출을 리스너 트랜잭션 밖에 두고 실패하면 같은 경로로 다시 시도하기 위해서다. 보상 취소는 드문 경로라 최대 1분 늦어도 된다. E2E는 환경 변수 `PAYMENT_CANCEL_INTERVAL`(2초)로 줄인다.
+- 리스너에서 바로 부르지 않고 작업으로 미룬 것은, 토스 호출을 리스너 트랜잭션 밖에 두고 실패하면 같은 경로로 다시 시도하기 위해서다. 보상 취소는 드문 경로라 최대 1분 늦어도 된다. E2E는 환경 변수 `PAYMENT_CANCEL_INTERVAL`로 줄인다([dev-setup.md](../dev-setup.md) "E2E").
 
 | 토스 응답 | 처리 |
 |---|---|
