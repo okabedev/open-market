@@ -74,3 +74,18 @@ export async function searchIds(keyword: string, sort = "RELEVANCE"): Promise<st
   expect(response.status).toBe(200);
   return ((await response.json()) as SearchResult).items.map((item) => item.productId);
 }
+
+export type Stock = { onHand: number; reserved: number; available: number };
+
+/** 판매자 상품 상세에서 옵션 없는 상품(SKU 하나)의 실재고·예약·판매 가능 수량을 읽는다. */
+export async function stockOf(seller: Page, productId: string): Promise<Stock> {
+  await seller.goto(`${env.seller}/products/${productId}`);
+  const table = seller
+    .getByRole("table")
+    .filter({ has: seller.getByRole("columnheader", { name: "실재고" }) });
+  const row = table.locator("tbody tr").first();
+  const number = async (column: number) =>
+    Number((await row.getByRole("cell").nth(column).innerText()).replace(/[^\d]/g, ""));
+  // 옵션 없는 상품의 열: 가격, 실재고, 예약, 판매 가능, …
+  return { onHand: await number(1), reserved: await number(2), available: await number(3) };
+}

@@ -22,14 +22,16 @@ export async function addToCart(buyer: Page, productId: string, quantity: number
   await expect(buyer.getByText(/장바구니에 담았습니다/)).toBeVisible();
 }
 
-/**
- * 장바구니에서 선택한 상품(처음에는 모두)으로 주문서를 열고 기본 배송지로 주문한다. 결제 화면에서 끝나고 주문 ID를 돌려준다.
- */
-export async function orderFromCart(buyer: Page): Promise<string> {
+/** 장바구니에서 선택한 상품(처음에는 모두)으로 주문서를 연다. 기본 배송지가 골라져 있다. */
+export async function openCheckout(buyer: Page): Promise<void> {
   await buyer.goto(`${env.shop}/cart`);
   await buyer.getByRole("button", { name: "선택한 상품 주문하기" }).click();
   await expect(buyer.getByRole("heading", { name: "주문서" })).toBeVisible();
   await expect(buyer.getByRole("radio")).toBeChecked();
+}
+
+/** 열린 주문서에서 주문한다. 결제 화면에서 끝나고 주문 ID를 돌려준다. */
+export async function placeOrder(buyer: Page): Promise<string> {
   await buyer.getByRole("button", { name: /주문하고 결제하기/ }).click();
   await buyer.waitForURL(/\/orders\/[0-9a-f-]+\/pay$/);
   const orderId = new URL(buyer.url()).pathname.split("/")[2];
@@ -37,6 +39,12 @@ export async function orderFromCart(buyer: Page): Promise<string> {
     throw new Error(`결제 화면이 아니다: ${buyer.url()}`);
   }
   return orderId;
+}
+
+/** 장바구니에서 선택한 상품으로 기본 배송지 주문을 한다. 결제 화면에서 끝나고 주문 ID를 돌려준다. */
+export async function orderFromCart(buyer: Page): Promise<string> {
+  await openCheckout(buyer);
+  return placeOrder(buyer);
 }
 
 /** 결제 화면에서 결제하기를 눌러 가짜 PG 결제 인증 화면으로 간다. 재고 확인(PENDING)이 끝나야 버튼이 켜진다. */
@@ -58,4 +66,43 @@ export async function fakePgOrder(orderId: string): Promise<FakePgOrder> {
   const response = await fetch(`${env.fakePg}/control/orders/${orderId}`);
   expect(response.status).toBe(200);
   return (await response.json()) as FakePgOrder;
+}
+
+/** 가짜 PG 제어 API로 그 주문의 승인 응답 지연(ms)이나 거절을 정한다. 결제 인증 전에 부른다. */
+export async function configureFakePg(
+  orderId: string,
+  settings: {
+    confirmDelayMs?: number;
+    confirmError?: { status: number; code: string; message: string };
+  },
+): Promise<void> {
+  const response = await fetch(`${env.fakePg}/control/orders/${orderId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(settings),
+  });
+  expect(response.status).toBe(204);
+}
+
+/** 장바구니에서 그 상품의 줄을 뺀다. */
+export async function removeFromCart(buyer: Page, productName: string): Promise<void> {
+  await buyer.goto(`${env.shop}/cart`);
+  const line = buyer
+    .getByRole("listitem")
+    .filter({ has: buyer.getByRole("link", { name: productName }) });
+  await line.getByRole("button", { name: "빼기" }).click();
+  await expect(buyer.getByRole("link", { name: productName })).toHaveCount(0);
+}
+
+/** 구매자 주문 상세를 다시 읽어 그 문구가 보일 때까지 기다린다(이벤트로 상태가 바뀐다). */
+export async function waitForOrderText(
+  buyer: Page,
+  orderId: string,
+  text: string | RegExp,
+  timeout = 30_000,
+): Promise<void> {
+  await expect(async () => {
+    await buyer.goto(`${env.shop}/orders/${orderId}`);
+    await expect(buyer.getByText(text).first()).toBeVisible({ timeout: 1_000 });
+  }).toPass({ timeout, intervals: [1_000] });
 }

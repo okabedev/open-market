@@ -9,7 +9,7 @@
 | R3 | 포매터·정적 분석 도구의 Java 25 지원 | 도구가 새 문법을 못 읽으면 빌드가 깨진다 | 후보 도구로 템플릿 빌드 | M0-b | 확인(2026-10-16): palantir 제외, google-java-format 1.36.1 + Error Prone + NullAway 동작. [ADR 0010](../adr/0010-code-style-tools.md) |
 | R4 | Gateway 구현 선택(WebFlux 또는 WebMVC) | 레이트 리밋, 토큰 처리 필터 지원 범위가 다르다 | 두 구현의 필터 문서 비교, 필요한 필터(JWT, Redis 레이트 리밋, 경로 재작성) 동작 확인 | M0-c | 확인(2026-10-16): WebFlux 선택. Redis 레이트 리밋을 설정으로 쓸 수 있다(WebMVC는 Bucket4j, 키 리졸버는 Java DSL만). JWT·역할·레이트 리밋·접두어 제거를 `GatewayTest`, `RateLimitTest`로 확인. Redis 무응답 시 기본 타임아웃(60s)만큼 요청이 멈추는 것을 발견해 200ms로 줄였다(`RedisOutageTest`). [ADR 0011](../adr/0011-gateway-webflux.md) |
 | R5 | Debezium과 Postgres 논리 복제 | 스키마 여러 개의 outbox를 커넥터 하나로 읽고, 토픽을 `aggregate_type`으로 나눠야 한다. 복제 슬롯이 쌓이면 디스크가 찬다 | 샘플 서비스 두 개로 outbox → 토픽 확인, 커넥터 중지 후 재기동 시 유실 없는지 확인 | M0-d | 확인(2026-10-18): 스키마 두 개(member, catalog)의 outbox가 커넥터 하나로 각 토픽에 나가고, 커넥터·Kafka 중지 중에 쓴 행은 재기동 뒤 유실 없이 나왔다. heartbeat가 없으면 슬롯이 따라오지 못하고, 없는 토픽에서는 태스크가 RUNNING인 채 멈추며, Kafka 재접속 뒤 5분간 태스크를 다시 받지 못하는 것을 발견해 설정으로 고쳤다. 아래 "outbox 발행 확인" |
-| R6 | 로컬 메모리 예산 | 서비스 15개, Kafka, Connect, ES, 관측성을 함께 띄워야 한다. WSL 메모리가 부족하면 E2E를 돌릴 수 없다 | profile별로 띄워 `docker stats`로 실측하고, 서비스 JVM 힙 기본값(`-XX:MaxRAMPercentage`)을 정한다 | M0-c | 확인(2026-10-17): 전체 profile 실측 5.1GB(Spring 서비스 4개). 상한이 없으면 JVM이 VM 메모리 기준으로 힙 상한을 5GB로 잡는 것을 발견했다. JVM 컨테이너에 `mem_limit` 512m + `MaxRAMPercentage=50`을 두었다. 서비스 15개 기준 컨테이너 상한 합계 약 11.5GB, 빌드까지 VM 전체 약 18GB로 `.wslconfig` 20GB를 권장한다. 아래 "메모리 예산". 서비스에 Kafka 소비자와 데이터가 붙는 M3 마감 전에 다시 잰다 |
+| R6 | 로컬 메모리 예산 | 서비스 15개, Kafka, Connect, ES, 관측성을 함께 띄워야 한다. WSL 메모리가 부족하면 E2E를 돌릴 수 없다 | profile별로 띄워 `docker stats`로 실측하고, 서비스 JVM 힙 기본값(`-XX:MaxRAMPercentage`)을 정한다 | M0-c | 확인(2026-10-17): 전체 profile 실측 5.1GB(Spring 서비스 4개). 상한이 없으면 JVM이 VM 메모리 기준으로 힙 상한을 5GB로 잡는 것을 발견했다. JVM 컨테이너에 `mem_limit` 512m + `MaxRAMPercentage=50`을 두었다. 서비스 15개 기준 컨테이너 상한 합계 약 11.5GB, 빌드까지 VM 전체 약 18GB로 `.wslconfig` 20GB를 권장한다. 아래 "메모리 예산". 서비스에 Kafka 소비자와 데이터가 붙는 M3 마감 전에 다시 잰다. 재측정(2026-10-21): 서비스 11개 + 전체 profile에서 VM 14.4GB, order가 512m 상한에 7MB까지 닿아 Spring 서비스 상한을 640m·힙 40%로 바꿨다. 아래 "M3 재측정" |
 | R7 | auth issuer 호스트 이름 | 브라우저, IDE 실행 서비스, 컨테이너가 같은 issuer URL로 auth에 닿아야 한다 | hosts + 네트워크 별칭으로 세 경우 모두 토큰 검증 확인 | M1 | 확인(2026-10-18): issuer를 고정하면 요청 주소와 상관없이 `iss`가 같다(`AuthorizationServerIntegrationTest`, 무작위 포트·다른 Host). 호스트(curl, hosts 대신 `--resolve`)에서 PKCE 로그인으로 받은 토큰을 컨테이너 gateway가 검증했다. 네트워크 별칭은 auth를 IDE로 띄우면 사라져 JWK를 받지 못해, 컨테이너가 `host-gateway`로 호스트 포트에 닿게 바꿨다. auth가 컨테이너일 때와 IDE일 때 모두 검증 통과. IDE gateway(bootRun)도 hosts 항목을 넣은 뒤 같은 결과였다(유효 토큰 통과, 서명 위조·토큰 없음 401). IDE gateway는 Netty DNS 리졸버가 `/etc/hosts`만 읽어서, JVM 옵션 `jdk.net.hosts.file`로는 대신할 수 없다. [ADR 0013](../adr/0013-auth-issuer-host.md) |
 | R8 | Next.js BFF 세션과 토큰 갱신 | 서버 컴포넌트, Server Action, Route Handler 모두에서 세션을 읽고 토큰을 갱신해야 한다. 동시 갱신 경쟁이 생길 수 있다 | 갱신 중복 방지(Redis 락) 시나리오 테스트 | M1 | 확인(2026-10-18): Redis 락(`SET NX PX`)을 잡은 한 요청만 갱신하고 나머지는 기다린다. BFF 인스턴스 둘이 동시에 20번 갱신해도 auth 요청은 1번이다(`bff.test.ts`, 락을 끄면 2번으로 실패). 실제 auth와 브라우저에서 액세스 토큰을 강제 만료한 뒤 서버 컴포넌트 5·Route Handler 5·Server Action 1을 동시에 보내기를 3번 반복했다. 모두 인증됐고 세션이 유지됐다. [ADR 0014](../adr/0014-bff-session.md) |
 | R9 | 토스페이먼츠 테스트 환경 | 테스트 키로 승인, 부분취소, 웹훅을 로컬에서 받을 수 있어야 한다. 웹훅은 공인 주소가 필요하다 | 승인·취소 API 확인. 웹훅은 결제 조회 폴링으로 대신할 수 있는지 확인 | M3 | 확인(2026-10-20): 주문서형 연동 키는 전자결제 신청(사업자 정보) 뒤에만 나와서 문서용 공개 테스트 키를 쓴다. 위젯 결제 → 서버 승인 → 조회 → 부분취소 → 나머지 취소가 로컬에서 됐고, 토스 `Idempotency-Key`로 승인·취소를 다시 보내도 한 번만 처리됐다. 웹훅 없이 `paymentKey` 조회로 상태를 확정할 수 있다. `orderId` 조회는 문서용 키에서 404라 쓰지 않는다. 아래 "토스 테스트 환경 확인". [ADR 0018](../adr/0018-toss-payments-integration.md) |
@@ -90,6 +90,30 @@
   - 768m·힙 50%도 힙이 384MB까지 커져 익명 메모리가 670MB, 스왑 21MB였다.
   - 768m·힙 40%·직접 버퍼 캐시 끔: 익명 메모리 608MB에서 멈췄고 스왑 0. `memory.peak`가 768MB에 닿는 것은 업로드 파일의 페이지 캐시이며 커널이 회수한다. 10건 동시 업로드는 0.8~2.9초였다.
   - 같은 측정에서 member·notification의 익명 메모리는 378~391MB로 M0 실측(230~335MB)보다 커졌다. M3 재측정 때 함께 본다.
+
+M3 재측정(2026-10-21)
+- 측정: E2E 스택(`openmarket-e2e`, 빈 볼륨)에서 M3 시나리오를 돈 뒤 `obs`·`search` profile을 더해 모든 profile을 띄웠다. gateway로 20,000건(동시 16: 주문 목록, 장바구니(order → catalog Feign), 상품 검색, 내 정보)을 보내고 cgroup `memory.stat`·`memory.peak`·`memory.events`와 `/actuator/prometheus`의 JVM 값을 봤다. 사용자당 레이트 리밋으로 order에 닿은 요청은 약 860건이었다.
+- 결과(부하 뒤, 512m·힙 50% 기준)
+
+  | 서비스 | anon | peak | 힙 사용 | 힙 밖(메타스페이스 등) |
+  |---|---|---|---|---|
+  | order | 496MB | 505MB | 111MB | 210MB |
+  | gateway | 469MB | 489MB | 79MB | 140MB |
+  | member | 460MB | 477MB | 98MB | 203MB |
+  | auth | 447MB | 470MB | 95MB | 210MB |
+  | catalog | 414MB | 433MB | 70MB | 187MB |
+  | payment | 402MB | 425MB | 65MB | 183MB |
+  | notification | 371MB | 399MB | 63MB | 172MB |
+  | search | 346MB | 379MB | 66MB | 150MB |
+  | discovery, config | 273MB, 241MB | 283MB, 253MB | 46MB, 43MB | 100MB, 84MB |
+  | file(768m, 힙 40%) | 476MB | 517MB | 151MB | 188MB |
+
+  - 메모리 상한 도달(`memory.events` max), 스왑, OOM은 없었다.
+  - order의 확보된 힙은 134MB였다. 힙 밖 212MB와 JVM이 세지 않는 네이티브 약 150MB(스레드 46개, malloc 영역)가 더해져 anon이 496MB다. 힙이 상한 248MB까지 커지면 약 610MB로 512m을 넘는다. M0 실측(230~335MB)보다 커진 것은 Kafka 소비자, OpenFeign·Resilience4j, OAuth2 클라이언트, QueryDSL이 메타스페이스를 늘렸기 때문이다(M0 80~126MB → M3 180~210MB).
+  - VM `free` 사용량은 14.4GB(모든 profile, 서비스 11개, 앱 3개는 멈춘 상태)다.
+- 결정: Spring 서비스 `mem_limit`을 640m로 올리고 힙을 40%(256MB)로 한다. 힙 상한은 거의 그대로 두고, 늘어난 힙 밖과 네이티브의 여유를 준다. 최악의 경우 힙 256MB + 힙 밖 약 210MB + 네이티브 약 150MB로 640MB 안에 든다. file은 768m·힙 40% 그대로다.
+  - 확인: 640m·힙 40%로 M3 E2E 전체를 돈 직후 order는 anon 463MB, peak 498MB(여유 약 140MB)였고 다른 서비스는 239~447MB였다. 상한 도달, 스왑, OOM은 없었다.
+- 서비스 15개 전망(갱신): 상한 합계는 14 × 640MB + 768MB = 약 9.7GB에 나머지 약 4GB를 더해 약 13.7GB다. 실측 기준 VM은 지금 14.4GB에 서비스 4개(각 약 450MB)가 더해져 약 16.2GB다. 전체 재빌드를 함께 돌리면 20GB를 넘을 수 있어, `apps`를 띄운 채 전체 재빌드를 하지 않는다([dev-setup.md](../dev-setup.md) 2절).
 
 서비스 15개 전망
 - 컨테이너: 실측 최댓값(335MB) 기준 Spring 서비스 15개는 약 5GB, 나머지 12개는 약 4GB다. 합계 약 9GB. 상한 기준은 15 × 512MB = 7.5GB에 4GB를 더해 약 11.5GB다.

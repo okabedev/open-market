@@ -151,8 +151,10 @@
   - [x] shop 장바구니, 상품 상세에서 담기
   - [x] shop 주문서, 결제(토스 결제위젯, BFF 승인), 완료
   - [x] shop 주문 내역·상세(결제 전 취소), seller 하위 주문 목록·상세
-- [ ] 마일스톤 E2E `infra/e2e/run.sh m3`(가짜 PG), 메모리 전체 재측정(R6)
+- [x] 마일스톤 E2E `infra/e2e/run.sh m3`(가짜 PG), 메모리 전체 재측정(R6)
   - [x] 가짜 PG(`infra/fake-pg`, `e2e` profile)와 첫 시나리오 `m3-order-payment`(장바구니 주문 → 결제 인증 취소 → 결제 완료)
+  - [x] 완료 기준 시나리오 `m3-order-saga`(판매자 둘 주문·결제, 동시 주문의 재고 부족, 만료와 예약 해제, 만료 직후 승인의 자동 취소). 결제 기한 40초 등 시간과 IP당 한도는 E2E에서만 줄이거나 늘린다
+  - [x] R6 재측정: Spring 서비스 상한 640m·힙 40%([risks.md](architecture/risks.md) "M3 재측정")
 - 관련 요구사항: ORD-1~4, PAY-1, PAY-3, PAY-4, NFR-1~4, ACC-4(진행 중 주문)
 - 범위 결정(2026-10-20)
   - 쿠폰은 M5다. M3 주문은 쿠폰 없이 재고 예약 결과만 기다리고, `OrderPlaced`의 발급 쿠폰 ID 목록은 비어 있다.
