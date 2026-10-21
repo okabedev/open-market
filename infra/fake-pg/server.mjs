@@ -119,7 +119,11 @@ export function createFakePg() {
     return payment ? json(200, payment) : error(404, "NOT_FOUND_PAYMENT", "존재하지 않는 결제 정보 입니다.");
   }
 
-  async function cancel(request, paymentKey, { cancelReason }) {
+  /**
+   * 취소. `cancelAmount`가 없으면 남은 금액 전부다. 토스처럼 부분취소는 `PARTIAL_CANCELED`이고, 남은 금액을 모두 부분취소해도
+   * 상태가 `CANCELED`로 바뀌지 않는다(R9). 전액 취소(금액 없음)만 `CANCELED`다.
+   */
+  async function cancel(request, paymentKey, { cancelReason, cancelAmount }) {
     if (!authorized(request)) {
       return unauthorized();
     }
@@ -134,21 +138,26 @@ export function createFakePg() {
       if (payment.status === "CANCELED") {
         return error(400, "ALREADY_CANCELED_PAYMENT", "이미 취소된 결제 입니다.");
       }
-      if (payment.status !== "DONE") {
+      if (payment.status !== "DONE" && payment.status !== "PARTIAL_CANCELED") {
         return error(403, "NOT_CANCELABLE_PAYMENT", "취소 할 수 없는 결제 입니다.");
       }
+      const amount = cancelAmount ?? payment.balanceAmount;
+      if (amount <= 0 || amount > payment.balanceAmount) {
+        return error(403, "NOT_CANCELABLE_AMOUNT", "취소 할 수 없는 금액 입니다.");
+      }
       const key = transactionKey();
-      payment.status = "CANCELED";
+      payment.status = cancelAmount === undefined && payment.status === "DONE" ? "CANCELED" : "PARTIAL_CANCELED";
       payment.cancels = [
+        ...(payment.cancels ?? []),
         {
           transactionKey: key,
           cancelReason,
-          cancelAmount: payment.balanceAmount,
+          cancelAmount: amount,
           canceledAt: kst(new Date()),
           cancelStatus: "DONE",
         },
       ];
-      payment.balanceAmount = 0;
+      payment.balanceAmount -= amount;
       payment.lastTransactionKey = key;
       return json(200, payment);
     });

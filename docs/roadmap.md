@@ -198,7 +198,7 @@
   - [ ] 반품·교환 신청, 판매자 승인(재입고 선택)·거부, 교환 재발송(CLM-2, CLM-3)
   - [ ] 중재(관리자 결정)
 - [ ] payment: 부분취소 환불(PAY-2)
-  - [ ] 환불(`Refund`, 환불 작업, 원장), `RefundCompleted`·`RefundFailed`
+  - [x] 환불(`Refund`, 환불 작업, 원장), `RefundCompleted`·`RefundFailed`
   - [ ] 환불 실패와 보상 취소 거절(`cancel_failure_code`)의 관리자 재시도
 - [ ] notification: 발송, 클레임 결과 알림, 인앱 알림
 - [ ] 판매자 주문·배송·클레임 화면, 구매자 배송 조회·클레임 화면

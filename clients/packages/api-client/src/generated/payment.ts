@@ -60,7 +60,7 @@ export interface components {
             /** Format: uuid */
             orderId?: string;
             /** @enum {string} */
-            status?: "READY" | "IN_PROGRESS" | "APPROVED" | "FAILED" | "CANCELLED";
+            status?: "READY" | "IN_PROGRESS" | "APPROVED" | "PARTIALLY_CANCELLED" | "FAILED" | "CANCELLED";
             /** Format: int64 */
             amount?: number;
         };

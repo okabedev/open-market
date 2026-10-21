@@ -183,7 +183,7 @@ sequenceDiagram
 | 결제 보상 취소(취소된 주문의 승인 결제) | payment | 1분 |
 | 배송 시뮬레이터(발송 → 배송 중 → 배송 완료) | fulfillment | 1분 |
 | 자동 구매확정(배송 완료 + 7일) | fulfillment | 1시간 |
-| 환불(토스 부분취소) | payment | 1분 |
+| 환불(토스 부분취소, `RefundJob`) | payment | 1분 |
 | 주간 정산 확정 | settlement | 매주 월요일 03:00 |
 | 미첨부 파일 삭제 | file | 1시간 |
 | 발행된 outbox 행(7일), `processed_event`(30일) 정리 | 각 서비스(`common-messaging`) | 매일 04:00 |

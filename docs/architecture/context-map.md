@@ -126,7 +126,7 @@ flowchart LR
 | `PaymentFailed` | 승인 실패 | orderId, paymentId, code(토스 오류 코드) | order, notification |
 | `PaymentCancelled` | 토스 전액 취소 성공(보상 포함) | orderId, paymentId, amount(취소 금액), reason, cancelledAt | notification |
 | `RefundCompleted` | 환불(부분취소) 성공. 금액 0이면 토스를 부르지 않고 낸다 | orderId, refundId, claimId, sellerOrderId, amount, refundedAt | fulfillment, notification |
-| `RefundFailed` | 토스가 환불을 거절했다(일시 오류는 다시 시도하고 내지 않는다) | orderId, refundId, claimId, sellerOrderId, code(토스 오류 코드) | fulfillment, notification(관리자) |
+| `RefundFailed` | 토스가 환불을 거절했거나 환불할 수 없다(일시 오류는 다시 시도하고 내지 않는다) | orderId, refundId, claimId, sellerOrderId, code(토스 오류 코드, 또는 `PAYMENT_NOT_REFUNDABLE`, `REFUND_AMOUNT_EXCEEDED`) | fulfillment, notification(관리자) |
 
 - 키는 orderId다. 한 주문의 결제 이벤트는 순서대로 온다.
 - JSON 예시는 `services/core/payment/src/test/resources/events/`에 있다. 처리 규칙은 [payment.md](payment.md).

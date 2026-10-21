@@ -144,6 +144,54 @@ public class TossPaymentGatewayAdapter implements PaymentGatewayPort {
         }
     }
 
+    @Override
+    public RefundResult refund(
+            String paymentKey, long amount, String reason, String idempotencyKey) {
+        try {
+            RefundResult result =
+                    client.post()
+                            .uri("/v1/payments/{paymentKey}/cancel", paymentKey)
+                            .header("Idempotency-Key", idempotencyKey)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .body(Map.of("cancelReason", reason, "cancelAmount", amount))
+                            .exchange(
+                                    (request, response) -> {
+                                        HttpStatusCode status = response.getStatusCode();
+                                        if (status.is2xxSuccessful()) {
+                                            return refunded(response.bodyTo(TossPayment.class));
+                                        }
+                                        return refundError(
+                                                status, response.bodyTo(TossError.class));
+                                    });
+            return result == null ? new Unknown("EMPTY_RESPONSE") : result;
+        } catch (ResourceAccessException e) {
+            return new Unknown(ioReason(e.getCause()));
+        }
+    }
+
+    /** 부분취소 응답. 남은 금액은 payment가 센다(docs/architecture/payment.md "환불 작업"). */
+    private static RefundResult refunded(@Nullable TossPayment payment) {
+        if (payment == null || payment.status() == null) {
+            return new Unknown("INVALID_RESPONSE");
+        }
+        List<TossCancel> cancels = payment.cancels();
+        String transactionKey =
+                cancels == null || cancels.isEmpty() ? null : cancels.getLast().transactionKey();
+        return new Refunded(payment.status(), transactionKey);
+    }
+
+    /** 부분취소 오류. 일시적인 오류는 다시 시도한다. 이미 전액 취소된 결제는 환불할 수 없으므로 거절로 본다. */
+    private static RefundResult refundError(HttpStatusCode status, @Nullable TossError error) {
+        String code = code(status, error);
+        if (status.is5xxServerError()
+                || error == null
+                || error.code() == null
+                || RETRYABLE_CANCEL_ERRORS.contains(code)) {
+            return new Unknown(code);
+        }
+        return new CancelRejected(code, message(error));
+    }
+
     /** 전액 취소인지는 상태가 아니라 남은 금액으로 정한다(ADR 0018). */
     private static CancelResult cancelled(@Nullable TossPayment payment) {
         if (payment == null || payment.status() == null || payment.balanceAmount() == null) {

@@ -19,11 +19,17 @@ public interface PaymentGatewayPort {
     /** 승인된 결제를 전액 취소한다. 같은 {@code idempotencyKey}로 다시 보내도 토스가 한 번만 처리한다. */
     CancelResult cancel(String paymentKey, String reason, String idempotencyKey);
 
+    /** 승인된 결제의 일부를 취소한다(환불). 같은 {@code idempotencyKey}로 다시 보내도 토스가 한 번만 처리한다. */
+    RefundResult refund(String paymentKey, long amount, String reason, String idempotencyKey);
+
     /** 토스 응답의 해석. */
     sealed interface Result permits Approved, Rejected, Pending, Unknown {}
 
     /** 토스 취소 응답의 해석. */
     sealed interface CancelResult permits Cancelled, CancelRejected, Unknown {}
+
+    /** 토스 부분취소(환불) 응답의 해석. */
+    sealed interface RefundResult permits Refunded, CancelRejected, Unknown {}
 
     /**
      * 승인됐다.
@@ -61,7 +67,7 @@ public interface PaymentGatewayPort {
      *
      * @param reason 토스 오류 코드, 또는 {@code TIMEOUT}, {@code CONNECTION_FAILED}, {@code HTTP_<상태>}
      */
-    record Unknown(String reason) implements Result, CancelResult {}
+    record Unknown(String reason) implements Result, CancelResult, RefundResult {}
 
     /**
      * 전액 취소됐다(남은 금액이 0이다). 이미 취소된 결제였어도 같다.
@@ -72,9 +78,17 @@ public interface PaymentGatewayPort {
     record Cancelled(String status, @Nullable String transactionKey) implements CancelResult {}
 
     /**
-     * 토스가 취소를 거절했다. 다시 보내도 결과가 같다.
+     * 토스가 취소(전액, 부분)를 거절했다. 다시 보내도 결과가 같다.
      *
      * @param code 토스 오류 코드
      */
-    record CancelRejected(String code, String message) implements CancelResult {}
+    record CancelRejected(String code, String message) implements CancelResult, RefundResult {}
+
+    /**
+     * 부분취소됐다.
+     *
+     * @param status 토스 결제 상태(원장에 남긴다)
+     * @param transactionKey 이 취소의 거래 키
+     */
+    record Refunded(String status, @Nullable String transactionKey) implements RefundResult {}
 }

@@ -31,6 +31,7 @@ export TOSS_SDK_URL=http://localhost:8090/v2/standard
 export ORDER_PAYMENT_TIMEOUT=40s
 export ORDER_EXPIRY_INTERVAL=2s
 export PAYMENT_CANCEL_INTERVAL=2s
+export PAYMENT_REFUND_INTERVAL=2s
 # 배송 시뮬레이터(config-repo 기본값은 1분 주기, 발송 10분 뒤 배송 중, 그 1시간 뒤 배송 완료). 발송 후 몇 초 안에 배송 완료가 되게 줄인다.
 export FULFILLMENT_SIMULATOR_INTERVAL=2s
 export FULFILLMENT_IN_TRANSIT_AFTER=3s

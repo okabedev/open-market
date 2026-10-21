@@ -22,3 +22,5 @@ openmarket:
     reconcile-after: 1m
     # 보상 취소 작업(PaymentCancelJob) 주기. 취소된 주문의 승인 결제를 토스에서 전액 취소한다. E2E만 환경 변수로 짧게 준다(infra/e2e/run.sh).
     cancel-interval: ${PAYMENT_CANCEL_INTERVAL:1m}
+    # 환불 작업(RefundJob) 주기. 클레임 환불의 토스 부분취소를 부른다. E2E만 환경 변수로 짧게 준다(infra/e2e/run.sh).
+    refund-interval: ${PAYMENT_REFUND_INTERVAL:1m}

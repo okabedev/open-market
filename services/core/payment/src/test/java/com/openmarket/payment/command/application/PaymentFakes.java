@@ -5,6 +5,9 @@ import com.openmarket.payment.command.domain.Payment;
 import com.openmarket.payment.command.domain.PaymentLedgerEntry;
 import com.openmarket.payment.command.domain.PaymentLedgerRepository;
 import com.openmarket.payment.command.domain.PaymentRepository;
+import com.openmarket.payment.command.domain.Refund;
+import com.openmarket.payment.command.domain.RefundRepository;
+import com.openmarket.payment.command.domain.RefundStatus;
 import java.time.Instant;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -55,6 +58,43 @@ final class PaymentFakes {
         }
     }
 
+    static final class Refunds implements RefundRepository {
+        final Map<UUID, Refund> rows = new LinkedHashMap<>();
+
+        @Override
+        public Refund save(Refund refund) {
+            if (!rows.containsKey(refund.id()) && existsByClaimId(refund.claimId())) {
+                throw new IllegalStateException("클레임당 하나다(유일 인덱스)");
+            }
+            rows.put(refund.id(), refund);
+            return refund;
+        }
+
+        @Override
+        public boolean existsByClaimId(UUID claimId) {
+            return rows.values().stream().anyMatch(r -> r.claimId().equals(claimId));
+        }
+
+        @Override
+        public Optional<Refund> findForUpdateById(UUID id) {
+            return Optional.ofNullable(rows.get(id));
+        }
+
+        @Override
+        public long sumRequestedAmountByPaymentId(UUID paymentId) {
+            return rows.values().stream()
+                    .filter(r -> paymentId.equals(r.paymentId()))
+                    .filter(r -> r.status() == RefundStatus.REQUESTED)
+                    .mapToLong(Refund::amount)
+                    .sum();
+        }
+
+        @Override
+        public List<UUID> findRequestedIds(int limit) {
+            throw new UnsupportedOperationException("통합 테스트에서 확인한다");
+        }
+    }
+
     static final class Ledger implements PaymentLedgerRepository {
         final List<PaymentLedgerEntry> entries = new ArrayList<>();
 
@@ -70,6 +110,7 @@ final class PaymentFakes {
         final Deque<Result> confirmResults = new ArrayDeque<>();
         final Deque<Result> findResults = new ArrayDeque<>();
         final Deque<CancelResult> cancelResults = new ArrayDeque<>();
+        final Deque<RefundResult> refundResults = new ArrayDeque<>();
         final List<String> calls = new ArrayList<>();
 
         /** 승인 요청을 받는 동안 일어날 일(예: 주문 취소). 응답보다 먼저 반영된다. */
@@ -86,6 +127,13 @@ final class PaymentFakes {
         public CancelResult cancel(String paymentKey, String reason, String idempotencyKey) {
             calls.add("cancel " + paymentKey + " " + idempotencyKey);
             return cancelResults.removeFirst();
+        }
+
+        @Override
+        public RefundResult refund(
+                String paymentKey, long amount, String reason, String idempotencyKey) {
+            calls.add("refund " + paymentKey + " " + amount + " " + idempotencyKey);
+            return refundResults.removeFirst();
         }
 
         @Override

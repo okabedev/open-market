@@ -1,6 +1,6 @@
 # 결제 (payment 서비스)
 
-토스페이먼츠 결제 승인, 결제 전 취소된 주문의 보상 취소, 결제 원장을 갖는다(PAY-1, PAY-3, PAY-4). 토스 연동 방식은 [ADR 0018](../adr/0018-toss-payments-integration.md), 주문 흐름 전체(Saga)는 [messaging.md](messaging.md) "주문·결제 Saga"에 있다. 부분취소 환불(PAY-2)은 M4에서 이 문서에 더한다.
+토스페이먼츠 결제 승인, 결제 전 취소된 주문의 보상 취소, 클레임 환불(부분취소), 결제 원장을 갖는다(PAY-1~4). 토스 연동 방식은 [ADR 0018](../adr/0018-toss-payments-integration.md), 주문 흐름 전체(Saga)는 [messaging.md](messaging.md) "주문·결제 Saga"에 있다.
 
 ## 결제(`Payment`)
 주문 하나당 하나다. 주문 ID, 구매자 ID, 결제 금액, 주문명을 주문에서 받아 고정한다. 금액은 이후 바뀌지 않는다.
@@ -9,9 +9,10 @@
 |---|---|---|
 | `READY` | 결제를 기다린다 | `IN_PROGRESS`, `CANCELLED` |
 | `IN_PROGRESS` | 토스에 승인을 요청했고 결과를 기다린다 | `APPROVED`, `FAILED`, `CANCELLED`(취소 요청 뒤 거절) |
-| `APPROVED` | 승인됐다 | `CANCELLED`(보상 취소) |
+| `APPROVED` | 승인됐다 | `PARTIALLY_CANCELLED`(환불), `CANCELLED`(보상 취소, 환불로 남은 금액이 0) |
+| `PARTIALLY_CANCELLED` | 환불로 일부를 돌려줬다. 남은 금액이 있다 | `CANCELLED`(환불로 남은 금액이 0) |
 | `FAILED` | 토스가 승인을 거절했다. 같은 주문으로 다시 승인할 수 있다 | `IN_PROGRESS`, `CANCELLED` |
-| `CANCELLED` | 주문이 결제 전에 취소돼 결제를 무효로 했거나, 승인된 결제를 토스에서 전액 취소했다 | |
+| `CANCELLED` | 주문이 결제 전에 취소돼 결제를 무효로 했거나, 승인된 결제를 토스에서 전액 취소했거나, 환불로 남은 금액이 0이 됐다 | |
 
 - 상태를 바꿀 때는 결제 행을 비관적 락(`SELECT … FOR UPDATE`)으로 잡는다. 같은 주문의 승인, 재조회, 취소가 겹쳐도 한 번에 하나만 바꾼다.
 - 토스 호출은 락과 트랜잭션 밖에서 한다. 승인 요청 전에 `IN_PROGRESS`로 커밋하고, 응답을 받으면 다시 잠그고 반영한다. 그사이 재조회 작업이 먼저 반영했으면 늦게 온 결과는 버린다(승인 시도 번호로 가린다).
@@ -93,7 +94,7 @@ order가 결제 전에 주문을 취소하면(`OrderCancelled`: 재고 부족, �
 
 ### 취소 작업(`PaymentCancelJob`)
 - 1분마다(`openmarket.payment.cancel-interval`) 돌고 ShedLock(`payment-cancel`)으로 한 인스턴스에서만 돈다. 취소 요청이 있고 토스가 거절한 적 없는 `APPROVED` 결제를 오래된 요청 순으로 100건씩 읽는다.
-- 결제마다 토스 `POST /v1/payments/{paymentKey}/cancel`(전액, `cancelReason` "주문 취소")을 트랜잭션 밖에서 부르고, 원장에 남긴 뒤 결제를 다시 잠가 반영한다. 토스 `Idempotency-Key`는 `<결제 ID>-cancel`이다. 전액 취소는 결제마다 한 번이라 결제 ID로 만든다(부분취소 환불은 M4에서 환불 ID로 만든다).
+- 결제마다 토스 `POST /v1/payments/{paymentKey}/cancel`(전액, `cancelReason` "주문 취소")을 트랜잭션 밖에서 부르고, 원장에 남긴 뒤 결제를 다시 잠가 반영한다. 토스 `Idempotency-Key`는 `<결제 ID>-cancel`이다. 전액 취소는 결제마다 한 번이라 결제 ID로 만든다(환불은 환불 ID로 만든다, 아래 "환불").
 - 리스너에서 바로 부르지 않고 작업으로 미룬 것은, 토스 호출을 리스너 트랜잭션 밖에 두고 실패하면 같은 경로로 다시 시도하기 위해서다. 보상 취소는 드문 경로라 최대 1분 늦어도 된다. E2E는 환경 변수 `PAYMENT_CANCEL_INTERVAL`로 줄인다([dev-setup.md](../dev-setup.md) "E2E").
 
 | 토스 응답 | 처리 |
@@ -102,6 +103,39 @@ order가 결제 전에 주문을 취소하면(`OrderCancelled`: 재고 부족, �
 | 400 `ALREADY_CANCELED_PAYMENT` | 이미 취소됐다. 위와 같다 |
 | 5xx, 연결 실패, 타임아웃, 400 `PROVIDER_ERROR`, 403 `FORBIDDEN_CONSECUTIVE_REQUEST`, 409 `IDEMPOTENT_REQUEST_PROCESSING` | 정하지 못했다. `APPROVED`로 두고 다음 주기에 같은 멱등 키로 다시 부른다 |
 | 그 밖의 4xx(`NOT_CANCELABLE_PAYMENT` 등), 200인데 남은 금액이 있다(`BALANCE_REMAINING`) | 토스가 취소를 거절했다. 실패 코드(`cancel_failure_code`)를 남기고 `APPROVED`로 둔다. 자동으로 다시 부르지 않고 ERROR 로그를 남긴다. 관리자가 환불 실패(`RefundFailed`)와 같은 화면에서 다시 시도한다(M4, 2026-10-21 결정. API는 구현할 때 이 문서에 더한다) |
+
+## 환불(`Refund`, PAY-2)
+결제 후 클레임(발송 전 취소, 반품)이 승인되면 하위 주문 단위로 토스 부분취소를 한다. 클레임과 환불 금액은 fulfillment가 정한다([fulfillment.md](fulfillment.md) "환불 금액"). 흐름 전체는 [messaging.md](messaging.md) "클레임 환불 흐름"에 있다.
+
+| 상태 | 뜻 |
+|---|---|
+| `REQUESTED` | 환불 작업이 토스 부분취소를 부를 차례다 |
+| `COMPLETED` | 토스가 부분취소했다. 금액이 0이면 토스를 부르지 않고 바로 이 상태다 |
+| `FAILED` | 토스가 거절했거나 환불할 수 없다. 실패 코드를 남긴다. 관리자 재시도는 M4의 다음 PR에서 더한다 |
+
+### 환불 요청
+`fulfillment.claim`의 `ClaimApproved`를 받는다. 교환(`EXCHANGE`)은 환불이 없으므로 넘긴다. 리스너는 처리 기록으로 거르고, 같은 클레임의 환불이 이미 있으면 아무것도 하지 않는다(클레임 ID 유일 인덱스).
+1. 주문의 결제를 잠근다.
+2. 확인한다. 어기면 `FAILED`로 만들고 `RefundFailed`를 낸다(토스를 부르지 않는다).
+   | 확인 | 실패 코드 |
+   |---|---|
+   | 결제가 있고 `APPROVED` 또는 `PARTIALLY_CANCELLED`다 | `PAYMENT_NOT_REFUNDABLE` |
+   | 환불 금액이 남은 금액(결제 금액 − 환불한 금액 − 진행 중인 환불 금액) 이하다 | `REFUND_AMOUNT_EXCEEDED` |
+3. 금액이 0이면 `COMPLETED`로 만들고 `RefundCompleted`를 낸다. 아니면 `REQUESTED`다.
+
+### 환불 작업(`RefundJob`)
+- `openmarket.payment.refund-interval`(기본 1분)마다 돌고 ShedLock(`payment-refund`)으로 한 인스턴스에서만 돈다. `REQUESTED` 환불을 오래된 순으로 100건씩 처리한다. E2E는 `PAYMENT_REFUND_INTERVAL`로 줄인다.
+- 환불마다 토스 `POST /v1/payments/{paymentKey}/cancel`(`cancelAmount`, `cancelReason` "클레임 환불")을 트랜잭션 밖에서 부르고, 원장에 남긴 뒤 결제와 환불을 다시 잠가 반영한다. 토스 `Idempotency-Key`는 `<환불 ID>-<시도 번호>`다(관리자 재시도가 시도 번호를 올린다).
+- 같은 결제의 환불은 결제 행을 먼저 잠그고 반영하므로 환불한 금액이 어긋나지 않는다.
+
+| 토스 응답 | 처리 |
+|---|---|
+| 200 | `COMPLETED` + `RefundCompleted`. 결제의 환불한 금액을 더하고, 남은 금액이 0이면 결제를 `CANCELLED`, 아니면 `PARTIALLY_CANCELLED`로 바꾼다 |
+| 5xx, 연결 실패, 타임아웃, 400 `PROVIDER_ERROR`, 403 `FORBIDDEN_CONSECUTIVE_REQUEST`, 409 `IDEMPOTENT_REQUEST_PROCESSING` | 정하지 못했다. `REQUESTED`로 두고 다음 주기에 같은 멱등 키로 다시 부른다 |
+| 그 밖의 4xx(`NOT_CANCELABLE_AMOUNT`, `ALREADY_CANCELED_PAYMENT` 등) | `FAILED` + `RefundFailed`. 실패 코드를 남기고 ERROR 로그를 남긴다 |
+
+- 남은 금액은 토스 응답이 아니라 payment가 센 금액으로 정한다. 토스는 전액을 부분취소로 모두 돌려줘도 상태를 `PARTIAL_CANCELED`로 둔다(R9).
+- 환불은 `PaymentCancelled`를 내지 않는다. 결제가 환불로 `CANCELLED`가 돼도 알림은 `RefundCompleted`로 간다.
 
 ## 토스 연동(`TossPaymentGatewayAdapter`)
 - 토스 API 형식은 `infra` 어댑터 밖으로 내보내지 않는다(ACL). `command.application`의 `PaymentGatewayPort`는 승인·조회 결과로 승인됨, 거절됨, 미정, 알 수 없음을, 취소 결과로 취소됨, 취소 거절, 알 수 없음을 안다.
@@ -113,11 +147,11 @@ order가 결제 전에 주문을 취소하면(`OrderCancelled`: 재고 부족, �
 토스 요청 하나마다 한 줄을 추가한다. 고치거나 지우지 않는다.
 | 필드 | 내용 |
 |---|---|
-| `kind` | `CONFIRM`(승인), `QUERY`(조회), `CANCEL`(전액 취소) |
+| `kind` | `CONFIRM`(승인), `QUERY`(조회), `CANCEL`(전액 취소), `REFUND`(부분취소 환불) |
 | `outcome` | `APPROVED`, `REJECTED`, `PENDING`, `UNKNOWN`, `CANCELLED` |
 | `pg_code` | 토스 오류 코드, 또는 토스 결제 상태. 응답이 없으면 `TIMEOUT`, `CONNECTION_FAILED` |
 | `payment_key`, `transaction_key` | 토스 결제 키, 거래 키(승인·조회는 `lastTransactionKey`, 취소는 마지막 `cancels[].transactionKey`) |
-| `amount` | 승인된 금액(`totalAmount`). 취소는 비워 둔다(전액이다) |
+| `amount` | 승인된 금액(`totalAmount`), 환불한 금액. 전액 취소는 비워 둔다(전액이다) |
 | `occurred_at` | 응답을 받은(실패한) 시각 |
 
 - 응답 원문은 저장하지 않는다. 카드 번호 같은 결제수단 상세가 들어 있다.
@@ -129,6 +163,8 @@ order가 결제 전에 주문을 취소하면(`OrderCancelled`: 재고 부족, �
 | `PaymentApproved` | 승인 응답이나 조회로 승인을 확인했다 |
 | `PaymentFailed` | 토스가 거절했거나 조회로 실패를 확인했다. 취소 요청이 있는 결제면 내지 않는다 |
 | `PaymentCancelled` | 승인된 결제를 토스에서 전액 취소했다(보상 취소). 돈이 빠져나가지 않은 결제를 무효로 할 때는 내지 않는다 |
+| `RefundCompleted` | 환불이 끝났다(토스 부분취소, 또는 금액 0) |
+| `RefundFailed` | 토스가 환불을 거절했거나 환불할 수 없다 |
 
 ## API
 gateway 경로는 `/api/payment` + 아래 경로다.
