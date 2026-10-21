@@ -46,7 +46,7 @@
 | 하위 주문 | `SellerOrder` | order | 주문을 판매자별로 나눈 단위. 배송, 클레임, 정산의 기준이다 |
 | 주문 항목 | `OrderLine` | order | SKU 하나와 수량, 주문 당시 가격 스냅샷 |
 | 취소 사유 | `CancelReason` | order | 결제 전 주문 취소의 이유. `STOCK_UNAVAILABLE`(재고 예약 실패), `PAYMENT_TIMEOUT`(주문 만료), `BUYER_CANCELLED`(구매자 취소) |
-| 주문 만료 | `Order.expire()` | order | 결제 대기 15분 초과. 취소 사유 `PAYMENT_TIMEOUT`으로 `CANCELLED`가 된다 |
+| 주문 만료 | `OrderExpiryJob` | order | 결제 기한(주문 후 15분) 안에 결제하지 않은 주문. 취소 사유 `PAYMENT_TIMEOUT`으로 `CANCELLED`가 된다 |
 | 결제 | `Payment` | payment | 주문 하나당 하나. 상태: `READY` → `IN_PROGRESS`(토스 승인 요청 중) → `APPROVED` → `PARTIALLY_CANCELLED` 또는 `CANCELLED`. 승인 실패 시 `FAILED`, 결제 전 주문 취소 시 `READY` → `CANCELLED` |
 | 결제 키 | `paymentKey` | payment | 토스페이먼츠가 발급한 결제 식별자 |
 | 결제 원장 | `PaymentLedgerEntry` | payment | 승인, 취소 요청과 PG 응답의 추가 전용 기록 |

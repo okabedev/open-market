@@ -141,7 +141,8 @@ order는 `OrderPlaced`를 낸 뒤, 쿠폰이 있으면 `StockReserved`와 `Coupo
 | 상황 | 처리 |
 |---|---|
 | 재고 부족(`StockReservationFailed`) 또는 쿠폰 사용 불가(`CouponReservationFailed`) | order가 `CANCELLED`로 바꾸고 `OrderCancelled`를 낸다. catalog와 promotion은 받은 예약이 있으면 푼다. 예약이 없으면 아무것도 하지 않는다 |
-| 결제 대기 15분 초과 | order의 스케줄러가 `Order.expire()`를 호출한다. 취소 사유 `PAYMENT_TIMEOUT`으로 `OrderCancelled`를 낸다 |
+| 결제 기한(주문 후 15분) 초과 | order의 만료 작업이 결제 전 주문을 취소 사유 `PAYMENT_TIMEOUT`으로 취소하고 `OrderCancelled`를 낸다([order.md](order.md) "만료와 결제 전 취소") |
+| 결제 전 구매자 취소 | order가 취소 사유 `BUYER_CANCELLED`로 취소하고 `OrderCancelled`를 낸다. 이후 처리는 만료와 같다 |
 | `OrderCancelled` 수신 시 payment가 `READY` | 결제를 `CANCELLED`로 바꾼다. 이후 승인 요청은 거부된다 |
 | `OrderCancelled` 수신 시 payment가 `IN_PROGRESS` 또는 `APPROVED` | 취소 요청 표시를 남기고, 승인이 끝나면 토스 전액 취소를 호출한다. 결과로 `PaymentCancelled`를 낸다(PAY-3). order는 이미 `CANCELLED`라 `PaymentApproved`를 무시한다 |
 | 토스 승인 응답 타임아웃 | 승인을 실패로 보지 않는다. 결제 조회 API로 상태를 확인한다. 확인이 안 되면 `IN_PROGRESS`로 두고 재조회 작업이 처리한다 |

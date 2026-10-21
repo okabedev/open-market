@@ -134,7 +134,7 @@
   - [x] 골격, 장바구니(ORD-1, [order.md](architecture/order.md))
   - [x] 주문 생성(가격 재확인, 멱등), 하위 주문, 예약 결과 반영, 구매자 주문 상세
   - [x] 구매자 주문 목록, 판매자 하위 주문 조회(ORD-3, ORD-4)
-  - [ ] 만료, 결제 전 구매자 취소
+  - [x] 만료, 결제 전 구매자 취소
 - [ ] catalog
   - [x] SKU 일괄 조회(order용 내부 API)
   - [x] 재고 예약·확정·해제, 동시성(CAT-4, [catalog.md](architecture/catalog.md) "재고 예약")
