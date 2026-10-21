@@ -44,8 +44,11 @@ public record OrderPaid(
                                                         .map(
                                                                 line ->
                                                                         new Line(
+                                                                                line.id(),
                                                                                 line.skuId(),
                                                                                 line.productId(),
+                                                                                line.productName(),
+                                                                                line.optionValues(),
                                                                                 line.categoryId(),
                                                                                 line.unitPrice(),
                                                                                 line.quantity(),
@@ -70,11 +73,16 @@ public record OrderPaid(
     /**
      * 주문 항목. 주문 당시 스냅샷이다.
      *
+     * @param orderLineId 주문 항목 ID. 구매확정·리뷰가 주문 항목 단위로 쓴다
+     * @param optionValues 옵션 값. 옵션 이름 순서대로, 옵션이 없으면 빈 목록
      * @param unitPrice 개당 가격(원)
      */
     public record Line(
+            UUID orderLineId,
             UUID skuId,
             UUID productId,
+            String productName,
+            List<String> optionValues,
             UUID categoryId,
             long unitPrice,
             int quantity,

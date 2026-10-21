@@ -12,7 +12,9 @@ M4 시작(2026-10-21)에 정한 규칙이다. API와 화면은 각 PR에서 이 
 - 시간 기준값(시뮬레이터 지연, 자동 구매확정 기한, 작업 주기)은 설정이다. E2E는 환경 변수로 줄인다(결제 기한과 같은 방식).
 
 ## 배송(`Shipment`)
-`order.order`의 `OrderPaid`를 받아 하위 주문마다 하나 만든다. 하위 주문 ID, 주문 ID, 판매자, 구매자, 금액, 항목(주문 항목 ID, SKU, 상품, 상품명, 옵션, 수량, 금액), 배송지를 이벤트에서 받아 고정한다. 교환 재발송은 같은 하위 주문에 새 배송을 만든다.
+`order.order`의 `OrderPaid`를 받아 하위 주문마다 하나 만든다. 하위 주문 ID, 주문 ID, 판매자, 구매자, 금액, 결제 시각, 항목(주문 항목 ID, SKU, 상품, 상품명, 옵션, 카테고리, 개당 가격, 수량, 금액)을 이벤트에서 받아 고정한다. 교환 재발송은 같은 하위 주문에 새 배송을 만든다.
+- 배송지는 저장하지 않는다. 판매자는 order의 하위 주문 상세에서 본다([order.md](order.md) "조회"). 구매자 개인정보를 한 곳에만 둔다.
+- 첫 배송(교환 재발송이 아닌 것)은 하위 주문마다 하나다(부분 유일 인덱스 `shipment_first_idx`).
 
 | 상태 | 뜻 | 바뀌는 때 |
 |---|---|---|
@@ -78,6 +80,18 @@ M4 시작(2026-10-21)에 정한 규칙이다. API와 화면은 각 PR에서 이 
 
 | 받는 이벤트 | 처리 |
 |---|---|
-| `OrderPaid`(order.order) | 하위 주문마다 배송 `READY`. 하위 주문의 배송이 이미 있으면 넘긴다 |
+| `OrderPaid`(order.order) | 하위 주문마다 배송 `READY`. 하위 주문의 첫 배송이 이미 있으면 넘긴다. 이벤트는 내지 않는다 |
 | `RefundCompleted`(payment.payment) | 클레임 `APPROVED` → `COMPLETED` + `ClaimCompleted` |
 | `RefundFailed`(payment.payment) | 클레임은 그대로 둔다. 실패 코드를 기록한다 |
+
+- 리스너는 처리 기록(`processed_event`)으로 같은 이벤트를 한 번만 처리한다. 리스너 이름은 `fulfillment.<이벤트>`다(예: `fulfillment.order-paid`).
+- 항목에 주문 항목 ID·상품명·옵션이 없는 M4 이전 형식의 `OrderPaid`는 배송을 만들 수 없어 영구 오류(`InvalidEventException`)로 바로 DLT에 보낸다. fulfillment 소비자 그룹은 `order.order`를 처음부터 읽으므로, M4 전에 결제된 개발용 스택의 주문이 여기에 걸린다(2026-10-21 확인). 빈 볼륨으로 띄운 스택에는 없다.
+
+## API
+gateway 경로는 `/api/fulfillment` + 아래 경로다. 판매자 경로는 `SELLER` 역할이 있어야 하고 주체는 토큰의 `sub`(= sellerId)다.
+| 메서드 | 경로 | 설명 |
+|---|---|---|
+| GET | `/v1/seller/seller-orders/{sellerOrderId}` | 본인 하위 주문의 배송 진행. 진행 상태(마지막 배송의 상태)와 배송 목록(배송 ID, 상태, 만든 시각. 만든 순서)이다. 다른 판매자의 것이거나 배송이 아직 없으면 404 `FULFILLMENT_NOT_FOUND` |
+
+- 하위 주문 목록, 항목, 배송지는 order의 판매자 하위 주문 조회에 있다([order.md](order.md) "조회"). 이 API는 처리 화면이 배송 상태와 할 수 있는 동작을 정하는 데 쓴다.
+- 배송은 `OrderPaid`를 받아 만들므로 결제 직후 잠깐 없다. 화면은 404인 동안 "배송 준비 중"으로 보여 준다.

@@ -88,6 +88,10 @@ public class OrderLine {
         return index < values.size() ? values.get(index) : null;
     }
 
+    public UUID id() {
+        return id;
+    }
+
     public UUID skuId() {
         return skuId;
     }

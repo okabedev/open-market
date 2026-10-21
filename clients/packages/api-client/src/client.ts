@@ -2,6 +2,7 @@ import createClient, { type Client } from "openapi-fetch";
 import type { paths as AuthPaths } from "./generated/auth";
 import type { paths as CatalogPaths } from "./generated/catalog";
 import type { paths as FilePaths } from "./generated/file";
+import type { paths as FulfillmentPaths } from "./generated/fulfillment";
 import type { paths as MemberPaths } from "./generated/member";
 import type { paths as OrderPaths } from "./generated/order";
 import type { paths as PaymentPaths } from "./generated/payment";
@@ -12,6 +13,7 @@ type ServicePaths = {
   auth: AuthPaths;
   catalog: CatalogPaths;
   file: FilePaths;
+  fulfillment: FulfillmentPaths;
   member: MemberPaths;
   order: OrderPaths;
   payment: PaymentPaths;

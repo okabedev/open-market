@@ -11,8 +11,11 @@
       "amount": 19900,
       "lines": [
         {
+          "orderLineId": "019a2c3d-4e60-7b71-8c2d-3e4f5a6b7d01",
           "skuId": "019a2b10-0000-7000-8000-0000000000b1",
           "productId": "019a2b10-0000-7000-8000-0000000000a1",
+          "productName": "반팔 티셔츠",
+          "optionValues": ["화이트", "M"],
           "categoryId": "0199f000-0000-7000-8000-000000000101",
           "unitPrice": 19900,
           "quantity": 1,
@@ -26,8 +29,11 @@
       "amount": 39800,
       "lines": [
         {
+          "orderLineId": "019a2c3d-4e61-7c82-8d3e-4f5a6b7c8e02",
           "skuId": "019a2b10-0000-7000-8000-0000000000b2",
           "productId": "019a2b10-0000-7000-8000-0000000000a2",
+          "productName": "면 양말 3켤레",
+          "optionValues": [],
           "categoryId": "0199f000-0000-7000-8000-000000000102",
           "unitPrice": 19900,
           "quantity": 2,

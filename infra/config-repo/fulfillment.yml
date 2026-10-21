@@ -1,0 +1,9 @@
+# fulfillment 실행 설정. 공통 설정은 application.yml에 있다. 설계는 docs/architecture/fulfillment.md.
+server:
+  port: 8105
+spring:
+  datasource:
+    password: ${FULFILLMENT_DB_PASSWORD}
+  kafka:
+    consumer:
+      group-id: fulfillment
