@@ -73,6 +73,7 @@ export default async function PayPage({
               {failure ? <Alert variant="destructive">{failure}</Alert> : null}
               <PaymentWidget
                 clientKey={process.env.TOSS_CLIENT_KEY ?? ""}
+                sdkUrl={process.env.TOSS_SDK_URL}
                 orderId={orderId}
                 orderName={data.orderName ?? ""}
                 amount={data.amount ?? 0}

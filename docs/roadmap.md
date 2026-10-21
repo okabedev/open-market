@@ -151,6 +151,7 @@
   - [x] shop 장바구니, 상품 상세에서 담기
   - [x] shop 주문서, 결제(토스 결제위젯, BFF 승인), 완료
 - [ ] 마일스톤 E2E `infra/e2e/run.sh m3`(가짜 PG), 메모리 전체 재측정(R6)
+  - [x] 가짜 PG(`infra/fake-pg`, `e2e` profile)와 첫 시나리오 `m3-order-payment`(장바구니 주문 → 결제 인증 취소 → 결제 완료)
 - 관련 요구사항: ORD-1~4, PAY-1, PAY-3, PAY-4, NFR-1~4, ACC-4(진행 중 주문)
 - 범위 결정(2026-10-20)
   - 쿠폰은 M5다. M3 주문은 쿠폰 없이 재고 예약 결과만 기다리고, `OrderPlaced`의 발급 쿠폰 ID 목록은 비어 있다.

@@ -91,6 +91,7 @@ flowchart LR
 | `search` | Elasticsearch(+ nori 플러그인 커스텀 이미지, [ADR 0016](../adr/0016-elasticsearch-nori.md)) |
 | `obs` | OpenTelemetry Collector, Prometheus, Tempo, Loki, Grafana |
 | `apps` | discovery, config, gateway, auth를 뺀 Spring 서비스(빌드 이미지) |
+| `e2e` | 가짜 PG(`infra/fake-pg`, [ADR 0018](../adr/0018-toss-payments-integration.md)). 마일스톤 E2E(`infra/e2e/run.sh`)만 띄운다 |
 
 메모리 예산(WSL 할당 기준)과 profile 조합의 실측은 [risks.md](risks.md)에서 관리한다.
 
