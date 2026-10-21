@@ -218,6 +218,19 @@ public class OrderQueryDao {
                         Objects.requireNonNull(row.get(order.placedAt))));
     }
 
+    /** 구매자의 주문 중 상태가 {@code statuses} 중 하나인 것이 있는지. */
+    public boolean existsForBuyer(UUID buyerId, Collection<OrderStatus> statuses) {
+        return query.selectOne()
+                        .from(order)
+                        .where(
+                                order.buyerId.eq(buyerId),
+                                order.status
+                                        .stringValue()
+                                        .in(statuses.stream().map(OrderStatus::name).toList()))
+                        .fetchFirst()
+                != null;
+    }
+
     private static Predicate sellerVisible(UUID sellerId, Collection<OrderStatus> statuses) {
         return sellerOrder
                 .sellerId

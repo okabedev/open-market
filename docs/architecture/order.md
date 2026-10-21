@@ -115,6 +115,15 @@ order는 `catalog.stock`에서 예약 결과를 받는다([messaging.md](messagi
 - 판매자 목록은 주문 시각 순이다. 결제 시각은 결제 승인 PR에서 더하고, 그때 정렬을 다시 본다.
 - 하위 주문의 진행 상태(배송 등)는 M4 fulfillment가 생기면 더한다. M3 하위 주문은 주문 상태를 따른다. 하위 주문 처리(발주 확인, 발송)도 M4에서 한다.
 
+## 내부 API
+서비스 간 조회다. `internal` scope 토큰만 부를 수 있고 gateway는 넘기지 않는다. 프론트 api-client(OpenAPI 문서)에 넣지 않는다.
+| 메서드 | 경로 | 설명 |
+|---|---|---|
+| GET | `/internal/v1/buyers/{buyerId}/ongoing-orders` | 구매자에게 진행 중인 주문이 있는지(`{hasOngoingOrders}`). member 탈퇴(ACC-4)가 부른다([member.md](member.md) "탈퇴") |
+
+- 진행 중인 주문은 `PENDING`, `AWAITING_PAYMENT`, `PAID`다. 결제 전 주문은 결제가 진행 중일 수 있고, M3의 `PAID`는 배송 전이다. `CANCELLED`만 끝난 주문이다.
+- M4에서 배송·클레임이 생기면 다시 정한다. 하위 주문이 모두 구매확정되었거나 클레임으로 끝난 주문을 빼고, 진행 중인 클레임을 더한다.
+
 ## catalog 조회
 order는 catalog 내부 API `GET /internal/v1/skus`로 SKU의 상품명, 판매 상태, 판매자, 가격, 판매 가능 수량을 읽는다([catalog.md](catalog.md) "내부 API"). 동기 호출은 조회에만 쓴다([overview.md](overview.md) "통신 규칙").
 - **클라이언트**: OpenFeign, Eureka로 찾는다(`lb://catalog`). 서비스 간 토큰은 `client_credentials`(클라이언트 ID `order`, scope `internal`)로 받아 만료 전까지 재사용한다.

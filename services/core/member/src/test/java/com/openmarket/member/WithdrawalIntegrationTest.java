@@ -1,5 +1,8 @@
 package com.openmarket.member;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.openmarket.member.MemberTokens.admin;
 import static com.openmarket.member.MemberTokens.buyer;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -27,10 +30,15 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.databind.json.JsonMapper;
 
-/** 탈퇴(ACC-4): 가명 처리, 입점 신청 정리, MemberWithdrawn outbox, 판매자 탈퇴 거절. */
+/**
+ * 탈퇴(ACC-4): 가명 처리, 입점 신청 정리, MemberWithdrawn outbox, 판매자·진행 중 주문 탈퇴 거절. order 내부 API와 auth 토큰
+ * 엔드포인트는 WireMock({@link OrderStub})이다.
+ */
 @SpringBootTest(properties = "spring.kafka.listener.auto-startup=false")
 @AutoConfigureMockMvc
 @Import(PostgresContainerConfiguration.class)
@@ -50,8 +58,15 @@ class WithdrawalIntegrationTest {
 
     UUID memberId;
 
+    @DynamicPropertySource
+    static void order(DynamicPropertyRegistry registry) {
+        OrderStub.register(registry);
+    }
+
     @BeforeEach
     void verifiedMember() {
+        OrderStub.reset();
+        OrderStub.ongoing(false);
         memberId = UUID.randomUUID();
         registerMember.execute(new RegisterMemberCommand(memberId, "leaving@example.com", "홍길동"));
         verifyMemberEmail.execute(new VerifyMemberEmailCommand(memberId));
@@ -133,6 +148,35 @@ class WithdrawalIntegrationTest {
         mockMvc.perform(post(ME + "/withdraw").with(buyer(memberId)))
                 .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.code").value("MEMBER_SELLER_CANNOT_WITHDRAW"));
+        mockMvc.perform(get(ME).with(buyer(memberId))).andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("진행 중인 주문이 있으면 422 MEMBER_ONGOING_ORDERS다. order는 서비스 간 토큰으로 부른다")
+    void ongoingOrdersBlockWithdrawal() throws Exception {
+        OrderStub.ongoing(true);
+
+        mockMvc.perform(post(ME + "/withdraw").with(buyer(memberId)))
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.code").value("MEMBER_ONGOING_ORDERS"));
+
+        mockMvc.perform(get(ME).with(buyer(memberId))).andExpect(status().isOk());
+        OrderStub.SERVER.verify(
+                getRequestedFor(
+                                urlPathEqualTo(
+                                        "/internal/v1/buyers/" + memberId + "/ongoing-orders"))
+                        .withHeader("Authorization", equalTo("Bearer " + OrderStub.ACCESS_TOKEN)));
+    }
+
+    @Test
+    @DisplayName("order를 부를 수 없으면 탈퇴하지 않고 503 MEMBER_ORDER_UNAVAILABLE이다")
+    void orderUnavailable() throws Exception {
+        OrderStub.ongoingFail(500);
+
+        mockMvc.perform(post(ME + "/withdraw").with(buyer(memberId)))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.code").value("MEMBER_ORDER_UNAVAILABLE"));
+
         mockMvc.perform(get(ME).with(buyer(memberId))).andExpect(status().isOk());
     }
 

@@ -143,7 +143,7 @@
   - [x] 서비스 간 조회 클라이언트(OpenFeign, `client_credentials`, 타임아웃, 서킷 브레이커): order → catalog
   - [x] 주문 생성의 `Idempotency-Key`
   - [ ] 결제 승인의 `Idempotency-Key`
-- [ ] member: 탈퇴의 진행 중 주문 확인을 order 내부 API로 연결(ACC-4)
+- [x] member: 탈퇴의 진행 중 주문 확인을 order 내부 API로 연결(ACC-4)
 - [ ] 화면: shop 장바구니·주문서·결제·주문 목록·상세, seller 하위 주문 목록·상세(조회만)
 - [ ] 마일스톤 E2E `infra/e2e/run.sh m3`(가짜 PG), 메모리 전체 재측정(R6)
 - 관련 요구사항: ORD-1~4, PAY-1, PAY-3, PAY-4, NFR-1~4, ACC-4(진행 중 주문)

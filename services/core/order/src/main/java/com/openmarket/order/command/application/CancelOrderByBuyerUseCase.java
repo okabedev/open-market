@@ -29,6 +29,8 @@ public class CancelOrderByBuyerUseCase {
     }
 
     /**
+     * 본인 주문을 취소한다.
+     *
      * @throws NotFoundException 없는 주문이거나 다른 회원의 주문이면 {@code ORDER_NOT_FOUND}
      * @throws OrderNotCancellableException 결제가 끝난 주문
      */

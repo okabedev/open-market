@@ -17,6 +17,11 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.cloud:spring-cloud-starter-config")
     implementation("org.springframework.cloud:spring-cloud-starter-netflix-eureka-client")
+    // 탈퇴의 진행 중 주문 조회(OpenFeign, client_credentials 토큰, 서킷 브레이커). docs/architecture/overview.md "통신 규칙" 3
+    implementation("org.springframework.cloud:spring-cloud-starter-openfeign")
+    implementation("org.springframework.cloud:spring-cloud-starter-circuitbreaker-resilience4j")
+    implementation("org.springframework.boot:spring-boot-starter-security-oauth2-client")
+    implementation("io.github.openfeign:feign-micrometer")
     implementation(libs.springdoc.webmvc.ui)
     runtimeOnly("org.flywaydb:flyway-database-postgresql")
     runtimeOnly("org.postgresql:postgresql")
@@ -26,4 +31,5 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
     testImplementation("org.springframework.boot:spring-boot-starter-security-test")
     testImplementation("org.awaitility:awaitility")
+    testImplementation(libs.wiremock.standalone)
 }
