@@ -12,6 +12,7 @@ const PUBLIC_NAV: NavItem[] = [{ href: "/products", label: "상품" }];
 
 const NAV: NavItem[] = [
   ...PUBLIC_NAV,
+  { href: "/cart", label: "장바구니" },
   { href: "/my", label: "내 정보" },
   { href: "/my/addresses", label: "배송지" },
   { href: "/my/seller", label: "입점 신청" },
