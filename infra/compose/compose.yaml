@@ -183,7 +183,7 @@ services:
       args:
         MODULE: infra/discovery
     image: openmarket/discovery:local
-    mem_limit: 512m # 힙 비율은 services/Dockerfile(R6)
+    mem_limit: 640m # 힙 비율은 services/Dockerfile(R6)
     ports:
       - "8761:8761"
     healthcheck:
@@ -198,7 +198,7 @@ services:
       args:
         MODULE: infra/config
     image: openmarket/config:local
-    mem_limit: 512m # 힙 비율은 services/Dockerfile(R6)
+    mem_limit: 640m # 힙 비율은 services/Dockerfile(R6)
     depends_on:
       discovery:
         condition: service_healthy
@@ -224,7 +224,7 @@ services:
       args:
         MODULE: infra/gateway
     image: openmarket/gateway:local
-    mem_limit: 512m # 힙 비율은 services/Dockerfile(R6)
+    mem_limit: 640m # 힙 비율은 services/Dockerfile(R6)
     depends_on:
       config:
         condition: service_healthy
@@ -236,6 +236,8 @@ services:
       REDIS_HOST: redis
       OTEL_COLLECTOR_HOST: otel-collector
       LOGGING_STRUCTURED_FORMAT_CONSOLE: ecs # infra/compose/apps.yaml과 같다
+      # E2E(infra/e2e/run.sh)만 준다. 값이 없으면 넘기지 않고 config-repo 기본값(1분에 5회)을 쓴다.
+      GATEWAY_STRICT_RATE_LIMIT:
     # JWK를 issuer 주소로 받는다. auth가 컨테이너든 IDE든 호스트 포트 9000에 있다(ADR 0013).
     extra_hosts:
       - "auth.openmarket.local:host-gateway"
@@ -259,7 +261,7 @@ services:
       args:
         MODULE: infra/auth
     image: openmarket/auth:local
-    mem_limit: 512m # 힙 비율은 services/Dockerfile(R6)
+    mem_limit: 640m # 힙 비율은 services/Dockerfile(R6)
     depends_on:
       config:
         condition: service_healthy
@@ -285,6 +287,8 @@ services:
       ORDER_CLIENT_SECRET: ${ORDER_CLIENT_SECRET:?}
       ADMIN_SEED_EMAIL: ${ADMIN_SEED_EMAIL:-}
       ADMIN_SEED_PASSWORD: ${ADMIN_SEED_PASSWORD:-}
+      # E2E(infra/e2e/run.sh)만 준다. 값이 없으면 넘기지 않고 config-repo 기본값(1분에 10회)을 쓴다.
+      AUTH_LOGIN_RATE_LIMIT:
     ports:
       - "9000:9000"
       # 관리 포트(9001)는 호스트에 열지 않는다.

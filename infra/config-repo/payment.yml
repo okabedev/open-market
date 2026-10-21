@@ -20,5 +20,5 @@ openmarket:
     # 결제 재조회 작업(PaymentReconcileJob) 주기와, 승인 요청 뒤 재조회까지 기다리는 시간. 읽기 타임아웃보다 길어야 한다.
     reconcile-interval: 1m
     reconcile-after: 1m
-    # 보상 취소 작업(PaymentCancelJob) 주기. 취소된 주문의 승인 결제를 토스에서 전액 취소한다. E2E만 짧게 준다.
-    cancel-interval: 1m
+    # 보상 취소 작업(PaymentCancelJob) 주기. 취소된 주문의 승인 결제를 토스에서 전액 취소한다. E2E만 환경 변수로 짧게 준다(infra/e2e/run.sh).
+    cancel-interval: ${PAYMENT_CANCEL_INTERVAL:1m}

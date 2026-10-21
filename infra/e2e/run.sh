@@ -27,6 +27,15 @@ compose() { docker compose -p "$PROJECT" --profile apps --profile e2e "$@"; }
 export TOSS_API_URL=http://fake-pg:8090
 export TOSS_SDK_URL=http://localhost:8090/v2/standard
 
+# 시간 설정(config-repo 기본값은 15분·1분). 결제 기한이 지나는 시나리오가 몇 십 초 안에 끝나게 줄인다(clients/e2e/support/env.ts가 같은 값을 읽는다).
+export ORDER_PAYMENT_TIMEOUT=40s
+export ORDER_EXPIRY_INTERVAL=2s
+export PAYMENT_CANCEL_INTERVAL=2s
+# 가입·이메일 인증의 IP당 한도(기본 1분에 5회). 시나리오가 한 IP에서 계정을 1분 안에 여럿 만든다.
+export GATEWAY_STRICT_RATE_LIMIT=60
+# 로그인의 IP당 한도(기본 1분에 10회). 판매자·구매자·역할 확인 토큰으로 1분 안에 여러 번 로그인한다.
+export AUTH_LOGIN_RATE_LIMIT=100
+
 cleanup() {
   local status=$?
   # 앱마다 프로세스 그룹을 따로 만들었다. pnpm만 죽이면 그 아래 next-server가 남아 포트를 계속 잡는다.

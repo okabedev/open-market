@@ -125,5 +125,6 @@ openmarket:
       replenish-rate: 20
       burst-capacity: 40
     # 라우트에 따로 거는 엄격한 한도(가입·이메일 인증, M5 쿠폰 발급). 라우트마다, 사용자 또는 IP마다 1분에 이만큼.
+    # E2E만 환경 변수로 늘린다(infra/e2e/run.sh). 한 IP에서 판매자·구매자 계정을 1분 안에 여럿 만들기 때문이다.
     strict-rate-limit:
-      requests-per-minute: 5
+      requests-per-minute: ${GATEWAY_STRICT_RATE_LIMIT:5}

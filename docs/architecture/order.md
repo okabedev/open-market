@@ -97,7 +97,7 @@ order는 `payment.payment`에서 결제 결과를 받는다([payment.md](payment
 - `OrderPaid`에는 하위 주문(판매자, 금액, 항목의 SKU·상품·카테고리·개당 가격·수량·금액)과 배송지가 실린다. 필드는 [context-map.md](context-map.md) "order.order".
 
 ### 만료와 결제 전 취소
-- **결제 기한**은 주문 시각부터 15분이다(`openmarket.order.payment-timeout`, config-repo `order.yml`. E2E만 짧게 준다). `PENDING`과 `AWAITING_PAYMENT` 모두 기한이 지나면 취소된다. 기한을 예약 결과가 온 시각이 아니라 주문 시각에서 세는 것은, catalog가 멈춰 예약 결과가 오지 않아도 `PENDING` 주문이 남지 않게 하고 구매자에게 보이는 기한을 주문할 때 정하기 위해서다.
+- **결제 기한**은 주문 시각부터 15분이다(`openmarket.order.payment-timeout`, config-repo `order.yml`). E2E만 환경 변수 `ORDER_PAYMENT_TIMEOUT`(40초)과 `ORDER_EXPIRY_INTERVAL`(2초)로 줄인다([dev-setup.md](../dev-setup.md) "E2E"). `PENDING`과 `AWAITING_PAYMENT` 모두 기한이 지나면 취소된다. 기한을 예약 결과가 온 시각이 아니라 주문 시각에서 세는 것은, catalog가 멈춰 예약 결과가 오지 않아도 `PENDING` 주문이 남지 않게 하고 구매자에게 보이는 기한을 주문할 때 정하기 위해서다.
 - **만료 작업**(`OrderExpiryJob`)은 1분마다(`openmarket.order.expiry-interval`) 돌고 ShedLock으로 한 인스턴스에서만 돈다. 기한이 지난 결제 전 주문을 오래된 순으로 100건씩 읽어, 주문마다 트랜잭션을 따로 열고 `PAYMENT_TIMEOUT`으로 취소한다. 다 못 하면 다음 주기에 이어 한다. 결제 전 주문만 담는 부분 인덱스(`orders_unpaid_placed_idx`)로 찾는다.
 - **구매자 취소**: `POST /v1/orders/{orderId}/cancel`. `PENDING`, `AWAITING_PAYMENT` 주문을 `BUYER_CANCELLED`로 취소한다. 204다.
   - 이미 취소된 주문이면 사유를 바꾸지 않고 204다. 다시 눌러도 결과가 같아 `Idempotency-Key`는 받지 않는다.

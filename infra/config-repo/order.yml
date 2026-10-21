@@ -50,10 +50,10 @@ spring:
 
 openmarket:
   order:
-    # 결제 기한. 주문 시각부터 센다. E2E만 짧게 준다(docs/architecture/order.md "만료와 결제 전 취소").
-    payment-timeout: 15m
+    # 결제 기한. 주문 시각부터 센다. E2E만 환경 변수로 짧게 준다(infra/e2e/run.sh, docs/architecture/order.md "만료와 결제 전 취소").
+    payment-timeout: ${ORDER_PAYMENT_TIMEOUT:15m}
     # 만료 작업 주기
-    expiry-interval: 1m
+    expiry-interval: ${ORDER_EXPIRY_INTERVAL:1m}
 
 resilience4j:
   circuitbreaker:

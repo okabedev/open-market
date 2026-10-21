@@ -28,7 +28,8 @@ COPY --from=build /extracted/spring-boot-loader/ ./
 COPY --from=build /extracted/snapshot-dependencies/ ./
 COPY --from=build /extracted/application/ ./
 USER app
-# 힙 상한을 컨테이너 메모리 상한(compose mem_limit 512m)의 절반으로 둔다. 나머지는 메타스페이스, 코드 캐시, 스레드 스택이 쓴다.
+# 힙 상한을 컨테이너 메모리 상한(compose mem_limit 640m)의 40%(256MB)로 둔다. 나머지는 메타스페이스, 코드 캐시, 스레드 스택,
+# 네이티브 메모리가 쓴다(M3 실측 힙 밖 약 210MB + JVM 밖 약 150MB).
 # 상한 없이 띄우면 JVM이 VM 전체 메모리를 기준으로 힙을 잡으므로 compose에서 mem_limit을 꼭 준다(R6, docs/architecture/risks.md).
-ENV JDK_JAVA_OPTIONS="-XX:MaxRAMPercentage=50"
+ENV JDK_JAVA_OPTIONS="-XX:MaxRAMPercentage=40"
 ENTRYPOINT ["java", "org.springframework.boot.loader.launch.JarLauncher"]
