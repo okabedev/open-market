@@ -125,7 +125,7 @@ docker compose --profile apps --profile obs --profile search stop   # 개발용 
 infra/e2e/run.sh m2   # 마일스톤마다 m1, m2 …
 ```
 
-- 별도 Compose 프로젝트(`openmarket-e2e`)를 빈 볼륨으로 띄우고(기본·`apps` profile), 앱 3개를 빌드해 `next start`로 띄운 뒤 시나리오를 돌린다. 끝나면 앱을 멈추고 프로젝트를 볼륨째 지운다. 남겨서 보려면 `E2E_KEEP=1 infra/e2e/run.sh m1`.
+- 별도 Compose 프로젝트(`openmarket-e2e`)를 빈 볼륨으로 띄우고(기본·`apps`·`e2e` profile), 앱 3개를 빌드해 `next start`로 띄운 뒤 시나리오를 돌린다. 끝나면 앱을 멈추고 프로젝트를 볼륨째 지운다. 남겨서 보려면 `E2E_KEEP=1 infra/e2e/run.sh m1`.
 - 호스트 포트가 같아서 개발용 스택이나 `pnpm dev`가 떠 있으면 시작하지 않는다.
 - 처음에는 서비스 이미지 빌드로 몇 분 걸린다. 그 뒤에는 시나리오까지 2~3분이다.
 - Playwright 브라우저(Chromium)는 스크립트가 받는다. 브라우저가 쓰는 시스템 라이브러리(`libnspr4`, `libnss3` 등)는 처음 한 번 설치한다. `sudo`는 PATH를 바꿔 `corepack`을 찾지 못하므로, 필요한 패키지 목록만 뽑아 `apt`로 설치한다(2026-10-20 확인, Ubuntu 26.04 WSL).
@@ -136,3 +136,19 @@ infra/e2e/run.sh m2   # 마일스톤마다 m1, m2 …
   라이브러리가 없으면 시나리오가 `error while loading shared libraries: libnspr4.so`로 바로 실패한다.
 - 결과: 터미널 목록과 `clients/e2e/playwright-report`(HTML). 실패한 시나리오는 `clients/e2e/test-results`에 trace와 스크린샷이 남는다(`corepack pnpm --filter @openmarket/e2e exec playwright show-trace <파일>`). 앱 로그는 `infra/e2e/.out`.
 - CI에서는 돌리지 않는다(2026-10-18 결정). 마일스톤 마감과 큰 변경 뒤에 돌린다.
+
+### 가짜 PG
+E2E는 토스페이먼츠 대신 가짜 PG(`infra/fake-pg`)로 결제한다([ADR 0018](adr/0018-toss-payments-integration.md)). `run.sh`가 `e2e` profile로 띄우고(호스트 포트 8090), 앱 코드는 그대로 두고 주소만 바꾼다.
+- payment: `TOSS_API_URL=http://fake-pg:8090`(Compose 네트워크). 승인 `POST /v1/payments/confirm`, 조회 `GET /v1/payments/{paymentKey}`, 취소 `POST /v1/payments/{paymentKey}/cancel`을 흉내 낸다. `Idempotency-Key`는 토스처럼 같은 키면 같은 응답, 처리 중이면 409 `IDEMPOTENT_REQUEST_PROCESSING`이다.
+- shop: `TOSS_SDK_URL=http://localhost:8090/v2/standard`. `loadTossPayments(clientKey, { src })`가 가짜 SDK 스크립트를 불러온다. 결제하기를 누르면 가짜 PG의 결제 인증 화면(`/checkout`)으로 가고, "결제 승인"은 `successUrl`, "결제 취소"는 `failUrl`(`PAY_PROCESS_CANCELED`)로 돌려보낸다.
+- 제어 API(시나리오용, 인증 없음)
+
+  | 요청 | 하는 일 |
+  |---|---|
+  | `PUT /control/orders/{orderId}` `{"confirmDelayMs": 15000}` | 그 주문의 승인 응답을 늦춘다. 승인은 요청을 받은 때 끝나므로(조회하면 `DONE`) 만료와 승인의 경합, 응답 타임아웃을 재현한다 |
+  | `PUT /control/orders/{orderId}` `{"confirmError": {"status": 403, "code": "REJECT_CARD_PAYMENT", "message": "…"}}` | 그 주문의 승인을 그 오류로 거절한다(결제는 `ABORTED`) |
+  | `GET /control/orders/{orderId}` | 그 주문의 결제 객체 목록과 승인·취소 요청 수(`confirmRequests`, `cancelRequests`) |
+  | `DELETE /control` | 결제와 설정을 모두 지운다 |
+- 상태는 메모리에만 있다. 컨테이너를 다시 띄우면 지워진다.
+- 개발용 스택에서 손으로 띄우려면 `TOSS_API_URL=http://fake-pg:8090 docker compose --profile apps --profile e2e up -d --wait fake-pg payment`, shop은 `TOSS_SDK_URL=http://localhost:8090/v2/standard pnpm --filter @openmarket/shop dev`다. 실제 토스로 돌아가려면 변수 없이 payment를 다시 띄운다.
+- 가짜 PG 테스트: 레포 루트에서 `node --test infra/fake-pg/*.test.mjs`(CI `compose` 잡).

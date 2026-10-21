@@ -120,7 +120,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       # compose 파일은 .env 값을 필수로 읽는다. 예시 값으로 문법과 변수 참조만 검사한다.
       - run: cp .env.example .env
-      - run: docker compose --profile search --profile obs --profile apps config --quiet
+      - run: docker compose --profile search --profile obs --profile apps --profile e2e config --quiet
+      # 가짜 PG(ADR 0018)는 의존성 없는 Node 서버다. 테스트도 Node 표준 테스트 러너로 돈다.
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
+      - run: node --test infra/fake-pg/*.test.mjs
 
   # 브랜치 보호의 필수 체크. 앞 잡 중 하나라도 실패하거나 취소되면 실패한다.
   ci:

@@ -105,7 +105,7 @@ order가 결제 전에 주문을 취소하면(`OrderCancelled`: 재고 부족, �
 
 ## 토스 연동(`TossPaymentGatewayAdapter`)
 - 토스 API 형식은 `infra` 어댑터 밖으로 내보내지 않는다(ACL). `command.application`의 `PaymentGatewayPort`는 승인·조회 결과로 승인됨, 거절됨, 미정, 알 수 없음을, 취소 결과로 취소됨, 취소 거절, 알 수 없음을 안다.
-- 주소 `openmarket.payment.toss.base-url`(기본 `https://api.tosspayments.com`), 시크릿 키 `TOSS_SECRET_KEY`(Basic 인증). E2E는 주소만 가짜 PG로 바꾼다.
+- 주소 `openmarket.payment.toss.base-url`(기본 `https://api.tosspayments.com`), 시크릿 키 `TOSS_SECRET_KEY`(Basic 인증). E2E는 주소만 가짜 PG로 바꾼다(`TOSS_API_URL`, [dev-setup.md](../dev-setup.md) "E2E").
 - 타임아웃: 연결 2초, 읽기 10초. R9에서 승인은 1초 안팎이었다. 타임아웃이 나도 조회로 정하므로 사용자가 오래 기다리지 않게 짧게 둔다.
 - 토스는 Eureka 밖의 외부 API라 OpenFeign·서킷 브레이커를 쓰지 않는다. 실패는 조회와 재조회 작업이 메운다.
 

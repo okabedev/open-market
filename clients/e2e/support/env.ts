@@ -6,6 +6,8 @@ export const env = {
   gateway: process.env.GATEWAY_URL ?? "http://localhost:8080",
   auth: process.env.OIDC_ISSUER ?? "http://auth.openmarket.local:9000",
   mailpit: process.env.MAILPIT_URL ?? "http://localhost:8025",
+  /** 가짜 PG(infra/fake-pg). 토스 대신 결제 인증 화면과 제어 API를 준다 */
+  fakePg: process.env.FAKE_PG_URL ?? "http://localhost:8090",
   adminEmail: process.env.ADMIN_SEED_EMAIL ?? "admin@openmarket.local",
   adminPassword: process.env.ADMIN_SEED_PASSWORD ?? "admin-local-1234",
   sellerClientSecret: process.env.SELLER_CLIENT_SECRET ?? "seller-local-secret",

@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # 마일스톤 완료 기준 E2E(docs/roadmap.md). 레포 루트에서 `infra/e2e/run.sh m1`.
 #
-# 1. 별도 Compose 프로젝트(openmarket-e2e)로 기본·apps profile을 빈 볼륨에서 띄운다. 개발용 스택(openmarket)의 데이터와 섞이지 않는다.
+# 1. 별도 Compose 프로젝트(openmarket-e2e)로 기본·apps·e2e profile을 빈 볼륨에서 띄운다. 개발용 스택(openmarket)의 데이터와 섞이지 않는다.
 #    호스트 포트는 같으므로 개발용 스택과 앱(3000~3002)은 먼저 멈춘다.
+#    토스 대신 가짜 PG(e2e profile, infra/fake-pg)를 쓴다. payment는 TOSS_API_URL, shop은 TOSS_SDK_URL로 주소만 바꾼다(ADR 0018).
 # 2. 앱 3개를 빌드해서 `next start`로 띄운다.
 # 3. clients/e2e의 Playwright 시나리오 중 `<마일스톤>-*.spec.ts`를 돌린다.
 # 4. 끝나면 앱을 멈추고 Compose 프로젝트를 볼륨째 지운다. 남겨서 들여다보려면 E2E_KEEP=1.
@@ -20,7 +21,11 @@ APP_PIDS=()
 log() { printf '\n[e2e] %s\n' "$*"; }
 fail() { printf '\n[e2e] 실패: %s\n' "$*" >&2; exit 1; }
 
-compose() { docker compose -p "$PROJECT" --profile apps "$@"; }
+compose() { docker compose -p "$PROJECT" --profile apps --profile e2e "$@"; }
+
+# 가짜 PG(infra/compose/e2e.yaml). payment 컨테이너는 Compose 네트워크 이름으로, 브라우저는 호스트 포트로 닿는다.
+export TOSS_API_URL=http://fake-pg:8090
+export TOSS_SDK_URL=http://localhost:8090/v2/standard
 
 cleanup() {
   local status=$?
@@ -29,7 +34,7 @@ cleanup() {
     kill -- "-$pid" 2>/dev/null || true
   done
   if [[ "${E2E_KEEP:-}" == "1" ]]; then
-    log "E2E_KEEP=1: 스택을 남긴다. 지울 때는 docker compose -p $PROJECT --profile apps down -v"
+    log "E2E_KEEP=1: 스택을 남긴다. 지울 때는 docker compose -p $PROJECT --profile apps --profile e2e down -v"
   else
     log "스택을 지운다"
     (cd "$ROOT" && compose down -v --remove-orphans >/dev/null 2>&1) || true

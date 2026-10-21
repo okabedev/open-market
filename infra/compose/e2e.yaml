@@ -1,0 +1,19 @@
+# e2e profile: 마일스톤 E2E에서만 쓰는 구성 요소. infra/e2e/run.sh가 `--profile e2e`를 더해 띄운다.
+
+services:
+  # 토스페이먼츠 대신 쓰는 가짜 PG(ADR 0018, infra/fake-pg). 브라우저가 SDK 스크립트와 결제 인증 화면을 받으므로 호스트 포트를 연다.
+  # payment는 run.sh가 준 TOSS_API_URL(http://fake-pg:8090)로 부른다. 제어 API는 docs/dev-setup.md "E2E".
+  fake-pg:
+    profiles: [e2e]
+    image: node:24.21.0-alpine3.24
+    command: ["node", "/app/server.mjs"]
+    volumes:
+      - ../fake-pg:/app:ro
+    ports:
+      - "8090:8090"
+    mem_limit: 128m
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8090/health"]
+      interval: 2s
+      timeout: 2s
+      retries: 15

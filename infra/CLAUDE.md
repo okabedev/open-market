@@ -5,7 +5,7 @@
 ## 구조
 ```
 infra/
-├─ compose/        compose 파일. compose.yaml(기본, discovery·config·gateway·auth 포함), search.yaml, obs.yaml, apps.yaml(나머지 Spring 서비스)
+├─ compose/        compose 파일. compose.yaml(기본, discovery·config·gateway·auth 포함), search.yaml, obs.yaml, apps.yaml(나머지 Spring 서비스), e2e.yaml(가짜 PG)
 ├─ config-repo/    Spring Cloud Config native 저장소. application.yml(공통) + <service>.yml. config 컨테이너에 마운트된다
 ├─ postgres/init/  스키마, 서비스 계정, 복제 계정, publication과 outbox 자동 등록 트리거(서비스 목록 services.txt)
 ├─ debezium/       outbox 커넥터 설정과 등록 스크립트(connect 컨테이너가 기동할 때 실행). 커넥터는 하나
@@ -13,6 +13,7 @@ infra/
 ├─ observability/  OTel Collector, Tempo, Loki, Prometheus 설정
 ├─ grafana/        데이터 소스·대시보드 프로비저닝
 ├─ e2e/            마일스톤 E2E 실행 스크립트 run.sh(별도 Compose 프로젝트 + 앱 3개 + Playwright). 시나리오는 clients/e2e
+├─ fake-pg/        E2E에서 토스 대신 쓰는 가짜 PG(ADR 0018). 의존성 없는 Node 서버, 테스트는 `node --test infra/fake-pg/*.test.mjs`
 ├─ k6/             부하 테스트 시나리오 (M6)
 └─ elasticsearch/  nori 플러그인 커스텀 이미지(ADR 0016). search profile이 빌드한다
 ```

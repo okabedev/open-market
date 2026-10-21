@@ -56,6 +56,7 @@ Spring Authorization Server는 Spring Security 7.x에 포함되어 Boot BOM이 �
 | grafana/tempo | 3.1.0 | `obs` profile. 3.x 단일 바이너리 모드는 Kafka 없이 동작한다 |
 | grafana/loki | 3.7.8 | `obs` profile |
 | grafana/grafana | 13.2.3 | `obs` profile |
+| node | 24.21.0-alpine3.24 | `e2e` profile의 가짜 PG(`infra/fake-pg`). 런타임 메이저는 `.nvmrc`와 같다. 24.22.0은 2026-10-14 릴리스라 2주가 지나지 않았다 |
 | eclipse-temurin | 25.0.4.1_1-jdk-noble, 25.0.4.1_1-jre-noble | `services/Dockerfile`의 빌드·실행 단계. 실행 이미지에는 healthcheck용 curl만 더한다 |
 
 Compose 이미지 태그의 원본은 `infra/compose`의 compose 파일이고, Spring 서비스 기반 이미지는 `services/Dockerfile`이다. 태그를 올리면 그 파일과 이 표를 같이 고친다.

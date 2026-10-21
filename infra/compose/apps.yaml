@@ -111,6 +111,8 @@ services:
       <<: *spring-env
       PAYMENT_DB_PASSWORD: ${PAYMENT_DB_PASSWORD:?}
       TOSS_SECRET_KEY: ${TOSS_SECRET_KEY:?}
+      # E2E(infra/e2e/run.sh)는 가짜 PG 주소(http://fake-pg:8090)를 준다. 기본값은 config-repo payment.yml과 같다.
+      TOSS_API_URL: ${TOSS_API_URL:-https://api.tosspayments.com}
     healthcheck:
       test: ["CMD", "curl", "-fs", "http://localhost:8104/actuator/health"]
       interval: 5s
