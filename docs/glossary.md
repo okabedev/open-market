@@ -58,11 +58,15 @@
 ## 배송·클레임
 | 용어 | 코드 이름 | 담당 | 설명 |
 |---|---|---|---|
-| 배송 | `Shipment` | fulfillment | 하위 주문 하나당 하나(교환 재발송은 새 배송). 상태: `READY` → `ACCEPTED`(발주 확인) → `SHIPPED` → `IN_TRANSIT` → `DELIVERED`. 발송 전 취소 클레임이면 `CANCELLED` |
+| 배송 | `Shipment` | fulfillment | 하위 주문 하나당 하나(교환 재발송은 새 배송). 상태: `READY` → `ACCEPTED`(발주 확인) → `SHIPPED` → `IN_TRANSIT` → `DELIVERED`. 발송 전 취소 클레임이면 `CANCELLED`. 화면 이름은 결제 완료, 상품 준비 중, 발송, 배송 중, 배송 완료, 취소됨이다 |
+| 배송 시뮬레이터 | `ShipmentSimulatorJob` | fulfillment | 택배사 연동 대신 발송한 배송을 시간이 지나면 배송 중, 배송 완료로 바꾸는 작업 |
 | 송장 | `TrackingInfo` | fulfillment | 택배사 코드와 송장 번호 |
-| 구매확정 | `PurchaseConfirmation` | fulfillment | 구매자 확정, 또는 배송 완료 7일 뒤 자동 확정. 이후에는 클레임을 신청할 수 없다 |
-| 클레임 | `Claim` | fulfillment | 유형: `CANCEL`, `RETURN`, `EXCHANGE`. 상태: `REQUESTED` → `APPROVED` → `COMPLETED`, 또는 `REJECTED`. 중재 중이면 `MEDIATING` |
-| 귀책 | `Fault` (`BUYER`, `SELLER`) | fulfillment | 반품 배송비 차감 여부를 정한다 |
+| 구매확정 | `PurchaseConfirmation` | fulfillment | 하위 주문당 한 번. 구매자 확정, 또는 배송 완료 7일 뒤 자동 확정(`PurchaseConfirmJob`). 이후에는 클레임을 신청할 수 없다 |
+| 클레임 | `Claim` | fulfillment | 하위 주문 전체가 대상이다. 유형: `CANCEL`(발송 전 취소), `RETURN`(반품), `EXCHANGE`(같은 SKU 교환). 상태: `REQUESTED` → `APPROVED` → `COMPLETED`, 또는 `REJECTED` → `MEDIATING`(중재) → `APPROVED` 또는 `REJECTED` |
+| 클레임 사유 | `ClaimReason` | fulfillment | `CHANGE_OF_MIND`, `DEFECTIVE`, `WRONG_ITEM`, `NOT_AS_DESCRIBED`, `BUYER_CANCEL`. 사유가 귀책을 정한다 |
+| 귀책 | `Fault` (`BUYER`, `SELLER`) | fulfillment | 반품 배송비 차감 여부와 교환 가능 여부를 정한다 |
+| 반품 배송비 | `returnShippingFee` | fulfillment | 구매자 귀책 반품의 환불에서 빼는 플랫폼 고정 금액(왕복) |
+| 중재 | `MEDIATING` | fulfillment | 판매자가 거부한 반품·교환을 구매자가 관리자에게 다시 판단해 달라고 요청한 상태 |
 
 ## 쿠폰·리뷰·정산·알림
 | 용어 | 코드 이름 | 담당 | 설명 |

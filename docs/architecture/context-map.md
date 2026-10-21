@@ -105,11 +105,12 @@ flowchart LR
 |---|---|---|---|
 | `OrderPlaced` | 주문 생성(`PENDING`) | orderId, buyerId, lines(skuId, quantity), issuedCouponIds | catalog(재고 예약), promotion(쿠폰 예약) |
 | `OrderAwaitingPayment` | 예약 모두 성공 | orderId, buyerId, amount(결제 금액), orderName(주문명) | payment(결제 준비) |
-| `OrderPaid` | 결제 승인 반영 | orderId, buyerId, amount, orderName, paidAt(토스 승인 시각), sellerOrders(sellerOrderId, sellerId, amount, lines(skuId, productId, categoryId, unitPrice, quantity, amount)), shippingAddress(배송지 스냅샷). 판매자 쿠폰 부담분은 M5에서 더한다 | catalog(예약 확정), promotion(쿠폰 사용 확정), fulfillment(배송 생성), notification |
+| `OrderPaid` | 결제 승인 반영 | orderId, buyerId, amount, orderName, paidAt(토스 승인 시각), sellerOrders(sellerOrderId, sellerId, amount, lines(orderLineId, skuId, productId, productName, optionValues, categoryId, unitPrice, quantity, amount)), shippingAddress(배송지 스냅샷). 판매자 쿠폰 부담분은 M5에서 더한다 | catalog(예약 확정), promotion(쿠폰 사용 확정), fulfillment(배송 생성), notification |
 | `OrderCancelled` | 결제 전 취소(예약 실패, 만료, 구매자 취소) | orderId, reason | catalog(예약 해제), promotion(쿠폰 복원), payment(결제 무효화·보상 취소) |
 
 - 키는 orderId다. 한 주문의 이벤트는 순서대로 온다.
 - JSON 예시는 `services/core/order/src/test/resources/events/`에 있다. catalog는 `OrderPaid`의 orderId만 읽는다.
+- `OrderPaid` 항목의 orderLineId, productName, optionValues는 M4에 더했다(2026-10-21). fulfillment가 구매확정(리뷰는 주문 항목 단위다)과 판매자·구매자 화면, 알림에 쓴다. 필드를 더하기만 해서 기존 소비자는 그대로다.
 - `OrderCancelled`의 reason은 `STOCK_UNAVAILABLE`, `PAYMENT_TIMEOUT`, `BUYER_CANCELLED`다([order.md](order.md) "취소 사유").
 
 ### promotion.issued-coupon
@@ -124,8 +125,8 @@ flowchart LR
 | `PaymentApproved` | 토스 승인 성공 | orderId, paymentId, amount, method(토스 결제수단 이름), approvedAt | order |
 | `PaymentFailed` | 승인 실패 | orderId, paymentId, code(토스 오류 코드) | order, notification |
 | `PaymentCancelled` | 토스 전액 취소 성공(보상 포함) | orderId, paymentId, amount(취소 금액), reason, cancelledAt | notification |
-| `RefundCompleted` | 부분취소 성공 | claimId, sellerOrderId, 금액 | fulfillment |
-| `RefundFailed` | 부분취소 최종 실패 | claimId, 오류 코드 | fulfillment, notification(관리자) |
+| `RefundCompleted` | 환불(부분취소) 성공. 금액 0이면 토스를 부르지 않고 낸다 | orderId, refundId, claimId, sellerOrderId, amount, refundedAt | fulfillment, notification |
+| `RefundFailed` | 토스가 환불을 거절했다(일시 오류는 다시 시도하고 내지 않는다) | orderId, refundId, claimId, sellerOrderId, code(토스 오류 코드) | fulfillment, notification(관리자) |
 
 - 키는 orderId다. 한 주문의 결제 이벤트는 순서대로 온다.
 - JSON 예시는 `services/core/payment/src/test/resources/events/`에 있다. 처리 규칙은 [payment.md](payment.md).
@@ -134,18 +135,28 @@ flowchart LR
 ### fulfillment.shipment
 | 이벤트 | 시점 | 주요 필드 | 소비자 |
 |---|---|---|---|
-| `ShipmentAccepted` | 발주 확인 | sellerOrderId | order |
-| `ShipmentShipped` | 발송 | sellerOrderId, 송장 | order, notification |
-| `ShipmentDelivered` | 배송 완료 | sellerOrderId | order, notification |
-| `PurchaseConfirmed` | 구매확정(수동·자동) | sellerOrderId, sellerId, buyerId, 항목(orderLineId, productId, 카테고리, 금액), 판매자 쿠폰 부담분 | order, review(작성 자격), settlement(정산 대상) |
+| `ShipmentAccepted` | 발주 확인 | shipmentId, orderId, sellerOrderId, acceptedAt | order |
+| `ShipmentShipped` | 발송 | shipmentId, orderId, sellerOrderId, sellerId, buyerId, carrier, trackingNumber, shippedAt | order, notification |
+| `ShipmentInTransit` | 배송 중(시뮬레이터) | shipmentId, orderId, sellerOrderId | order |
+| `ShipmentDelivered` | 배송 완료(시뮬레이터) | shipmentId, orderId, sellerOrderId, buyerId, deliveredAt | order, notification |
+| `PurchaseConfirmed` | 구매확정(구매자·자동) | orderId, sellerOrderId, sellerId, buyerId, mode(`BUYER`, `AUTO`), confirmedAt, lines(orderLineId, productId, categoryId, amount). 판매자 쿠폰 부담분은 M5에서 더한다 | order, review(작성 자격, M5), settlement(정산 대상, M5) |
+
+- 키는 sellerOrderId다. 교환 재발송은 같은 하위 주문의 새 배송(새 shipmentId)이다.
+- 처리 규칙은 [fulfillment.md](fulfillment.md).
 
 ### fulfillment.claim
 | 이벤트 | 시점 | 주요 필드 | 소비자 |
 |---|---|---|---|
-| `ClaimRequested` | 신청 | claimId, 유형, sellerOrderId, 첨부 fileId | order, notification(판매자), file |
-| `ClaimApproved` | 승인(취소는 즉시) | claimId, 유형, sellerOrderId, 환불 금액 | payment(환불), order |
-| `ClaimRejected` | 거부 | claimId, reason | order, notification |
-| `ClaimCompleted` | 환불 또는 재발송 완료 | claimId, 유형, sellerOrderId, 재입고 SKU·수량 | order, catalog(재입고), notification |
+| `ClaimRequested` | 신청 | claimId, type, orderId, sellerOrderId, sellerId, buyerId, reason, fault, fileIds, requestedAt | order, notification(판매자), file(첨부 확정) |
+| `ClaimApproved` | 승인(취소는 신청과 함께) | claimId, type, orderId, sellerOrderId, sellerId, buyerId, fault, refundAmount(교환은 0), approvedAt | payment(환불, 교환 제외), order, notification |
+| `ClaimRejected` | 판매자 거부, 중재 거부 확정 | claimId, type, orderId, sellerOrderId, buyerId, reason(거부 사유), final(중재 결과면 true), rejectedAt | order, notification |
+| `ClaimMediationRequested` | 구매자 중재 요청 | claimId, type, orderId, sellerOrderId, sellerId | order, notification(관리자) |
+| `ClaimCompleted` | 환불 완료, 교환 재발송 | claimId, type, orderId, sellerOrderId, buyerId, refundAmount, restockLines(skuId, quantity. 재입고하지 않으면 빈 목록), completedAt | order, catalog(재입고), notification |
+
+- 키는 sellerOrderId다. 배송 토픽과 사이 순서는 보장하지 않는다. order는 두 토픽을 함께 보고 하위 주문 진행 상태를 정한다.
+- type은 `CANCEL`, `RETURN`, `EXCHANGE`, reason은 [fulfillment.md](fulfillment.md) "사유와 귀책"의 코드다.
+- `CANCEL`은 `ClaimRequested`와 `ClaimApproved`를 한 트랜잭션에서 함께 낸다.
+- 관리자 중재 승인은 `ClaimApproved`, 거부 확정은 `ClaimRejected`(final=true)다.
 
 ### review.review, review.rating-summary
 | 이벤트 | 토픽 | 시점 | 주요 필드 | 소비자 |
