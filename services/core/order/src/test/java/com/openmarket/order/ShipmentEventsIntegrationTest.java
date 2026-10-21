@@ -95,7 +95,7 @@ class ShipmentEventsIntegrationTest {
     }
 
     @Test
-    @DisplayName("배송 이벤트마다 하위 주문 진행 상태가 앞으로 간다. 늦게 온 앞 단계 이벤트와 같은 이벤트는 바꾸지 않는다")
+    @DisplayName("배송 이벤트와 구매확정마다 하위 주문 진행 상태가 앞으로 간다. 늦게 온 앞 단계 이벤트와 같은 이벤트는 바꾸지 않는다")
     void advances() throws Exception {
         Order order = paidOrder();
         UUID sellerOrderId = order.sellerOrders().getFirst().id();
@@ -107,6 +107,9 @@ class ShipmentEventsIntegrationTest {
         send(shipped, "ShipmentShipped", order, sellerOrderId);
         send(UUID.randomUUID(), "ShipmentInTransit", order, sellerOrderId);
         send(UUID.randomUUID(), "ShipmentAccepted", order, sellerOrderId);
+        send(UUID.randomUUID(), "ShipmentDelivered", order, sellerOrderId);
+        UUID confirmed = UUID.randomUUID();
+        send(confirmed, "PurchaseConfirmed", order, sellerOrderId);
         UUID delivered = UUID.randomUUID();
         send(delivered, "ShipmentDelivered", order, sellerOrderId);
 
@@ -121,7 +124,7 @@ class ShipmentEventsIntegrationTest {
                                                         .query(Integer.class)
                                                         .single())
                                         .isEqualTo(1));
-        assertThat(progress(sellerOrderId)).isEqualTo("DELIVERED");
+        assertThat(progress(sellerOrderId)).isEqualTo("CONFIRMED");
         assertThat(
                         jdbc.sql("SELECT count(*) FROM outbox_event WHERE aggregate_id =" + " :id")
                                 .param("id", order.id().toString())

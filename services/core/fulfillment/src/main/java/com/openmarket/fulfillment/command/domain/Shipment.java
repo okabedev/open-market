@@ -13,6 +13,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OrderColumn;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -72,6 +73,10 @@ public class Shipment {
 
     @Column(name = "delivered_at")
     private @Nullable Instant deliveredAt;
+
+    // 자동 구매확정 기한. 배송 완료 때 정한다.
+    @Column(name = "confirm_due_at")
+    private @Nullable Instant confirmDueAt;
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
@@ -164,15 +169,24 @@ public class Shipment {
         return true;
     }
 
-    /** 배송 시뮬레이터: 배송 중 → 배송 완료. {@code IN_TRANSIT}이 아니면 아무것도 하지 않고 {@code false}. */
-    public boolean deliver(Instant now) {
+    /**
+     * 배송 시뮬레이터: 배송 중 → 배송 완료. 자동 구매확정 기한을 배송 완료 시각 + {@code autoConfirmAfter}로 정한다. {@code
+     * IN_TRANSIT}이 아니면 아무것도 하지 않고 {@code false}.
+     */
+    public boolean deliver(Instant now, Duration autoConfirmAfter) {
         if (status != ShipmentStatus.IN_TRANSIT) {
             return false;
         }
         status = ShipmentStatus.DELIVERED;
         deliveredAt = now;
+        confirmDueAt = now.plus(autoConfirmAfter);
         updatedAt = now;
         return true;
+    }
+
+    /** 이 배송을 받는 구매자인가. */
+    public boolean isReceivedBy(UUID buyerId) {
+        return this.buyerId.equals(buyerId);
     }
 
     /** 이 배송을 처리하는 판매자인가. */
@@ -234,6 +248,10 @@ public class Shipment {
 
     public @Nullable Instant deliveredAt() {
         return deliveredAt;
+    }
+
+    public @Nullable Instant confirmDueAt() {
+        return confirmDueAt;
     }
 
     /** 판매자 동작의 결과. 같은 동작을 다시 하면 {@code UNCHANGED}이고 이벤트를 내지 않는다. */

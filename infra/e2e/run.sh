@@ -35,6 +35,10 @@ export PAYMENT_CANCEL_INTERVAL=2s
 export FULFILLMENT_SIMULATOR_INTERVAL=2s
 export FULFILLMENT_IN_TRANSIT_AFTER=3s
 export FULFILLMENT_DELIVER_AFTER=3s
+# 자동 구매확정(config-repo 기본값은 1시간 주기, 배송 완료 7일 뒤). "7일 뒤 자동 구매확정"을 몇 십 초로 줄인다.
+# 반품할 하위 주문은 이 기한 안에 반품을 신청한다(docs/roadmap.md M4 완료 기준).
+export FULFILLMENT_CONFIRM_INTERVAL=2s
+export FULFILLMENT_AUTO_CONFIRM_AFTER=30s
 # 가입·이메일 인증의 IP당 한도(기본 1분에 5회). 시나리오가 한 IP에서 계정을 1분 안에 여럿 만든다.
 export GATEWAY_STRICT_RATE_LIMIT=60
 # 로그인의 IP당 한도(기본 1분에 10회). 판매자·구매자·역할 확인 토큰으로 1분 안에 여러 번 로그인한다.

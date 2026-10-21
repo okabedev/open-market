@@ -137,7 +137,7 @@ infra/e2e/run.sh m2   # 마일스톤마다 m1, m2 …
 - 결과: 터미널 목록과 `clients/e2e/playwright-report`(HTML). 실패한 시나리오는 `clients/e2e/test-results`에 trace와 스크린샷이 남는다(`corepack pnpm --filter @openmarket/e2e exec playwright show-trace <파일>`). 앱 로그는 `infra/e2e/.out`.
 - CI에서는 돌리지 않는다(2026-10-18 결정). 마일스톤 마감과 큰 변경 뒤에 돌린다.
 
-- 시간 설정: `run.sh`가 결제 기한(`ORDER_PAYMENT_TIMEOUT=40s`), 만료 작업 주기(`ORDER_EXPIRY_INTERVAL=2s`), 보상 취소 주기(`PAYMENT_CANCEL_INTERVAL=2s`), 배송 시뮬레이터 주기와 지연(`FULFILLMENT_SIMULATOR_INTERVAL=2s`, `FULFILLMENT_IN_TRANSIT_AFTER=3s`, `FULFILLMENT_DELIVER_AFTER=3s`)을 줄이고, 가입·이메일 인증(`GATEWAY_STRICT_RATE_LIMIT=60`, 기본 1분에 5회)과 로그인(`AUTH_LOGIN_RATE_LIMIT=100`, 기본 1분에 10회)의 IP당 한도를 늘린다. 시나리오가 한 IP에서 계정을 1분 안에 여럿 만들고 로그인하기 때문이다. config-repo는 `${ORDER_PAYMENT_TIMEOUT:15m}`처럼 기본값을 갖고, `apps.yaml`은 값이 있을 때만 컨테이너에 넘긴다. 시나리오는 `clients/e2e/support/env.ts`의 `paymentTimeoutMs`로 같은 값을 읽는다.
+- 시간 설정: `run.sh`가 결제 기한(`ORDER_PAYMENT_TIMEOUT=40s`), 만료 작업 주기(`ORDER_EXPIRY_INTERVAL=2s`), 보상 취소 주기(`PAYMENT_CANCEL_INTERVAL=2s`), 배송 시뮬레이터 주기와 지연(`FULFILLMENT_SIMULATOR_INTERVAL=2s`, `FULFILLMENT_IN_TRANSIT_AFTER=3s`, `FULFILLMENT_DELIVER_AFTER=3s`), 자동 구매확정 주기와 기한(`FULFILLMENT_CONFIRM_INTERVAL=2s`, `FULFILLMENT_AUTO_CONFIRM_AFTER=30s`)을 줄이고, 가입·이메일 인증(`GATEWAY_STRICT_RATE_LIMIT=60`, 기본 1분에 5회)과 로그인(`AUTH_LOGIN_RATE_LIMIT=100`, 기본 1분에 10회)의 IP당 한도를 늘린다. 시나리오가 한 IP에서 계정을 1분 안에 여럿 만들고 로그인하기 때문이다. config-repo는 `${ORDER_PAYMENT_TIMEOUT:15m}`처럼 기본값을 갖고, `apps.yaml`은 값이 있을 때만 컨테이너에 넘긴다. 시나리오는 `clients/e2e/support/env.ts`의 `paymentTimeoutMs`로 같은 값을 읽는다.
 
 ### 가짜 PG
 E2E는 토스페이먼츠 대신 가짜 PG(`infra/fake-pg`)로 결제한다([ADR 0018](adr/0018-toss-payments-integration.md)). `run.sh`가 `e2e` profile로 띄우고(호스트 포트 8090), 앱 코드는 그대로 두고 주소만 바꾼다.

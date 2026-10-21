@@ -1,0 +1,16 @@
+{
+  "orderId": "019a2c3d-4e5f-7a60-8b1c-2d3e4f5a6b70",
+  "sellerOrderId": "019a2c3d-4e60-7b71-8c2d-3e4f5a6b7c81",
+  "sellerId": "019a2b00-0000-7000-8000-00000000a001",
+  "buyerId": "019a2c3d-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
+  "mode": "AUTO",
+  "confirmedAt": "2026-10-28T07:00:00Z",
+  "lines": [
+    {
+      "orderLineId": "019a2c3d-4e60-7b71-8c2d-3e4f5a6b7d01",
+      "productId": "019a2b10-0000-7000-8000-0000000000a1",
+      "categoryId": "0199f000-0000-7000-8000-000000000101",
+      "amount": 19900
+    }
+  ]
+}

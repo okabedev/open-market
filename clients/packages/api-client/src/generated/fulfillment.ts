@@ -34,6 +34,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/seller-orders/{sellerOrderId}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["confirm"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/seller/seller-orders/{sellerOrderId}": {
         parameters: {
             query?: never;
@@ -50,6 +66,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/seller-orders/{sellerOrderId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["detail_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -58,7 +90,16 @@ export interface components {
             carrier: string;
             trackingNumber: string;
         };
-        SellerFulfillmentShipmentView: {
+        SellerFulfillmentView: {
+            /** Format: uuid */
+            sellerOrderId?: string;
+            /** Format: uuid */
+            orderId?: string;
+            /** @enum {string} */
+            status?: "READY" | "ACCEPTED" | "SHIPPED" | "IN_TRANSIT" | "DELIVERED" | "CANCELLED";
+            shipments?: components["schemas"]["ShipmentView"][];
+        };
+        ShipmentView: {
             /** Format: uuid */
             shipmentId?: string;
             /** @enum {string} */
@@ -77,14 +118,20 @@ export interface components {
             /** Format: date-time */
             deliveredAt?: string;
         };
-        SellerFulfillmentView: {
+        BuyerFulfillmentView: {
             /** Format: uuid */
             sellerOrderId?: string;
             /** Format: uuid */
             orderId?: string;
             /** @enum {string} */
             status?: "READY" | "ACCEPTED" | "SHIPPED" | "IN_TRANSIT" | "DELIVERED" | "CANCELLED";
-            shipments?: components["schemas"]["SellerFulfillmentShipmentView"][];
+            shipments?: components["schemas"]["ShipmentView"][];
+            /** Format: date-time */
+            confirmDueAt?: string;
+            /** Format: date-time */
+            confirmedAt?: string;
+            /** @enum {string} */
+            confirmMode?: "BUYER" | "AUTO";
         };
     };
     responses: never;
@@ -139,6 +186,26 @@ export interface operations {
             };
         };
     };
+    confirm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sellerOrderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     detail: {
         parameters: {
             query?: never;
@@ -157,6 +224,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SellerFulfillmentView"];
+                };
+            };
+        };
+    };
+    detail_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sellerOrderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BuyerFulfillmentView"];
                 };
             };
         };

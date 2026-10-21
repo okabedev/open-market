@@ -29,7 +29,7 @@ class QueryEnumsTest {
                         names(
                                 com.openmarket.order.command.application.AdvanceSellerOrderCommand
                                         .Stage.values()))
-                .containsExactly("ACCEPTED", "SHIPPED", "IN_TRANSIT", "DELIVERED");
+                .containsExactly("ACCEPTED", "SHIPPED", "IN_TRANSIT", "DELIVERED", "CONFIRMED");
     }
 
     private static String[] names(Enum<?>[] values) {

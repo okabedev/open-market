@@ -3,6 +3,7 @@ package com.openmarket.fulfillment.command.domain;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -12,6 +13,7 @@ import org.junit.jupiter.api.Test;
 class ShipmentTest {
 
     static final Instant NOW = Instant.parse("2026-10-21T00:00:00Z");
+    static final Duration SEVEN_DAYS = Duration.ofDays(7);
     static final TrackingInfo TRACKING = TrackingInfo.of("CJ_LOGISTICS", "123456789012");
 
     final UUID sellerId = UUID.randomUUID();
@@ -111,19 +113,53 @@ class ShipmentTest {
         Shipment shipment = ready(sellerId);
 
         assertThat(shipment.startTransit(NOW)).isFalse();
-        assertThat(shipment.deliver(NOW)).isFalse();
+        assertThat(shipment.deliver(NOW, SEVEN_DAYS)).isFalse();
 
         shipment.accept(NOW);
         shipment.ship(TRACKING, NOW);
-        assertThat(shipment.deliver(NOW)).isFalse();
+        assertThat(shipment.deliver(NOW, SEVEN_DAYS)).isFalse();
         assertThat(shipment.startTransit(NOW.plusSeconds(600))).isTrue();
         assertThat(shipment.startTransit(NOW.plusSeconds(601))).isFalse();
-        assertThat(shipment.deliver(NOW.plusSeconds(4200))).isTrue();
-        assertThat(shipment.deliver(NOW.plusSeconds(4201))).isFalse();
+        assertThat(shipment.deliver(NOW.plusSeconds(4200), SEVEN_DAYS)).isTrue();
+        assertThat(shipment.deliver(NOW.plusSeconds(4201), SEVEN_DAYS)).isFalse();
 
         assertThat(shipment.status()).isEqualTo(ShipmentStatus.DELIVERED);
         assertThat(shipment.inTransitAt()).isEqualTo(NOW.plusSeconds(600));
         assertThat(shipment.deliveredAt()).isEqualTo(NOW.plusSeconds(4200));
+        assertThat(shipment.confirmDueAt()).isEqualTo(NOW.plusSeconds(4200).plus(SEVEN_DAYS));
+    }
+
+    @Test
+    @DisplayName("구매확정은 배송 완료된 배송에만 한다. 확정 방식과 시각을 남기고 하위 주문을 가리킨다")
+    void confirm() {
+        Shipment shipment = ready(sellerId);
+        assertThatThrownBy(() -> PurchaseConfirmation.of(shipment, ConfirmMode.BUYER, NOW))
+                .isInstanceOfSatisfying(
+                        ShipmentInvalidStateException.class,
+                        e ->
+                                assertThat(e.getProperties())
+                                        .containsEntry("shipmentStatus", "READY"));
+
+        shipment.accept(NOW);
+        shipment.ship(TRACKING, NOW);
+        shipment.startTransit(NOW);
+        shipment.deliver(NOW, SEVEN_DAYS);
+        PurchaseConfirmation confirmation =
+                PurchaseConfirmation.of(shipment, ConfirmMode.AUTO, NOW.plus(SEVEN_DAYS));
+
+        assertThat(confirmation.sellerOrderId()).isEqualTo(shipment.sellerOrderId());
+        assertThat(confirmation.shipmentId()).isEqualTo(shipment.id());
+        assertThat(confirmation.mode()).isEqualTo(ConfirmMode.AUTO);
+        assertThat(confirmation.confirmedAt()).isEqualTo(NOW.plus(SEVEN_DAYS));
+    }
+
+    @Test
+    @DisplayName("구매자 본인의 배송인지 확인한다")
+    void receivedBy() {
+        Shipment shipment = ready(sellerId);
+
+        assertThat(shipment.isReceivedBy(shipment.buyerId())).isTrue();
+        assertThat(shipment.isReceivedBy(sellerId)).isFalse();
     }
 
     @Test

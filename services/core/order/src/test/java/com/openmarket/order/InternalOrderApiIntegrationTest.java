@@ -57,15 +57,22 @@ class InternalOrderApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("결제 전·결제된 주문이 있으면 진행 중이고, 취소된 주문만 있거나 주문이 없으면 아니다")
+    @DisplayName("결제 전 주문과 구매확정되지 않은 하위 주문이 있는 결제 완료 주문은 진행 중이다. 취소됐거나 모두 구매확정됐으면 아니다")
     void ongoingOrders() throws Exception {
         expectOngoing(false);
 
         UUID orderId = place();
-        for (String status : List.of("PENDING", "AWAITING_PAYMENT", "PAID")) {
+        for (String status : List.of("PENDING", "AWAITING_PAYMENT")) {
             markStatus(orderId, status);
             expectOngoing(true);
         }
+        markStatus(orderId, "PAID");
+        for (String progress : List.of("PAID", "DELIVERED")) {
+            markProgress(orderId, progress);
+            expectOngoing(true);
+        }
+        markProgress(orderId, "CONFIRMED");
+        expectOngoing(false);
 
         markStatus(orderId, "CANCELLED");
         expectOngoing(false);
@@ -82,6 +89,13 @@ class InternalOrderApiIntegrationTest {
         mockMvc.perform(get(ONGOING, buyerId).with(internal()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.hasOngoingOrders").value(ongoing));
+    }
+
+    private void markProgress(UUID orderId, String progress) {
+        jdbc.sql("UPDATE seller_order SET progress = :progress WHERE order_id = :id")
+                .param("progress", progress)
+                .param("id", orderId)
+                .update();
     }
 
     private void markStatus(UUID orderId, String status) {

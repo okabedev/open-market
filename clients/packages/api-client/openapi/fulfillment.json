@@ -55,6 +55,26 @@
         }
       }
     },
+    "/v1/seller-orders/{sellerOrderId}/confirm" : {
+      "post" : {
+        "tags" : [ "buyer-fulfillment-controller" ],
+        "operationId" : "confirm",
+        "parameters" : [ {
+          "name" : "sellerOrderId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        }
+      }
+    },
     "/v1/seller/seller-orders/{sellerOrderId}" : {
       "get" : {
         "tags" : [ "seller-fulfillment-query-controller" ],
@@ -81,6 +101,33 @@
           }
         }
       }
+    },
+    "/v1/seller-orders/{sellerOrderId}" : {
+      "get" : {
+        "tags" : [ "buyer-fulfillment-controller" ],
+        "operationId" : "detail_1",
+        "parameters" : [ {
+          "name" : "sellerOrderId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BuyerFulfillmentView"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components" : {
@@ -97,7 +144,30 @@
         },
         "required" : [ "carrier", "trackingNumber" ]
       },
-      "SellerFulfillmentShipmentView" : {
+      "SellerFulfillmentView" : {
+        "type" : "object",
+        "properties" : {
+          "sellerOrderId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "orderId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "status" : {
+            "type" : "string",
+            "enum" : [ "READY", "ACCEPTED", "SHIPPED", "IN_TRANSIT", "DELIVERED", "CANCELLED" ]
+          },
+          "shipments" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ShipmentView"
+            }
+          }
+        }
+      },
+      "ShipmentView" : {
         "type" : "object",
         "properties" : {
           "shipmentId" : {
@@ -137,7 +207,7 @@
           }
         }
       },
-      "SellerFulfillmentView" : {
+      "BuyerFulfillmentView" : {
         "type" : "object",
         "properties" : {
           "sellerOrderId" : {
@@ -155,8 +225,20 @@
           "shipments" : {
             "type" : "array",
             "items" : {
-              "$ref" : "#/components/schemas/SellerFulfillmentShipmentView"
+              "$ref" : "#/components/schemas/ShipmentView"
             }
+          },
+          "confirmDueAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "confirmedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "confirmMode" : {
+            "type" : "string",
+            "enum" : [ "BUYER", "AUTO" ]
           }
         }
       }

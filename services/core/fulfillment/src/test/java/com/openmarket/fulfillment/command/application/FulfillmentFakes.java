@@ -1,6 +1,8 @@
 package com.openmarket.fulfillment.command.application;
 
 import com.openmarket.common.messaging.outbox.Outbox;
+import com.openmarket.fulfillment.command.domain.PurchaseConfirmation;
+import com.openmarket.fulfillment.command.domain.PurchaseConfirmationRepository;
 import com.openmarket.fulfillment.command.domain.Shipment;
 import com.openmarket.fulfillment.command.domain.ShipmentRepository;
 import com.openmarket.fulfillment.command.domain.ShipmentStatus;
@@ -51,6 +53,11 @@ final class FulfillmentFakes {
         }
 
         @Override
+        public List<UUID> findConfirmDueIds(Instant now, int limit) {
+            throw new UnsupportedOperationException("저장소 통합 테스트에서 확인한다");
+        }
+
+        @Override
         public List<UUID> findInTransitIdsBefore(Instant inTransitBefore, int limit) {
             return due(ShipmentStatus.IN_TRANSIT, Shipment::inTransitAt, inTransitBefore, limit);
         }
@@ -67,6 +74,24 @@ final class FulfillmentFakes {
                     .limit(limit)
                     .map(Shipment::id)
                     .toList();
+        }
+    }
+
+    static final class FakePurchaseConfirmations implements PurchaseConfirmationRepository {
+        final List<PurchaseConfirmation> confirmations = new ArrayList<>();
+
+        @Override
+        public PurchaseConfirmation save(PurchaseConfirmation confirmation) {
+            if (existsBySellerOrderId(confirmation.sellerOrderId())) {
+                throw new IllegalStateException("하위 주문당 한 번이다(유일 인덱스)");
+            }
+            confirmations.add(confirmation);
+            return confirmation;
+        }
+
+        @Override
+        public boolean existsBySellerOrderId(UUID sellerOrderId) {
+            return confirmations.stream().anyMatch(c -> c.sellerOrderId().equals(sellerOrderId));
         }
     }
 

@@ -140,10 +140,12 @@ services:
     environment:
       <<: *spring-env
       FULFILLMENT_DB_PASSWORD: ${FULFILLMENT_DB_PASSWORD:?}
-      # E2E(infra/e2e/run.sh)만 준다(배송 시뮬레이터 지연). 값이 없으면 넘기지 않고 config-repo 기본값을 쓴다.
+      # E2E(infra/e2e/run.sh)만 준다(배송 시뮬레이터 지연, 자동 구매확정 기한). 값이 없으면 넘기지 않고 config-repo 기본값을 쓴다.
       FULFILLMENT_SIMULATOR_INTERVAL:
       FULFILLMENT_IN_TRANSIT_AFTER:
       FULFILLMENT_DELIVER_AFTER:
+      FULFILLMENT_CONFIRM_INTERVAL:
+      FULFILLMENT_AUTO_CONFIRM_AFTER:
     healthcheck:
       test: ["CMD", "curl", "-fs", "http://localhost:8105/actuator/health"]
       interval: 5s
