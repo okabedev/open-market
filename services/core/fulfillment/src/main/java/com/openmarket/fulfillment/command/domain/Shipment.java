@@ -4,6 +4,7 @@ import com.openmarket.common.core.id.Ids;
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
+import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -55,8 +56,22 @@ public class Shipment {
     @OrderColumn(name = "position")
     private List<ShipmentLine> lines = new ArrayList<>();
 
+    @Embedded private @Nullable TrackingInfo trackingInfo;
+
     @Column(name = "paid_at", nullable = false)
     private Instant paidAt;
+
+    @Column(name = "accepted_at")
+    private @Nullable Instant acceptedAt;
+
+    @Column(name = "shipped_at")
+    private @Nullable Instant shippedAt;
+
+    @Column(name = "in_transit_at")
+    private @Nullable Instant inTransitAt;
+
+    @Column(name = "delivered_at")
+    private @Nullable Instant deliveredAt;
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
@@ -106,6 +121,65 @@ public class Shipment {
         return new Shipment(orderId, sellerOrderId, sellerId, buyerId, amount, lines, paidAt, now);
     }
 
+    /** 발주 확인(FUL-1). {@code READY}에서만 한다. 이미 {@code ACCEPTED}면 그대로다. */
+    public Transition accept(Instant now) {
+        if (status == ShipmentStatus.ACCEPTED) {
+            return Transition.UNCHANGED;
+        }
+        if (status != ShipmentStatus.READY) {
+            throw new ShipmentInvalidStateException(status, "발주를 확인할 수 없는 상태입니다.");
+        }
+        status = ShipmentStatus.ACCEPTED;
+        acceptedAt = now;
+        updatedAt = now;
+        return Transition.CHANGED;
+    }
+
+    /** 발송(FUL-1). {@code ACCEPTED}에서만 한다. 이미 발송했고 송장이 같으면 그대로다. 송장이 다르면 409다(송장을 바꾸는 기능은 없다). */
+    public Transition ship(TrackingInfo tracking, Instant now) {
+        if (shippedAt != null) {
+            if (tracking.equals(trackingInfo)) {
+                return Transition.UNCHANGED;
+            }
+            throw new ShipmentInvalidStateException(status, "이미 다른 송장으로 발송했습니다.");
+        }
+        if (status != ShipmentStatus.ACCEPTED) {
+            throw new ShipmentInvalidStateException(status, "발송할 수 없는 상태입니다. 발주를 먼저 확인하세요.");
+        }
+        status = ShipmentStatus.SHIPPED;
+        trackingInfo = tracking;
+        shippedAt = now;
+        updatedAt = now;
+        return Transition.CHANGED;
+    }
+
+    /** 배송 시뮬레이터: 발송 → 배송 중. {@code SHIPPED}가 아니면 아무것도 하지 않고 {@code false}. */
+    public boolean startTransit(Instant now) {
+        if (status != ShipmentStatus.SHIPPED) {
+            return false;
+        }
+        status = ShipmentStatus.IN_TRANSIT;
+        inTransitAt = now;
+        updatedAt = now;
+        return true;
+    }
+
+    /** 배송 시뮬레이터: 배송 중 → 배송 완료. {@code IN_TRANSIT}이 아니면 아무것도 하지 않고 {@code false}. */
+    public boolean deliver(Instant now) {
+        if (status != ShipmentStatus.IN_TRANSIT) {
+            return false;
+        }
+        status = ShipmentStatus.DELIVERED;
+        deliveredAt = now;
+        updatedAt = now;
+        return true;
+    }
+
+    /** 이 배송을 처리하는 판매자인가. */
+    public boolean isHandledBy(UUID sellerId) {
+        return this.sellerId.equals(sellerId);
+    }
+
     public UUID id() {
         return id;
     }
@@ -140,5 +214,31 @@ public class Shipment {
 
     public Instant paidAt() {
         return paidAt;
+    }
+
+    public @Nullable TrackingInfo trackingInfo() {
+        return trackingInfo;
+    }
+
+    public @Nullable Instant acceptedAt() {
+        return acceptedAt;
+    }
+
+    public @Nullable Instant shippedAt() {
+        return shippedAt;
+    }
+
+    public @Nullable Instant inTransitAt() {
+        return inTransitAt;
+    }
+
+    public @Nullable Instant deliveredAt() {
+        return deliveredAt;
+    }
+
+    /** 판매자 동작의 결과. 같은 동작을 다시 하면 {@code UNCHANGED}이고 이벤트를 내지 않는다. */
+    public enum Transition {
+        CHANGED,
+        UNCHANGED
     }
 }

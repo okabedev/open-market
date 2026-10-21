@@ -137,6 +137,60 @@ class OrderTest {
     }
 
     @Test
+    @DisplayName("결제 전 하위 주문은 진행 상태가 없고, 결제 완료가 되면 모든 하위 주문이 PAID다")
+    void progressStartsAtPayment() {
+        Order order = twoSellers();
+        assertThat(order.sellerOrders()).allSatisfy(s -> assertThat(s.progress()).isNull());
+
+        order.awaitPayment(NOW);
+        order.pay(order.amount(), NOW, NOW);
+
+        assertThat(order.sellerOrders())
+                .allSatisfy(s -> assertThat(s.progress()).isEqualTo(SellerOrderProgress.PAID));
+    }
+
+    @Test
+    @DisplayName("하위 주문 진행 상태는 그 하위 주문만, 앞으로만 바뀐다. 같거나 뒤의 단계는 그대로다")
+    void advancesSellerOrder() {
+        Order order = twoSellers();
+        order.awaitPayment(NOW);
+        order.pay(order.amount(), NOW, NOW);
+        UUID first = order.sellerOrders().get(0).id();
+
+        assertThat(order.advanceSellerOrder(first, SellerOrderProgress.SHIPPED, NOW))
+                .isEqualTo(Order.Transition.APPLIED);
+        assertThat(order.advanceSellerOrder(first, SellerOrderProgress.ACCEPTED, NOW))
+                .isEqualTo(Order.Transition.ALREADY);
+        assertThat(order.advanceSellerOrder(first, SellerOrderProgress.SHIPPED, NOW))
+                .isEqualTo(Order.Transition.ALREADY);
+
+        assertThat(order.sellerOrders().get(0).progress()).isEqualTo(SellerOrderProgress.SHIPPED);
+        assertThat(order.sellerOrders().get(1).progress()).isEqualTo(SellerOrderProgress.PAID);
+    }
+
+    @Test
+    @DisplayName("결제 전 주문이나 주문에 없는 하위 주문은 진행 상태를 바꿀 수 없다")
+    void advanceRejected() {
+        Order order = twoSellers();
+        UUID first = order.sellerOrders().get(0).id();
+
+        assertThat(order.advanceSellerOrder(first, SellerOrderProgress.ACCEPTED, NOW))
+                .isEqualTo(Order.Transition.INVALID);
+        order.awaitPayment(NOW);
+        order.pay(order.amount(), NOW, NOW);
+        assertThat(order.advanceSellerOrder(UUID.randomUUID(), SellerOrderProgress.ACCEPTED, NOW))
+                .isEqualTo(Order.Transition.INVALID);
+    }
+
+    private Order twoSellers() {
+        return Order.place(
+                buyerId,
+                List.of(item(sellerA, "반팔 티셔츠", 19_900, 1), item(sellerB, "청바지", 39_900, 1)),
+                address,
+                NOW);
+    }
+
+    @Test
     @DisplayName("배송지 규칙: 받는 사람, 연락처 형식, 우편번호 5자리, 기본 주소. 어기면 ORDER_INVALID_INPUT이다")
     void shippingAddressRules() {
         assertThatThrownBy(() -> ShippingAddress.of(" ", "010-1234-5678", "06236", "주소", null))

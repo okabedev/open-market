@@ -2,11 +2,13 @@ package com.openmarket.order.query.dto;
 
 import java.time.Instant;
 import java.util.UUID;
+import org.jspecify.annotations.Nullable;
 
 /**
  * 판매자 하위 주문 목록의 한 줄(ORD-4).
  *
- * @param status 주문 상태. M3 하위 주문은 주문 상태를 따른다
+ * @param status 주문 상태
+ * @param progress 하위 주문 진행 상태(docs/architecture/order.md "하위 주문 진행 상태")
  * @param amount 하위 주문 금액(원)
  * @param firstProductName 첫 항목의 상품명(주문 당시)
  * @param lineCount 하위 주문의 항목 수
@@ -16,6 +18,7 @@ public record SellerOrderSummaryView(
         UUID sellerOrderId,
         UUID orderId,
         OrderStatus status,
+        @Nullable SellerOrderProgress progress,
         long amount,
         String firstProductName,
         int lineCount,

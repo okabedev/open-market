@@ -136,12 +136,13 @@ flowchart LR
 | 이벤트 | 시점 | 주요 필드 | 소비자 |
 |---|---|---|---|
 | `ShipmentAccepted` | 발주 확인 | shipmentId, orderId, sellerOrderId, acceptedAt | order |
-| `ShipmentShipped` | 발송 | shipmentId, orderId, sellerOrderId, sellerId, buyerId, carrier, trackingNumber, shippedAt | order, notification |
-| `ShipmentInTransit` | 배송 중(시뮬레이터) | shipmentId, orderId, sellerOrderId | order |
+| `ShipmentShipped` | 발송 | shipmentId, orderId, sellerOrderId, sellerId, buyerId, carrier(택배사 코드), trackingNumber, shippedAt | order, notification |
+| `ShipmentInTransit` | 배송 중(시뮬레이터) | shipmentId, orderId, sellerOrderId, inTransitAt | order |
 | `ShipmentDelivered` | 배송 완료(시뮬레이터) | shipmentId, orderId, sellerOrderId, buyerId, deliveredAt | order, notification |
 | `PurchaseConfirmed` | 구매확정(구매자·자동) | orderId, sellerOrderId, sellerId, buyerId, mode(`BUYER`, `AUTO`), confirmedAt, lines(orderLineId, productId, categoryId, amount). 판매자 쿠폰 부담분은 M5에서 더한다 | order, review(작성 자격, M5), settlement(정산 대상, M5) |
 
 - 키는 sellerOrderId다. 교환 재발송은 같은 하위 주문의 새 배송(새 shipmentId)이다.
+- JSON 예시는 `services/core/fulfillment/src/test/resources/events/`에 있다.
 - 처리 규칙은 [fulfillment.md](fulfillment.md).
 
 ### fulfillment.claim

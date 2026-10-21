@@ -183,6 +183,8 @@ export interface components {
             orderId?: string;
             /** @enum {string} */
             status?: "PENDING" | "AWAITING_PAYMENT" | "PAID" | "CANCELLED";
+            /** @enum {string} */
+            progress?: "PAID" | "ACCEPTED" | "SHIPPED" | "IN_TRANSIT" | "DELIVERED";
             /** Format: int64 */
             amount?: number;
             firstProductName?: string;
@@ -224,6 +226,8 @@ export interface components {
             orderId?: string;
             /** @enum {string} */
             status?: "PENDING" | "AWAITING_PAYMENT" | "PAID" | "CANCELLED";
+            /** @enum {string} */
+            progress?: "PAID" | "ACCEPTED" | "SHIPPED" | "IN_TRANSIT" | "DELIVERED";
             /** Format: int64 */
             amount?: number;
             shipping?: components["schemas"]["OrderShippingView"];
@@ -277,6 +281,8 @@ export interface components {
             storeName?: string;
             /** Format: int64 */
             amount?: number;
+            /** @enum {string} */
+            progress?: "PAID" | "ACCEPTED" | "SHIPPED" | "IN_TRANSIT" | "DELIVERED";
             lines?: components["schemas"]["OrderLineView"][];
         };
         CartItemView: {

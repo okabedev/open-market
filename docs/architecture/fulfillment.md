@@ -26,8 +26,26 @@ M4 시작(2026-10-21)에 정한 규칙이다. API와 화면은 각 PR에서 이 
 | `CANCELLED` | 발송 전 취소 클레임으로 멈췄다 | 취소 클레임 |
 
 - 상태를 바꿀 때 배송 행을 잠근다. 판매자의 발송과 구매자의 취소가 겹치면 먼저 잠근 쪽이 이기고, 다른 쪽은 409다.
+- 판매자 동작은 하위 주문의 마지막 배송에 한다. 교환 재발송이 있으면 새 배송이다.
+
+### 발주 확인과 발송(FUL-1)
+| 동작 | 할 수 있는 상태 | 같은 동작을 다시 하면 | 그 밖의 상태 |
+|---|---|---|---|
+| 발주 확인 | `READY` → `ACCEPTED` | `ACCEPTED`면 204, 이벤트 없음 | 409 `FULFILLMENT_INVALID_STATE` |
+| 발송 | `ACCEPTED` → `SHIPPED`. 택배사와 송장 번호를 남긴다 | 이미 발송했고 택배사·송장 번호가 같으면 204, 이벤트 없음. 다르면 409 | 409 `FULFILLMENT_INVALID_STATE` |
+
 - 발송은 `ACCEPTED`에서만 한다. 발주 확인을 건너뛰지 않는다.
-- 배송 시뮬레이터(`ShipmentSimulatorJob`)는 1분마다 돌고 ShedLock(`fulfillment-simulator`)으로 한 인스턴스에서만 돈다. 기준 시각이 지난 배송을 오래된 순으로 100건씩, 배송마다 트랜잭션을 따로 열어 한 단계씩 바꾼다.
+- 409 응답에는 지금 배송 상태(`shipmentStatus`)가 실린다. 화면은 다시 읽어 그린다.
+- 상태로 결과가 정해져 다시 보내도 같으므로 `Idempotency-Key`는 받지 않는다.
+- 택배사(`Carrier`): `CJ_LOGISTICS`(CJ대한통운), `HANJIN`(한진택배), `LOTTE`(롯데택배), `LOGEN`(로젠택배), `KOREA_POST`(우체국택배). 택배사와 연동하지 않으므로 화면 이름과 코드만 둔다.
+- 송장 번호: 숫자 10~14자리, 하이픈 없이. 어기면 400 `FULFILLMENT_INVALID_INPUT`이다. 실제 택배사 형식은 확인하지 않는다.
+
+### 배송 시뮬레이터(FUL-2)
+- `ShipmentSimulatorJob`은 `openmarket.fulfillment.simulator.interval`(기본 1분)마다 돌고 ShedLock(`fulfillment-simulator`)으로 한 인스턴스에서만 돈다.
+- 발송 후 `in-transit-after`(기본 10분)가 지난 `SHIPPED`를 `IN_TRANSIT`으로, 배송 중이 된 뒤 `deliver-after`(기본 1시간)가 지난 `IN_TRANSIT`을 `DELIVERED`로 바꾼다. 한 주기에 한 단계만 바꾼다.
+- 단계마다 기준 시각이 오래된 순으로 100건씩 읽고, 배송마다 트랜잭션을 따로 열어 잠그고 바꾼다. 그사이 상태가 바뀌었으면 넘긴다. 다 못 하면 다음 주기에 이어 한다.
+- 바뀐 시각은 기준 시각(발송 시각 + 지연)이 아니라 작업이 바꾼 시각이다. 자동 구매확정 기한은 이 배송 완료 시각에서 센다.
+- E2E는 환경 변수 `FULFILLMENT_SIMULATOR_INTERVAL`, `FULFILLMENT_IN_TRANSIT_AFTER`, `FULFILLMENT_DELIVER_AFTER`로 줄인다([dev-setup.md](../dev-setup.md) "E2E").
 
 ## 구매확정(`PurchaseConfirmation`, FUL-3)
 하위 주문 하나에 한 번이다. 하위 주문의 마지막 배송이 `DELIVERED`이고 진행 중인 클레임(`REQUESTED`, `APPROVED`, `MEDIATING`)이 없을 때만 한다.
@@ -84,6 +102,13 @@ M4 시작(2026-10-21)에 정한 규칙이다. API와 화면은 각 PR에서 이 
 | `RefundCompleted`(payment.payment) | 클레임 `APPROVED` → `COMPLETED` + `ClaimCompleted` |
 | `RefundFailed`(payment.payment) | 클레임은 그대로 둔다. 실패 코드를 기록한다 |
 
+| 내는 이벤트 | 언제 |
+|---|---|
+| `ShipmentAccepted` | 발주 확인 |
+| `ShipmentShipped` | 발송 |
+| `ShipmentInTransit` | 시뮬레이터가 배송 중으로 바꿨다 |
+| `ShipmentDelivered` | 시뮬레이터가 배송 완료로 바꿨다 |
+
 - 리스너는 처리 기록(`processed_event`)으로 같은 이벤트를 한 번만 처리한다. 리스너 이름은 `fulfillment.<이벤트>`다(예: `fulfillment.order-paid`).
 - 항목에 주문 항목 ID·상품명·옵션이 없는 M4 이전 형식의 `OrderPaid`는 배송을 만들 수 없어 영구 오류(`InvalidEventException`)로 바로 DLT에 보낸다. fulfillment 소비자 그룹은 `order.order`를 처음부터 읽으므로, M4 전에 결제된 개발용 스택의 주문이 여기에 걸린다(2026-10-21 확인). 빈 볼륨으로 띄운 스택에는 없다.
 
@@ -91,7 +116,10 @@ M4 시작(2026-10-21)에 정한 규칙이다. API와 화면은 각 PR에서 이 
 gateway 경로는 `/api/fulfillment` + 아래 경로다. 판매자 경로는 `SELLER` 역할이 있어야 하고 주체는 토큰의 `sub`(= sellerId)다.
 | 메서드 | 경로 | 설명 |
 |---|---|---|
-| GET | `/v1/seller/seller-orders/{sellerOrderId}` | 본인 하위 주문의 배송 진행. 진행 상태(마지막 배송의 상태)와 배송 목록(배송 ID, 상태, 만든 시각. 만든 순서)이다. 다른 판매자의 것이거나 배송이 아직 없으면 404 `FULFILLMENT_NOT_FOUND` |
+| GET | `/v1/seller/seller-orders/{sellerOrderId}` | 본인 하위 주문의 배송 진행. 진행 상태(마지막 배송의 상태)와 배송 목록(배송 ID, 상태, 택배사, 송장 번호, 만든·발주 확인·발송·배송 중·배송 완료 시각. 만든 순서)이다. 다른 판매자의 것이거나 배송이 아직 없으면 404 `FULFILLMENT_NOT_FOUND` |
+| POST | `/v1/seller/seller-orders/{sellerOrderId}/accept` | 발주 확인. 204. 위 "발주 확인과 발송" |
+| POST | `/v1/seller/seller-orders/{sellerOrderId}/ship` | 발송. 본문 `{"carrier", "trackingNumber"}`. 204 |
 
+- 발주 확인과 발송도 다른 판매자의 하위 주문이나 배송이 없는 하위 주문이면 404 `FULFILLMENT_NOT_FOUND`다.
 - 하위 주문 목록, 항목, 배송지는 order의 판매자 하위 주문 조회에 있다([order.md](order.md) "조회"). 이 API는 처리 화면이 배송 상태와 할 수 있는 동작을 정하는 데 쓴다.
 - 배송은 `OrderPaid`를 받아 만들므로 결제 직후 잠깐 없다. 화면은 404인 동안 "배송 준비 중"으로 보여 준다.

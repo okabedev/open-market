@@ -11,6 +11,7 @@ import com.openmarket.order.command.domain.OrderCancelled;
 import com.openmarket.order.command.domain.OrderItem;
 import com.openmarket.order.command.domain.OrderPaid;
 import com.openmarket.order.command.domain.OrderStatus;
+import com.openmarket.order.command.domain.SellerOrderProgress;
 import com.openmarket.order.command.domain.ShippingAddress;
 import java.time.Clock;
 import java.time.Instant;
@@ -33,6 +34,7 @@ class OrderTransitionUseCasesTest {
     final CancelOrderUseCase cancel = new CancelOrderUseCase(orders, outbox, clock);
     final FakeCartRepository carts = new FakeCartRepository();
     final PayOrderUseCase pay = new PayOrderUseCase(orders, carts, outbox, clock);
+    final AdvanceSellerOrderUseCase advance = new AdvanceSellerOrderUseCase(orders, clock);
 
     final Order order =
             orders.save(
@@ -180,5 +182,27 @@ class OrderTransitionUseCasesTest {
         pay.execute(new PayOrderCommand(UUID.randomUUID(), 59_700, NOW));
 
         assertThat(outbox.events).isEmpty();
+    }
+
+    @Test
+    @DisplayName("배송 이벤트로 하위 주문 진행 상태를 앞으로 바꾸고 이벤트는 내지 않는다. 모르는 주문은 넘긴다")
+    void advancesSellerOrder() {
+        awaitPayment.execute(new AwaitPaymentCommand(order.id()));
+        pay.execute(new PayOrderCommand(order.id(), 59_700, NOW));
+        UUID sellerOrderId = order.sellerOrders().getFirst().id();
+
+        advance.execute(
+                new AdvanceSellerOrderCommand(
+                        order.id(), sellerOrderId, AdvanceSellerOrderCommand.Stage.IN_TRANSIT));
+        advance.execute(
+                new AdvanceSellerOrderCommand(
+                        order.id(), sellerOrderId, AdvanceSellerOrderCommand.Stage.SHIPPED));
+        advance.execute(
+                new AdvanceSellerOrderCommand(
+                        UUID.randomUUID(), sellerOrderId, AdvanceSellerOrderCommand.Stage.SHIPPED));
+
+        assertThat(order.sellerOrders().getFirst().progress())
+                .isEqualTo(SellerOrderProgress.IN_TRANSIT);
+        assertThat(outbox.types()).containsExactly(OrderAwaitingPayment.TYPE, OrderPaid.TYPE);
     }
 }

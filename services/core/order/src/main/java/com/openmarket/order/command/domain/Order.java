@@ -160,7 +160,31 @@ public class Order {
         status = OrderStatus.PAID;
         paidAt = approvedAt;
         updatedAt = now;
+        for (SellerOrder sellerOrder : sellerOrders) {
+            sellerOrder.startProgress(now);
+        }
         return Transition.APPLIED;
+    }
+
+    /**
+     * 하위 주문 진행 상태를 앞으로 바꾼다(fulfillment 배송 이벤트). 같거나 뒤의 단계면 {@code ALREADY}(재처리, 늦게 온 이벤트), 결제 전
+     * 주문이거나 이 주문의 하위 주문이 아니면 {@code INVALID}다.
+     */
+    public Transition advanceSellerOrder(
+            UUID sellerOrderId, SellerOrderProgress progress, Instant now) {
+        if (status != OrderStatus.PAID) {
+            return Transition.INVALID;
+        }
+        for (SellerOrder sellerOrder : sellerOrders) {
+            if (sellerOrder.id().equals(sellerOrderId)) {
+                if (!sellerOrder.advance(progress, now)) {
+                    return Transition.ALREADY;
+                }
+                updatedAt = now;
+                return Transition.APPLIED;
+            }
+        }
+        return Transition.INVALID;
     }
 
     /** 결제 전에 취소한다. {@code PENDING}, {@code AWAITING_PAYMENT}에서만 바뀐다. 이미 취소됐으면 처음 사유가 남는다. */

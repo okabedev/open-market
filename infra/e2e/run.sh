@@ -31,6 +31,10 @@ export TOSS_SDK_URL=http://localhost:8090/v2/standard
 export ORDER_PAYMENT_TIMEOUT=40s
 export ORDER_EXPIRY_INTERVAL=2s
 export PAYMENT_CANCEL_INTERVAL=2s
+# 배송 시뮬레이터(config-repo 기본값은 1분 주기, 발송 10분 뒤 배송 중, 그 1시간 뒤 배송 완료). 발송 후 몇 초 안에 배송 완료가 되게 줄인다.
+export FULFILLMENT_SIMULATOR_INTERVAL=2s
+export FULFILLMENT_IN_TRANSIT_AFTER=3s
+export FULFILLMENT_DELIVER_AFTER=3s
 # 가입·이메일 인증의 IP당 한도(기본 1분에 5회). 시나리오가 한 IP에서 계정을 1분 안에 여럿 만든다.
 export GATEWAY_STRICT_RATE_LIMIT=60
 # 로그인의 IP당 한도(기본 1분에 10회). 판매자·구매자·역할 확인 토큰으로 1분 안에 여러 번 로그인한다.
