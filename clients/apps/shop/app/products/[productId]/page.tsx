@@ -12,13 +12,23 @@ import {
 } from "@openmarket/ui";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { randomUUID } from "node:crypto";
+import { addToCart } from "@/app/cart/actions";
+import { QuantityForm } from "@/components/quantity-form";
 import { bff } from "@/lib/bff";
+import { currentSession } from "@/lib/session";
 
 /**
- * 구매자 상품 상세. 판매 중·판매 중지 상품만 보이고(제재·등록 중은 404), 남은 수량 대신 옵션별 품절 여부를 보여 준다. 주문은 M3에서 연다.
+ * 구매자 상품 상세. 판매 중·판매 중지 상품만 보이고(제재·등록 중은 404), 남은 수량 대신 옵션별 품절 여부를 보여 준다. 로그인하면 판매
+ * 중인 상품의 품절 아닌 옵션을 장바구니에 담는다(재고는 주문할 때 예약으로 정한다). 담으면 `?added=<SKU ID>`로 돌아와 안내한다.
  */
-export default async function ProductPage({ params }: PageProps<"/products/[productId]">) {
+export default async function ProductPage({
+  params,
+  searchParams,
+}: PageProps<"/products/[productId]">) {
   const { productId } = await params;
+  const { added } = await searchParams;
+  const session = await currentSession();
   const catalog = await bff.publicClient("catalog");
   const { data: product, response } = await catalog.GET("/v1/products/{productId}", {
     params: { path: { productId } },
@@ -34,6 +44,7 @@ export default async function ProductPage({ params }: PageProps<"/products/[prod
   const optionNames = product.optionNames ?? [];
   const prices = new Set(skus.map((sku) => sku.price));
   const stopped = product.status === "STOPPED";
+  const addedSku = skus.find((sku) => sku.skuId === added);
   return (
     <article className="grid gap-8">
       <nav
@@ -79,6 +90,14 @@ export default async function ProductPage({ params }: PageProps<"/products/[prod
             {formatPrice(product.minPrice)}
             {prices.size > 1 ? <span className="text-base font-normal">부터</span> : null}
           </p>
+          {addedSku ? (
+            <Alert variant="success">
+              장바구니에 담았습니다({(addedSku.optionValues ?? []).join(" / ") || "기본"}).{" "}
+              <Link href="/cart" className="font-medium underline">
+                장바구니 보기
+              </Link>
+            </Alert>
+          ) : null}
           {stopped ? (
             <Alert>판매가 중지된 상품입니다.</Alert>
           ) : !product.inStock ? (
@@ -90,6 +109,9 @@ export default async function ProductPage({ params }: PageProps<"/products/[prod
                 <TableHead>{optionNames.length > 0 ? optionNames.join(" / ") : "옵션"}</TableHead>
                 <TableHead className="text-right">가격</TableHead>
                 <TableHead className="text-right">재고</TableHead>
+                {session && !stopped ? (
+                  <TableHead className="text-right">장바구니</TableHead>
+                ) : null}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -106,13 +128,42 @@ export default async function ProductPage({ params }: PageProps<"/products/[prod
                       <Badge variant="secondary">품절</Badge>
                     )}
                   </TableCell>
+                  {session && !stopped ? (
+                    <TableCell className="text-right">
+                      {sku.inStock ? (
+                        <QuantityForm
+                          action={addToCart}
+                          // 옵션마다 화면을 그릴 때 한 번 만든다. 두 번 눌러도 한 번만 담긴다.
+                          hidden={{
+                            skuId: sku.skuId ?? "",
+                            productId,
+                            idempotencyKey: randomUUID(),
+                          }}
+                          id={`quantity-${sku.skuId}`}
+                          label={`${(sku.optionValues ?? []).join(" / ") || "기본"} 수량`}
+                          defaultQuantity={1}
+                          submitText="담기"
+                        />
+                      ) : (
+                        <span className="text-sm text-muted-foreground">-</span>
+                      )}
+                    </TableCell>
+                  ) : null}
                 </TableRow>
               ))}
             </TableBody>
           </Table>
-          <p className="text-sm text-muted-foreground">
-            장바구니와 주문은 다음 마일스톤에서 열립니다.
-          </p>
+          {session ? null : (
+            <p className="text-sm text-muted-foreground">
+              <Link
+                href={`/auth/login?returnTo=${encodeURIComponent(`/products/${productId}`)}`}
+                className="font-medium underline"
+              >
+                로그인
+              </Link>
+              하면 장바구니에 담을 수 있습니다.
+            </p>
+          )}
         </div>
       </div>
       <section className="grid gap-2">
