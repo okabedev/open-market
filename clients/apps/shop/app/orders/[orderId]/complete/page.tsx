@@ -3,15 +3,14 @@ import {
   Button,
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
   formatDateTime,
-  formatPrice,
   PageHeader,
+  ShippingCard,
 } from "@openmarket/ui";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { AutoRefresh } from "@/components/auto-refresh";
+import { OrderItemsCard } from "@/components/order-items-card";
 import { bff } from "@/lib/bff";
 import { cancelReasonMessage } from "@/lib/checkout";
 import { requireSession } from "@/lib/session";
@@ -64,7 +63,6 @@ export default async function CompletePage({ params }: PageProps<"/orders/[order
       </>
     );
   }
-  const shipping = data.shipping;
   return (
     <>
       <PageHeader
@@ -72,52 +70,12 @@ export default async function CompletePage({ params }: PageProps<"/orders/[order
         description={`결제 시각 ${formatDateTime(data.paidAt)}`}
       />
       <div className="grid gap-4">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">주문 상품</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-4 text-sm">
-            {(data.sellerOrders ?? []).map((sellerOrder) => (
-              <section key={sellerOrder.sellerOrderId} className="grid gap-1">
-                <h2 className="font-medium">{sellerOrder.storeName}</h2>
-                <ul className="grid gap-1">
-                  {(sellerOrder.lines ?? []).map((line) => (
-                    <li key={line.orderLineId} className="flex justify-between gap-4">
-                      <span>
-                        {line.productName}
-                        {(line.optionValues ?? []).length > 0
-                          ? ` (${(line.optionValues ?? []).join(" / ")})`
-                          : ""}{" "}
-                        × {line.quantity}
-                      </span>
-                      <span>{formatPrice(line.amount)}</span>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            ))}
-            <p className="flex justify-between border-t pt-3 text-base font-semibold">
-              <span>결제 금액</span>
-              <span>{formatPrice(data.amount)}</span>
-            </p>
-          </CardContent>
-        </Card>
-        {shipping ? (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">배송지</CardTitle>
-            </CardHeader>
-            <CardContent className="grid gap-1 text-sm">
-              <p>
-                {shipping.recipientName} · {shipping.recipientPhone}
-              </p>
-              <p className="text-muted-foreground">
-                ({shipping.zipCode}) {shipping.baseAddress} {shipping.detailAddress}
-              </p>
-            </CardContent>
-          </Card>
-        ) : null}
-        <div>
+        <OrderItemsCard sellerOrders={data.sellerOrders} amount={data.amount} />
+        <ShippingCard shipping={data.shipping} />
+        <div className="flex gap-2">
+          <Button asChild variant="outline">
+            <Link href={`/orders/${orderId}`}>주문 상세 보기</Link>
+          </Button>
           <Button asChild variant="outline">
             <Link href="/products">쇼핑 계속하기</Link>
           </Button>

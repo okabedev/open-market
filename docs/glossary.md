@@ -42,7 +42,7 @@
 | 용어 | 코드 이름 | 담당 | 설명 |
 |---|---|---|---|
 | 장바구니 | `Cart`, `CartItem` | order | 회원당 하나 |
-| 주문 | `Order` | order | 구매자의 결제 단위. 상태: `PENDING`(예약 중) → `AWAITING_PAYMENT` → `PAID`, 또는 `CANCELLED` |
+| 주문 | `Order` | order | 구매자의 결제 단위. 상태: `PENDING`(예약 중) → `AWAITING_PAYMENT` → `PAID`, 또는 `CANCELLED`. 화면 이름은 재고 확인 중, 결제 대기, 결제 완료, 취소됨이다(하위 주문도 같다) |
 | 하위 주문 | `SellerOrder` | order | 주문을 판매자별로 나눈 단위. 배송, 클레임, 정산의 기준이다 |
 | 주문 항목 | `OrderLine` | order | SKU 하나와 수량, 주문 당시 가격 스냅샷 |
 | 취소 사유 | `CancelReason` | order | 결제 전 주문 취소의 이유. `STOCK_UNAVAILABLE`(재고 예약 실패), `PAYMENT_TIMEOUT`(주문 만료), `BUYER_CANCELLED`(구매자 취소) |
