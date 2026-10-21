@@ -136,6 +136,54 @@ class OrderEventsIntegrationTest {
                 .isEqualTo(1);
     }
 
+    @Test
+    @DisplayName("OrderCancelled를 받으면 READY 결제를 CANCELLED로 바꾼다. 결제가 없는 주문의 취소는 넘긴다")
+    void cancels() throws Exception {
+        UUID orderId = UUID.randomUUID();
+        UUID withoutPayment = UUID.randomUUID();
+
+        send(
+                UUID.randomUUID(),
+                "OrderAwaitingPayment",
+                withOrderId("OrderAwaitingPayment.json", orderId),
+                orderId);
+        send(
+                UUID.randomUUID(),
+                "OrderCancelled",
+                withOrderId("OrderCancelled.json", withoutPayment),
+                withoutPayment);
+        send(
+                UUID.randomUUID(),
+                "OrderCancelled",
+                withOrderId("OrderCancelled.json", orderId),
+                orderId);
+
+        await().atMost(Duration.ofSeconds(15))
+                .untilAsserted(
+                        () ->
+                                assertThat(
+                                                jdbc.sql(
+                                                                "SELECT status FROM payment WHERE"
+                                                                        + " order_id = :orderId")
+                                                        .param("orderId", orderId)
+                                                        .query(String.class)
+                                                        .single())
+                                        .isEqualTo("CANCELLED"));
+        assertThat(
+                        jdbc.sql(
+                                        "SELECT count(*) FROM processed_event WHERE consumer ="
+                                                + " 'payment.order-cancelled'")
+                                .query(Integer.class)
+                                .single())
+                .isGreaterThanOrEqualTo(2);
+        assertThat(
+                        jdbc.sql("SELECT count(*) FROM payment WHERE order_id = :orderId")
+                                .param("orderId", withoutPayment)
+                                .query(Integer.class)
+                                .single())
+                .isZero();
+    }
+
     private String withOrderId(String example, UUID orderId) throws Exception {
         ObjectNode node =
                 (ObjectNode) json.readTree(Files.readString(PUBLISHER_EXAMPLES.resolve(example)));

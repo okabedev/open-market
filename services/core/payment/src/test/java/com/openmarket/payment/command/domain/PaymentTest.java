@@ -111,4 +111,98 @@ class PaymentTest {
         assertThat(payment.approve(1, "카드", NOW, NOW)).isEqualTo(Payment.Transition.STALE);
         assertThat(payment.status()).isEqualTo(PaymentStatus.IN_PROGRESS);
     }
+
+    @Test
+    @DisplayName("주문이 취소되면 돈이 빠져나가지 않은 결제(READY, FAILED)는 바로 CANCELLED다. 다시 와도 그대로다")
+    void cancelWithoutMoney() {
+        Payment ready = ready();
+        assertThat(ready.requestCancel(NOW)).isEqualTo(Payment.CancelRequest.CANCELLED);
+        assertThat(ready.status()).isEqualTo(PaymentStatus.CANCELLED);
+        assertThat(ready.cancelledAt()).isEqualTo(NOW);
+        assertThat(ready.requestCancel(NOW)).isEqualTo(Payment.CancelRequest.ALREADY);
+
+        Payment failed = ready();
+        failed.requestConfirm("tgen_1", 59_700, NOW);
+        failed.fail(1, "REJECT_CARD_PAYMENT", NOW);
+        assertThat(failed.requestCancel(NOW)).isEqualTo(Payment.CancelRequest.CANCELLED);
+        assertThat(failed.status()).isEqualTo(PaymentStatus.CANCELLED);
+        assertThat(failed.needsGatewayCancel()).isFalse();
+    }
+
+    @Test
+    @DisplayName("취소된 결제와 취소 요청이 있는 결제는 승인을 요청할 수 없다(같은 결제 키여도)")
+    void confirmAfterCancel() {
+        Payment ready = ready();
+        ready.requestCancel(NOW);
+        assertThatThrownBy(() -> ready.requestConfirm("tgen_1", 59_700, NOW))
+                .isInstanceOf(PaymentCancelledException.class);
+
+        Payment inProgress = ready();
+        inProgress.requestConfirm("tgen_1", 59_700, NOW);
+        inProgress.requestCancel(NOW);
+        assertThatThrownBy(() -> inProgress.requestConfirm("tgen_1", 59_700, NOW))
+                .isInstanceOf(PaymentCancelledException.class);
+        assertThat(inProgress.confirmAttempt()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("승인을 기다리는 결제는 취소 요청만 남긴다. 승인되면 토스 취소가 필요하고, 거절되면 CANCELLED다")
+    void cancelWhileInProgress() {
+        Payment approved = ready();
+        approved.requestConfirm("tgen_1", 59_700, NOW);
+        assertThat(approved.requestCancel(NOW)).isEqualTo(Payment.CancelRequest.REQUESTED);
+        assertThat(approved.requestCancel(NOW)).isEqualTo(Payment.CancelRequest.ALREADY);
+        assertThat(approved.status()).isEqualTo(PaymentStatus.IN_PROGRESS);
+        assertThat(approved.cancelRequestedAt()).isEqualTo(NOW);
+        assertThat(approved.needsGatewayCancel()).isFalse();
+
+        assertThat(approved.approve(1, "카드", NOW, NOW)).isEqualTo(Payment.Transition.APPLIED);
+        assertThat(approved.status()).isEqualTo(PaymentStatus.APPROVED);
+        assertThat(approved.needsGatewayCancel()).isTrue();
+
+        Payment rejected = ready();
+        rejected.requestConfirm("tgen_1", 59_700, NOW);
+        rejected.requestCancel(NOW);
+        assertThat(rejected.fail(1, "REJECT_CARD_PAYMENT", NOW))
+                .isEqualTo(Payment.Transition.APPLIED);
+        assertThat(rejected.status()).isEqualTo(PaymentStatus.CANCELLED);
+        assertThat(rejected.failureCode()).isEqualTo("REJECT_CARD_PAYMENT");
+        assertThat(rejected.needsGatewayCancel()).isFalse();
+    }
+
+    @Test
+    @DisplayName("승인된 결제는 취소 요청을 남기고, 토스 취소가 끝나면 CANCELLED다. 토스 취소의 멱등 키는 결제마다 하나다")
+    void cancelApproved() {
+        Payment payment = ready();
+        payment.requestConfirm("tgen_1", 59_700, NOW);
+        payment.approve(1, "카드", NOW, NOW);
+
+        assertThat(payment.cancelled(NOW)).isEqualTo(Payment.Transition.STALE);
+        assertThat(payment.requestCancel(NOW)).isEqualTo(Payment.CancelRequest.REQUESTED);
+        assertThat(payment.needsGatewayCancel()).isTrue();
+        assertThat(payment.gatewayCancelIdempotencyKey()).isEqualTo(payment.id() + "-cancel");
+
+        Instant later = NOW.plusSeconds(60);
+        assertThat(payment.cancelled(later)).isEqualTo(Payment.Transition.APPLIED);
+        assertThat(payment.status()).isEqualTo(PaymentStatus.CANCELLED);
+        assertThat(payment.cancelledAt()).isEqualTo(later);
+        assertThat(payment.needsGatewayCancel()).isFalse();
+        assertThat(payment.cancelled(later)).isEqualTo(Payment.Transition.ALREADY);
+    }
+
+    @Test
+    @DisplayName("토스가 취소를 거절하면 코드를 남기고 APPROVED로 둔다. 더는 자동으로 취소하지 않는다")
+    void cancelRejected() {
+        Payment payment = ready();
+        payment.requestConfirm("tgen_1", 59_700, NOW);
+        payment.approve(1, "카드", NOW, NOW);
+        payment.requestCancel(NOW);
+
+        assertThat(payment.cancelRejected("NOT_CANCELABLE_PAYMENT", NOW))
+                .isEqualTo(Payment.Transition.APPLIED);
+
+        assertThat(payment.status()).isEqualTo(PaymentStatus.APPROVED);
+        assertThat(payment.cancelFailureCode()).isEqualTo("NOT_CANCELABLE_PAYMENT");
+        assertThat(payment.needsGatewayCancel()).isFalse();
+    }
 }

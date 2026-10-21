@@ -55,6 +55,15 @@ public class Payment {
     @Column(name = "failure_code")
     private @Nullable String failureCode;
 
+    @Column(name = "cancel_requested_at")
+    private @Nullable Instant cancelRequestedAt;
+
+    @Column(name = "cancelled_at")
+    private @Nullable Instant cancelledAt;
+
+    @Column(name = "cancel_failure_code")
+    private @Nullable String cancelFailureCode;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -90,11 +99,16 @@ public class Payment {
      * 승인을 요청한다. {@code READY}, {@code FAILED}면 금액을 대조하고 {@code IN_PROGRESS}로 바꾼 뒤 시도 번호를 올린다. 이미
      * 요청했거나 승인된 결제는 같은 결제 키면 지금 상태를 알리고 바꾸지 않는다.
      *
+     * @throws PaymentCancelledException 주문이 취소돼 결제가 취소됐거나 취소를 기다린다
      * @throws PaymentAmountMismatchException 금액이 결제 금액과 다르다
      * @throws PaymentNotConfirmableException 다른 결제 키로 이미 요청했거나 승인됐다
      */
     public ConfirmRequest requestConfirm(String paymentKey, long amount, Instant now) {
+        if (isCancelRequested()) {
+            throw new PaymentCancelledException();
+        }
         return switch (status) {
+            case CANCELLED -> throw new PaymentCancelledException();
             case IN_PROGRESS -> sameKey(paymentKey, ConfirmRequest.PENDING);
             case APPROVED -> sameKey(paymentKey, ConfirmRequest.APPROVED);
             case READY, FAILED -> {
@@ -137,26 +151,91 @@ public class Payment {
         return Transition.APPLIED;
     }
 
-    /** 승인 실패를 반영한다. {@code attempt}가 지금 시도일 때만 바꾼다. */
+    /**
+     * 승인 실패를 반영한다. {@code attempt}가 지금 시도일 때만 바꾼다. 취소 요청이 있으면 다시 결제할 주문이 없으므로 {@code CANCELLED}가
+     * 된다.
+     */
     public Transition fail(int attempt, String code, Instant now) {
         if (attempt != confirmAttempt) {
             return Transition.STALE;
         }
-        if (status == PaymentStatus.FAILED) {
+        if (status == PaymentStatus.FAILED
+                || (status == PaymentStatus.CANCELLED && code.equals(failureCode))) {
             return Transition.ALREADY;
         }
         if (status != PaymentStatus.IN_PROGRESS) {
             return Transition.STALE;
         }
-        status = PaymentStatus.FAILED;
         failureCode = code;
+        if (isCancelRequested()) {
+            status = PaymentStatus.CANCELLED;
+            cancelledAt = now;
+        } else {
+            status = PaymentStatus.FAILED;
+        }
         updatedAt = now;
         return Transition.APPLIED;
+    }
+
+    /**
+     * 주문이 결제 전에 취소됐다(docs/architecture/payment.md "보상 취소"). 돈이 빠져나가지 않은 결제({@code READY}, {@code
+     * FAILED})는 바로 {@code CANCELLED}다. 승인을 기다리거나 승인된 결제는 취소 요청만 남긴다. 승인되면 토스 전액 취소 대상이 된다.
+     */
+    public CancelRequest requestCancel(Instant now) {
+        if (status == PaymentStatus.CANCELLED || isCancelRequested()) {
+            return CancelRequest.ALREADY;
+        }
+        cancelRequestedAt = now;
+        updatedAt = now;
+        if (status == PaymentStatus.READY || status == PaymentStatus.FAILED) {
+            status = PaymentStatus.CANCELLED;
+            cancelledAt = now;
+            return CancelRequest.CANCELLED;
+        }
+        return CancelRequest.REQUESTED;
+    }
+
+    /** 토스 전액 취소를 불러야 하는지. 승인됐고 취소 요청이 있으며 토스가 취소를 거절한 적이 없다. */
+    public boolean needsGatewayCancel() {
+        return status == PaymentStatus.APPROVED && isCancelRequested() && cancelFailureCode == null;
+    }
+
+    /** 토스 전액 취소가 끝났다. */
+    public Transition cancelled(Instant now) {
+        if (status == PaymentStatus.CANCELLED) {
+            return Transition.ALREADY;
+        }
+        if (!needsGatewayCancel()) {
+            return Transition.STALE;
+        }
+        status = PaymentStatus.CANCELLED;
+        cancelledAt = now;
+        updatedAt = now;
+        return Transition.APPLIED;
+    }
+
+    /** 토스가 전액 취소를 거절했다. {@code APPROVED}로 두고 더는 자동으로 취소하지 않는다. 운영자가 처리한다. */
+    public Transition cancelRejected(String code, Instant now) {
+        if (!needsGatewayCancel()) {
+            return Transition.STALE;
+        }
+        cancelFailureCode = code;
+        updatedAt = now;
+        return Transition.APPLIED;
+    }
+
+    private boolean isCancelRequested() {
+        return cancelRequestedAt != null;
     }
 
     /** 지금 승인 시도의 토스 {@code Idempotency-Key}. 같은 시도를 다시 보내도 토스가 한 번만 처리한다. */
     public String gatewayIdempotencyKey() {
         return id + "-" + confirmAttempt;
+    }
+
+    /** 토스 전액 취소의 {@code Idempotency-Key}. 전액 취소는 결제마다 한 번이라 결제 ID로 만든다. */
+    public String gatewayCancelIdempotencyKey() {
+        return id + "-cancel";
     }
 
     public UUID id() {
@@ -207,6 +286,18 @@ public class Payment {
         return failureCode;
     }
 
+    public @Nullable Instant cancelRequestedAt() {
+        return cancelRequestedAt;
+    }
+
+    public @Nullable Instant cancelledAt() {
+        return cancelledAt;
+    }
+
+    public @Nullable String cancelFailureCode() {
+        return cancelFailureCode;
+    }
+
     /** 승인 요청의 결과. */
     public enum ConfirmRequest {
         /** {@code IN_PROGRESS}로 바꿨다. 토스를 부른다. */
@@ -215,6 +306,16 @@ public class Payment {
         PENDING,
         /** 같은 결제 키로 이미 승인됐다. */
         APPROVED
+    }
+
+    /** 취소 요청의 결과. */
+    public enum CancelRequest {
+        /** 돈이 빠져나가지 않은 결제라 바로 취소했다. */
+        CANCELLED,
+        /** 취소 요청을 남겼다. 승인되면 토스 전액 취소를 부른다. */
+        REQUESTED,
+        /** 이미 취소됐거나 취소 요청이 있다. */
+        ALREADY
     }
 
     /** 결과 반영. */

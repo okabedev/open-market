@@ -123,12 +123,13 @@ flowchart LR
 |---|---|---|---|
 | `PaymentApproved` | 토스 승인 성공 | orderId, paymentId, amount, method(토스 결제수단 이름), approvedAt | order |
 | `PaymentFailed` | 승인 실패 | orderId, paymentId, code(토스 오류 코드) | order, notification |
-| `PaymentCancelled` | 전액 취소(보상 포함) | orderId, paymentId, reason | order, notification |
+| `PaymentCancelled` | 토스 전액 취소 성공(보상 포함) | orderId, paymentId, amount(취소 금액), reason, cancelledAt | notification |
 | `RefundCompleted` | 부분취소 성공 | claimId, sellerOrderId, 금액 | fulfillment |
 | `RefundFailed` | 부분취소 최종 실패 | claimId, 오류 코드 | fulfillment, notification(관리자) |
 
 - 키는 orderId다. 한 주문의 결제 이벤트는 순서대로 온다.
 - JSON 예시는 `services/core/payment/src/test/resources/events/`에 있다. 처리 규칙은 [payment.md](payment.md).
+- `PaymentCancelled`의 reason은 M3에서 `ORDER_CANCELLED`(결제 전 취소된 주문의 보상 취소) 하나다. 돈이 빠져나가지 않은 결제(`READY`, `FAILED`)를 무효로 할 때는 내지 않는다. order는 받지 않는다. 보상 취소할 때 주문은 이미 `CANCELLED`다.
 
 ### fulfillment.shipment
 | 이벤트 | 시점 | 주요 필드 | 소비자 |

@@ -4,6 +4,7 @@ import com.openmarket.payment.command.application.ApplyGatewayResultUseCase.Appl
 import com.openmarket.payment.command.application.PaymentGatewayPort.Rejected;
 import com.openmarket.payment.command.application.PaymentGatewayPort.Unknown;
 import com.openmarket.payment.command.domain.Payment;
+import com.openmarket.payment.command.domain.PaymentCancelledException;
 import com.openmarket.payment.command.domain.PaymentLedgerEntry;
 import com.openmarket.payment.command.domain.PaymentNotFoundException;
 import com.openmarket.payment.command.domain.PaymentRejectedException;
@@ -18,7 +19,8 @@ import org.springframework.transaction.support.TransactionOperations;
 
 /**
  * 결제를 승인한다(PAY-1, docs/architecture/payment.md "승인"). 결제를 잠그고 금액을 대조해 {@code IN_PROGRESS}로 커밋한 뒤,
- * 트랜잭션 밖에서 토스를 부른다. 응답으로 정하지 못하면 조회로 정하고, 그래도 안 되면 {@code IN_PROGRESS}로 두어 재조회 작업에 맡긴다.
+ * 트랜잭션 밖에서 토스를 부른다. 응답으로 정하지 못하면 조회로 정하고, 그래도 안 되면 {@code IN_PROGRESS}로 두어 재조회 작업에 맡긴다. 토스를 부르는 동안
+ * 주문이 취소됐으면 409 {@code PAYMENT_CANCELLED}다. 승인된 금액은 취소 작업이 돌려준다.
  */
 @Service
 public class ConfirmPaymentUseCase {
@@ -46,6 +48,7 @@ public class ConfirmPaymentUseCase {
      * 승인 결과. 정해지지 않았으면 {@code IN_PROGRESS}다.
      *
      * @throws PaymentRejectedException 토스가 거절했다. 결제는 {@code FAILED}다
+     * @throws PaymentCancelledException 주문이 취소돼 결제가 취소됐거나 취소를 기다린다
      */
     public Result execute(ConfirmPaymentCommand command) {
         Requested requested = Objects.requireNonNull(transaction.execute(_ -> request(command)));
@@ -74,6 +77,9 @@ public class ConfirmPaymentUseCase {
                             PaymentLedgerEntry.Kind.QUERY,
                             command.paymentKey(),
                             response);
+        }
+        if (applied.cancelRequested()) {
+            throw new PaymentCancelledException();
         }
         if (applied.status() == PaymentStatus.FAILED) {
             throw response instanceof Rejected rejected

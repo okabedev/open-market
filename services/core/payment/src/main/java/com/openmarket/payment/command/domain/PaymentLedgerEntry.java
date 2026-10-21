@@ -102,7 +102,9 @@ public class PaymentLedgerEntry {
         /** 승인 */
         CONFIRM,
         /** 결제 조회 */
-        QUERY
+        QUERY,
+        /** 전액 취소 */
+        CANCEL
     }
 
     /** 토스 응답의 해석. */
@@ -114,6 +116,8 @@ public class PaymentLedgerEntry {
         /** 아직 정해지지 않았다(조회). */
         PENDING,
         /** 응답으로 정할 수 없다(타임아웃, 5xx 등). */
-        UNKNOWN
+        UNKNOWN,
+        /** 취소됐다. */
+        CANCELLED
     }
 }

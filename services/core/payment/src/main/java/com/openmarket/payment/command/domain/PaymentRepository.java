@@ -20,4 +20,7 @@ public interface PaymentRepository {
 
     /** {@code requestedBefore} 이전에 승인을 요청한 {@code IN_PROGRESS} 결제. 오래된 순, 최대 {@code limit}개. */
     List<UUID> findInProgressIdsRequestedBefore(Instant requestedBefore, int limit);
+
+    /** 토스 전액 취소를 기다리는 결제(승인됐고 취소 요청이 있으며 토스가 거절한 적이 없다). 오래된 요청 순, 최대 {@code limit}개. */
+    List<UUID> findCancelRequestedApprovedIds(int limit);
 }
