@@ -13,13 +13,14 @@ import { notFound, redirect } from "next/navigation";
 import { AutoRefresh } from "@/components/auto-refresh";
 import { PaymentWidget } from "@/components/payment-widget";
 import { bff } from "@/lib/bff";
-import { cancelReasonMessage, paymentErrorMessage } from "@/lib/checkout";
+import { cancelReasonMessage, paymentErrorMessage, payStage } from "@/lib/checkout";
 import { requireSession } from "@/lib/session";
 
 /**
  * 결제 화면(PAY-1). 주문을 만든 뒤 여기로 온다. 주문 상태를 읽어 화면을 고른다.
  * - `PENDING`: 재고를 확인하는 동안 화면을 다시 그리며 기다린다
- * - `AWAITING_PAYMENT`: 토스 결제위젯. 실패하고 돌아오면(`?code=&message=`) 문구를 보여 주고 다시 결제할 수 있다
+ * - `AWAITING_PAYMENT`: payment가 결제를 만들 때까지 기다린 뒤 토스 결제위젯을 그린다. 실패하고 돌아오면(`?code=&message=`) 문구를
+ *   보여 주고 다시 결제할 수 있다
  * - `CANCELLED`: 취소 사유. `PAID`: 완료 화면으로 보낸다
  */
 export default async function PayPage({
@@ -42,6 +43,13 @@ export default async function PayPage({
   if (data.status === "PAID") {
     redirect(`/orders/${orderId}/complete`);
   }
+  const payment =
+    data.status === "AWAITING_PAYMENT"
+      ? await (
+          await bff.serviceClient("payment")
+        ).GET("/v1/payments/orders/{orderId}", { params: { path: { orderId } } })
+      : null;
+  const stage = payStage(data.status, payment ? payment.response.status : null);
   const failure =
     typeof code === "string"
       ? paymentErrorMessage(code, typeof message === "string" ? message : undefined)
@@ -51,15 +59,24 @@ export default async function PayPage({
       <PageHeader title="결제" description={data.orderName} />
       <div className="grid gap-6 lg:grid-cols-[1fr_18rem]">
         <div className="grid content-start gap-4">
-          {data.status === "PENDING" ? (
+          {stage === "STOCK_CHECK" || stage === "PREPARING" ? (
             <Card>
               <CardContent className="grid gap-2">
-                <p className="font-medium">재고를 확인하고 있습니다.</p>
+                <p className="font-medium">
+                  {stage === "STOCK_CHECK"
+                    ? "재고를 확인하고 있습니다."
+                    : "결제를 준비하고 있습니다."}
+                </p>
                 <p className="text-sm text-muted-foreground">확인이 끝나면 결제 화면이 열립니다.</p>
                 <AutoRefresh />
               </CardContent>
             </Card>
-          ) : data.status === "CANCELLED" ? (
+          ) : stage === "ERROR" ? (
+            <Alert variant="destructive">
+              결제 정보를 불러오지 못했습니다. 잠시 뒤 다시 시도해 주세요.
+              <AutoRefresh />
+            </Alert>
+          ) : stage === "CANCELLED" ? (
             <Alert variant="destructive">
               {failure && code === "PAYMENT_CANCELLED"
                 ? failure

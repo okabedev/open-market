@@ -4,6 +4,7 @@ import {
   checkoutLines,
   confirmIdempotencyKey,
   paymentErrorMessage,
+  payStage,
 } from "./checkout";
 
 const A = "0199f000-0000-7000-8000-0000000000a1";
@@ -115,5 +116,27 @@ describe("cancelReasonMessage", () => {
     expect(cancelReasonMessage("PAYMENT_TIMEOUT")).toContain("결제 기한");
     expect(cancelReasonMessage("BUYER_CANCELLED")).toContain("취소한 주문");
     expect(cancelReasonMessage(undefined)).toBe("취소된 주문입니다.");
+  });
+});
+
+describe("payStage", () => {
+  it("재고 확인 중이면 기다린다", () => {
+    expect(payStage("PENDING", null)).toBe("STOCK_CHECK");
+  });
+
+  it("결제 대기여도 payment가 결제를 아직 만들지 않았으면(404) 기다린다", () => {
+    expect(payStage("AWAITING_PAYMENT", 404)).toBe("PREPARING");
+  });
+
+  it("결제가 준비됐으면 결제위젯을 그린다", () => {
+    expect(payStage("AWAITING_PAYMENT", 200)).toBe("WIDGET");
+  });
+
+  it("결제를 읽지 못했으면 오류를 보여 준다", () => {
+    expect(payStage("AWAITING_PAYMENT", 503)).toBe("ERROR");
+  });
+
+  it("취소된 주문은 취소 사유를 보여 준다", () => {
+    expect(payStage("CANCELLED", null)).toBe("CANCELLED");
   });
 });

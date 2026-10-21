@@ -1,6 +1,7 @@
 // payment: 토스 결제 승인, 결제 원장(docs/architecture/payment.md).
 plugins {
     id("openmarket.spring-service-conventions")
+    id("openmarket.querydsl-conventions")
 }
 
 dependencies {

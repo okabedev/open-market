@@ -89,3 +89,24 @@ export function cancelReasonMessage(reason: string | undefined): string {
       return "취소된 주문입니다.";
   }
 }
+
+export type PayStage = "STOCK_CHECK" | "PREPARING" | "WIDGET" | "ERROR" | "CANCELLED";
+
+/**
+ * 결제 화면이 보여 줄 단계. 주문이 결제 대기가 되어도 payment는 그 이벤트를 받아 결제를 만들므로, 결제 조회가 404인 동안은 결제를
+ * 준비하는 중으로 보고 기다린다. 그 사이 승인하면 결제가 없어 거절된다(payment.md "조회").
+ *
+ * @param paymentStatus 결제 조회(`GET /v1/payments/orders/{orderId}`)의 HTTP 상태. 결제 대기일 때만 부른다
+ */
+export function payStage(orderStatus: string | undefined, paymentStatus: number | null): PayStage {
+  if (orderStatus === "PENDING") {
+    return "STOCK_CHECK";
+  }
+  if (orderStatus === "CANCELLED") {
+    return "CANCELLED";
+  }
+  if (paymentStatus === 404) {
+    return "PREPARING";
+  }
+  return paymentStatus !== null && paymentStatus >= 200 && paymentStatus < 300 ? "WIDGET" : "ERROR";
+}

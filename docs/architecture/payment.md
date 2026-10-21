@@ -21,7 +21,7 @@
 
 ## 승인(PAY-1)
 `POST /v1/payments/confirm`(`Idempotency-Key` 필수). 구매자의 BFF가 토스 `successUrl`로 받은 값을 그대로 넘긴다. 주체는 토큰의 `sub`(= buyerId)다.
-- shop 흐름: 주문서(`/checkout`) → 결제 화면(`/orders/<id>/pay`, 결제위젯) → 토스 인증 → `successUrl` `/orders/<id>/pay/confirm`(BFF Route Handler가 이 API를 부른다) → 완료 화면(`/orders/<id>/complete`, 주문이 `PAID`가 될 때까지 다시 그린다). `failUrl`은 결제 화면이고 토스 코드와 문구를 보여 준다.
+- shop 흐름: 주문서(`/checkout`) → 결제 화면(`/orders/<id>/pay`. 주문이 `AWAITING_PAYMENT`가 되고 결제가 준비되면(아래 "조회") 결제위젯) → 토스 인증 → `successUrl` `/orders/<id>/pay/confirm`(BFF Route Handler가 이 API를 부른다) → 완료 화면(`/orders/<id>/complete`, 주문이 `PAID`가 될 때까지 다시 그린다). `failUrl`은 결제 화면이고 토스 코드와 문구를 보여 준다.
 - BFF의 `Idempotency-Key`는 `confirm-<paymentKey의 SHA-256>`이다. 승인 주소를 새로 고치거나 다시 열어도 한 번만 승인하고, 결제 키가 200자까지라 키 상한(100자)에 맞게 줄인다. 거절되면(4xx) 같은 키로는 같은 응답이 오므로, 다시 결제할 때는 위젯이 새 결제 키를 만든다.
 - 토스 SDK에는 구매자 식별자를 넘기지 않는다(`customerKey`는 `ANONYMOUS`).
 
@@ -34,7 +34,7 @@
 1. 결제를 잠그고 확인한다.
    | 확인 | 어기면 |
    |---|---|
-   | 주문의 결제가 있고 본인 것이다 | 404 `PAYMENT_NOT_FOUND`. 결제 준비 전(주문이 `AWAITING_PAYMENT`가 되기 전)도 같다 |
+   | 주문의 결제가 있고 본인 것이다 | 404 `PAYMENT_NOT_FOUND`. 결제 준비 전도 같다. 결제는 `OrderAwaitingPayment`를 받아 만들므로 주문이 `AWAITING_PAYMENT`가 된 직후에도 잠깐 없다. 그래서 화면은 결제 조회로 준비를 확인한 뒤 결제위젯을 그린다 |
    | 주문이 취소되지 않았다(결제가 `CANCELLED`가 아니고 취소 요청이 없다) | 409 `PAYMENT_CANCELLED`. 같은 결제 키여도 같다 |
    | 결제가 `READY` 또는 `FAILED`다 | 아래 "이미 승인을 요청한 결제" |
    | `amount`가 결제 금액과 같다 | 422 `PAYMENT_AMOUNT_MISMATCH`. 토스를 부르지 않고 결제는 그대로다 |
@@ -135,3 +135,8 @@ gateway 경로는 `/api/payment` + 아래 경로다.
 | 메서드 | 경로 | 설명 |
 |---|---|---|
 | POST | `/v1/payments/confirm` | 승인. 위 "승인" |
+| GET | `/v1/payments/orders/{orderId}` | 본인 주문의 결제. 아래 "조회" |
+
+### 조회
+- `GET /v1/payments/orders/{orderId}`는 본인 주문의 결제 상태(`READY`, `IN_PROGRESS`, `APPROVED`, `FAILED`, `CANCELLED`)와 금액을 준다. 결제가 아직 없거나(결제 준비 전) 다른 회원의 주문이면 404 `PAYMENT_NOT_FOUND`다.
+- shop 결제 화면은 주문이 `AWAITING_PAYMENT`면 이 API를 불러, 404인 동안은 "결제를 준비하고 있습니다"를 보여 주며 다시 그린다. 결제가 생기기 전에 승인하면 404가 멱등 기록에 남아 같은 결제 키로 다시 승인할 수 없기 때문이다(2026-10-21, E2E에서 발견).
