@@ -17,6 +17,9 @@ class QueryEnumsTest {
                         names(com.openmarket.fulfillment.command.domain.ShipmentStatus.values()));
         assertThat(names(com.openmarket.fulfillment.query.dto.Carrier.values()))
                 .containsExactly(names(com.openmarket.fulfillment.command.domain.Carrier.values()));
+        assertThat(names(com.openmarket.fulfillment.query.dto.ConfirmMode.values()))
+                .containsExactly(
+                        names(com.openmarket.fulfillment.command.domain.ConfirmMode.values()));
     }
 
     private static String[] names(Enum<?>[] values) {

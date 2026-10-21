@@ -10,6 +10,7 @@ public record AdvanceSellerOrderCommand(UUID orderId, UUID sellerOrderId, Stage 
         ACCEPTED,
         SHIPPED,
         IN_TRANSIT,
-        DELIVERED
+        DELIVERED,
+        CONFIRMED
     }
 }

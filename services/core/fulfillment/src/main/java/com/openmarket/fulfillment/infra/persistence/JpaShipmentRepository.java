@@ -44,6 +44,16 @@ public interface JpaShipmentRepository extends Repository<Shipment, UUID>, Shipm
     @Override
     @Query(
             value =
+                    "SELECT s.id FROM shipment s WHERE s.status = 'DELIVERED' AND s.confirm_due_at"
+                            + " <= :now AND NOT EXISTS (SELECT 1 FROM purchase_confirmation c WHERE"
+                            + " c.seller_order_id = s.seller_order_id) ORDER BY s.confirm_due_at"
+                            + " LIMIT :limit",
+            nativeQuery = true)
+    List<UUID> findConfirmDueIds(Instant now, int limit);
+
+    @Override
+    @Query(
+            value =
                     "SELECT id FROM shipment WHERE status = 'IN_TRANSIT' AND in_transit_at <="
                             + " :inTransitBefore ORDER BY in_transit_at LIMIT :limit",
             nativeQuery = true)

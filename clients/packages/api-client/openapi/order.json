@@ -398,7 +398,7 @@
           },
           "progress" : {
             "type" : "string",
-            "enum" : [ "PAID", "ACCEPTED", "SHIPPED", "IN_TRANSIT", "DELIVERED" ]
+            "enum" : [ "PAID", "ACCEPTED", "SHIPPED", "IN_TRANSIT", "DELIVERED", "CONFIRMED" ]
           },
           "amount" : {
             "type" : "integer",
@@ -502,7 +502,7 @@
           },
           "progress" : {
             "type" : "string",
-            "enum" : [ "PAID", "ACCEPTED", "SHIPPED", "IN_TRANSIT", "DELIVERED" ]
+            "enum" : [ "PAID", "ACCEPTED", "SHIPPED", "IN_TRANSIT", "DELIVERED", "CONFIRMED" ]
           },
           "amount" : {
             "type" : "integer",
@@ -634,7 +634,7 @@
           },
           "progress" : {
             "type" : "string",
-            "enum" : [ "PAID", "ACCEPTED", "SHIPPED", "IN_TRANSIT", "DELIVERED" ]
+            "enum" : [ "PAID", "ACCEPTED", "SHIPPED", "IN_TRANSIT", "DELIVERED", "CONFIRMED" ]
           },
           "lines" : {
             "type" : "array",

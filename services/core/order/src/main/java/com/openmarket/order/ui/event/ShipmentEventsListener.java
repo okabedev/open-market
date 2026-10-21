@@ -14,20 +14,22 @@ import org.springframework.stereotype.Component;
 
 /**
  * {@code fulfillment.shipment} 토픽의 배송 이벤트로 하위 주문 진행 상태를 바꾼다(docs/architecture/order.md "하위 주문 진행
- * 상태"). 진행 상태가 없는 이벤트(구매확정 등)는 처리 기록 없이 넘긴다.
+ * 상태"). 구매확정({@code PurchaseConfirmed})도 진행 상태다. 그 밖의 이벤트는 처리 기록 없이 넘긴다.
  */
 @Component
 class ShipmentEventsListener {
 
     /**
-     * 이벤트 이름 → 진행 단계. 리스너 이름은 {@code order.shipment-<단계>}다(예: {@code order.shipment-in-transit}).
+     * 이벤트 이름 → 진행 단계. 리스너 이름은 {@code order.shipment-<단계>}다(예: {@code order.shipment-in-transit},
+     * 구매확정은 {@code order.shipment-confirmed}).
      */
     static final Map<String, AdvanceSellerOrderCommand.Stage> STAGES =
             Map.of(
                     "ShipmentAccepted", AdvanceSellerOrderCommand.Stage.ACCEPTED,
                     "ShipmentShipped", AdvanceSellerOrderCommand.Stage.SHIPPED,
                     "ShipmentInTransit", AdvanceSellerOrderCommand.Stage.IN_TRANSIT,
-                    "ShipmentDelivered", AdvanceSellerOrderCommand.Stage.DELIVERED);
+                    "ShipmentDelivered", AdvanceSellerOrderCommand.Stage.DELIVERED,
+                    "PurchaseConfirmed", AdvanceSellerOrderCommand.Stage.CONFIRMED);
 
     private final IdempotentEventProcessor processor;
     private final AdvanceSellerOrderUseCase advance;

@@ -15,6 +15,7 @@ import com.openmarket.fulfillment.command.domain.ShipmentLine;
 import com.openmarket.fulfillment.command.domain.ShipmentShipped;
 import com.openmarket.fulfillment.command.domain.ShipmentStatus;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -36,7 +37,8 @@ class ShippingUseCasesTest {
     final AcceptShipmentUseCase accept = new AcceptShipmentUseCase(shipments, outbox, clock);
     final ShipShipmentUseCase ship = new ShipShipmentUseCase(shipments, outbox, clock);
     final StartTransitUseCase startTransit = new StartTransitUseCase(shipments, outbox, clock);
-    final DeliverShipmentUseCase deliver = new DeliverShipmentUseCase(shipments, outbox, clock);
+    final DeliverShipmentUseCase deliver =
+            new DeliverShipmentUseCase(shipments, outbox, clock, Duration.ofDays(7));
 
     Shipment shipment;
 

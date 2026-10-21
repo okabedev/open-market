@@ -49,11 +49,13 @@ M4 시작(2026-10-21)에 정한 규칙이다. API와 화면은 각 PR에서 이 
 
 ## 구매확정(`PurchaseConfirmation`, FUL-3)
 하위 주문 하나에 한 번이다. 하위 주문의 마지막 배송이 `DELIVERED`이고 진행 중인 클레임(`REQUESTED`, `APPROVED`, `MEDIATING`)이 없을 때만 한다.
-- 구매자 확정: 구매자가 직접 한다.
-- 자동 확정(`PurchaseConfirmJob`): 1시간마다 돌고 ShedLock(`fulfillment-purchase-confirm`)으로 한 인스턴스에서만 돈다. 확정 기한(`confirm_due_at`)이 지난 배송을 100건씩 확정한다.
-- 확정 기한은 배송 완료 시각 + `auto-confirm-after`(기본 7일)다. 반품·교환이 거부로 끝나면 거부 시각 + 7일과 비교해 늦은 쪽으로 미룬다. 구매자가 중재를 요청할 시간을 남기기 위해서다.
+- 구매자 확정: 구매자가 직접 한다. 이미 확정했으면 그대로 204, 배송 완료 전이면 409 `FULFILLMENT_INVALID_STATE`(지금 배송 상태 `shipmentStatus`)다.
+- 자동 확정(`PurchaseConfirmJob`): `openmarket.fulfillment.purchase-confirm.interval`(기본 1시간)마다 돌고 ShedLock(`fulfillment-purchase-confirm`)으로 한 인스턴스에서만 돈다. 확정 기한(`confirm_due_at`)이 지나고 확정되지 않은 배송 완료 배송을 기한이 오래된 순으로 100건씩, 배송마다 트랜잭션을 따로 열어 확정한다. 다 못 하면 다음 주기에 이어 한다.
+- 구매자 확정과 자동 확정이 겹치면 하위 주문의 마지막 배송 행을 먼저 잠근 쪽이 확정하고, 다른 쪽은 이미 확정된 것을 보고 넘긴다.
+- 확정 기한은 배송 완료 시각 + `openmarket.fulfillment.purchase-confirm.auto-confirm-after`(기본 7일)다. 시뮬레이터가 배송 완료로 바꿀 때 정한다. E2E는 `FULFILLMENT_CONFIRM_INTERVAL`, `FULFILLMENT_AUTO_CONFIRM_AFTER`로 줄인다. 반품·교환이 거부로 끝나면 거부 시각 + 7일과 비교해 늦은 쪽으로 미룬다. 구매자가 중재를 요청할 시간을 남기기 위해서다.
 - 확정은 하위 주문 ID 유니크 제약으로 한 번만 생긴다. 확정한 뒤에는 클레임을 신청할 수 없다.
-- 확정하면 `PurchaseConfirmed`를 낸다. 리뷰 작성 자격과 정산 대상(M5)이 이것으로 생긴다.
+- 확정하면 `PurchaseConfirmed`(확정 방식 `BUYER`, `AUTO`)를 낸다. 리뷰 작성 자격과 정산 대상(M5)이 이것으로 생긴다.
+- 진행 중인 클레임 확인은 클레임을 만드는 PR에서 더한다.
 
 ## 클레임(`Claim`, CLM-1~3)
 하위 주문마다 진행 중인 클레임은 하나다. 거부로 끝난 클레임은 다음 신청을 막지 않는다.
@@ -108,14 +110,17 @@ M4 시작(2026-10-21)에 정한 규칙이다. API와 화면은 각 PR에서 이 
 | `ShipmentShipped` | 발송 |
 | `ShipmentInTransit` | 시뮬레이터가 배송 중으로 바꿨다 |
 | `ShipmentDelivered` | 시뮬레이터가 배송 완료로 바꿨다 |
+| `PurchaseConfirmed` | 구매자 확정, 자동 확정 |
 
 - 리스너는 처리 기록(`processed_event`)으로 같은 이벤트를 한 번만 처리한다. 리스너 이름은 `fulfillment.<이벤트>`다(예: `fulfillment.order-paid`).
 - 항목에 주문 항목 ID·상품명·옵션이 없는 M4 이전 형식의 `OrderPaid`는 배송을 만들 수 없어 영구 오류(`InvalidEventException`)로 바로 DLT에 보낸다. fulfillment 소비자 그룹은 `order.order`를 처음부터 읽으므로, M4 전에 결제된 개발용 스택의 주문이 여기에 걸린다(2026-10-21 확인). 빈 볼륨으로 띄운 스택에는 없다.
 
 ## API
-gateway 경로는 `/api/fulfillment` + 아래 경로다. 판매자 경로는 `SELLER` 역할이 있어야 하고 주체는 토큰의 `sub`(= sellerId)다.
+gateway 경로는 `/api/fulfillment` + 아래 경로다. 판매자 경로는 `SELLER` 역할이 있어야 하고 주체는 토큰의 `sub`(= sellerId)다. 구매자 경로의 주체는 토큰의 `sub`(= buyerId)다.
 | 메서드 | 경로 | 설명 |
 |---|---|---|
+| GET | `/v1/seller-orders/{sellerOrderId}` | 구매자 본인 하위 주문의 배송 조회(FUL-2). 판매자 조회와 같은 진행 상태·배송 목록에 구매확정 시각·방식, 확정 기한을 더한다. 남의 것이거나 배송이 아직 없으면 404 `FULFILLMENT_NOT_FOUND` |
+| POST | `/v1/seller-orders/{sellerOrderId}/confirm` | 구매확정(FUL-3). 204. 위 "구매확정" |
 | GET | `/v1/seller/seller-orders/{sellerOrderId}` | 본인 하위 주문의 배송 진행. 진행 상태(마지막 배송의 상태)와 배송 목록(배송 ID, 상태, 택배사, 송장 번호, 만든·발주 확인·발송·배송 중·배송 완료 시각. 만든 순서)이다. 다른 판매자의 것이거나 배송이 아직 없으면 404 `FULFILLMENT_NOT_FOUND` |
 | POST | `/v1/seller/seller-orders/{sellerOrderId}/accept` | 발주 확인. 204. 위 "발주 확인과 발송" |
 | POST | `/v1/seller/seller-orders/{sellerOrderId}/ship` | 발송. 본문 `{"carrier", "trackingNumber"}`. 204 |

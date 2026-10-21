@@ -105,9 +105,10 @@ order는 `payment.payment`에서 결제 결과를 받는다([payment.md](payment
 | `SHIPPED` | 발송 | `ShipmentShipped` |
 | `IN_TRANSIT` | 배송 중 | `ShipmentInTransit` |
 | `DELIVERED` | 배송 완료 | `ShipmentDelivered` |
+| `CONFIRMED` | 구매확정 | `PurchaseConfirmed` |
 
 - 결제 전 주문의 하위 주문은 진행 상태가 없다(`null`). 화면은 주문 상태를 보여 준다.
-- 앞으로만 간다. 지금보다 앞이거나 같은 단계의 이벤트(재처리, 늦게 온 이벤트)는 넘긴다. 구매확정과 클레임은 M4의 다음 PR에서 더한다.
+- 앞으로만 간다. 지금보다 앞이거나 같은 단계의 이벤트(재처리, 늦게 온 이벤트)는 넘긴다. 클레임은 M4의 다음 PR에서 더한다.
 - 리스너는 처리 기록으로 같은 이벤트를 한 번만 처리하고, 주문 행을 잠그고 바꾼다. 리스너 이름은 `order.shipment-<단계>`다(예: `order.shipment-accepted`). order가 모르는 주문·하위 주문이면 경고 로그만 남긴다.
 - 진행 상태를 바꿔도 이벤트를 내지 않는다.
 
@@ -149,8 +150,8 @@ order는 `payment.payment`에서 결제 결과를 받는다([payment.md](payment
 |---|---|---|
 | GET | `/internal/v1/buyers/{buyerId}/ongoing-orders` | 구매자에게 진행 중인 주문이 있는지(`{hasOngoingOrders}`). member 탈퇴(ACC-4)가 부른다([member.md](member.md) "탈퇴") |
 
-- 진행 중인 주문은 `PENDING`, `AWAITING_PAYMENT`, `PAID`다. 결제 전 주문은 결제가 진행 중일 수 있고, M3의 `PAID`는 배송 전이다. `CANCELLED`만 끝난 주문이다.
-- M4에서 배송·클레임이 생기면 다시 정한다. 하위 주문이 모두 구매확정되었거나 클레임으로 끝난 주문을 빼고, 진행 중인 클레임을 더한다.
+- 진행 중인 주문은 결제 전(`PENDING`, `AWAITING_PAYMENT`) 주문과, 구매확정되지 않은 하위 주문이 하나라도 있는 결제 완료 주문이다. 결제 전 주문은 결제가 진행 중일 수 있다. 취소된 주문과 하위 주문이 모두 구매확정된 주문은 끝난 주문이다(2026-10-21, M4).
+- 클레임이 생기면 클레임으로 끝난 하위 주문을 끝난 것으로 보고, 진행 중인 클레임을 더한다(M4 클레임 PR).
 
 ## catalog 조회
 order는 catalog 내부 API `GET /internal/v1/skus`로 SKU의 상품명, 판매 상태, 판매자, 가격, 판매 가능 수량을 읽는다([catalog.md](catalog.md) "내부 API"). 동기 호출은 조회에만 쓴다([overview.md](overview.md) "통신 규칙").

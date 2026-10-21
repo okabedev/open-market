@@ -7,6 +7,7 @@ import static com.openmarket.order.command.domain.QSellerOrder.sellerOrder;
 import com.openmarket.common.core.error.BusinessException;
 import com.openmarket.common.core.error.ErrorType;
 import com.openmarket.order.command.domain.QOrderLine;
+import com.openmarket.order.command.domain.QSellerOrder;
 import com.openmarket.order.query.dto.CancelReason;
 import com.openmarket.order.query.dto.CursorPageView;
 import com.openmarket.order.query.dto.OrderDetailView;
@@ -235,15 +236,41 @@ public class OrderQueryDao {
                         Objects.requireNonNull(row.get(order.paidAt))));
     }
 
-    /** 구매자의 주문 중 상태가 {@code statuses} 중 하나인 것이 있는지. */
-    public boolean existsForBuyer(UUID buyerId, Collection<OrderStatus> statuses) {
+    /**
+     * 구매자에게 진행 중인 주문이 있는지(ACC-4, docs/architecture/order.md "내부 API"). 결제 전 주문과, 구매확정되지 않은 하위 주문이
+     * 하나라도 있는 결제 완료 주문이 진행 중이다.
+     */
+    public boolean hasOngoingOrders(UUID buyerId) {
+        QSellerOrder open = new QSellerOrder("open");
         return query.selectOne()
                         .from(order)
                         .where(
                                 order.buyerId.eq(buyerId),
                                 order.status
                                         .stringValue()
-                                        .in(statuses.stream().map(OrderStatus::name).toList()))
+                                        .in(
+                                                OrderStatus.PENDING.name(),
+                                                OrderStatus.AWAITING_PAYMENT.name())
+                                        .or(
+                                                order.status
+                                                        .stringValue()
+                                                        .eq(OrderStatus.PAID.name())
+                                                        .and(
+                                                                JPAExpressions.selectOne()
+                                                                        .from(open)
+                                                                        .where(
+                                                                                open.order.eq(
+                                                                                        order),
+                                                                                open.progress
+                                                                                        .isNull()
+                                                                                        .or(
+                                                                                                open.progress
+                                                                                                        .stringValue()
+                                                                                                        .ne(
+                                                                                                                SellerOrderProgress
+                                                                                                                        .CONFIRMED
+                                                                                                                        .name())))
+                                                                        .exists())))
                         .fetchFirst()
                 != null;
     }

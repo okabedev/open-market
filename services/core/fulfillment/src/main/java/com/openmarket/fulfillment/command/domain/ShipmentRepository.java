@@ -22,6 +22,9 @@ public interface ShipmentRepository {
     /** {@code shippedBefore} 이전에 발송한 {@code SHIPPED} 배송. 오래된 순, 최대 {@code limit}개. */
     List<UUID> findShippedIdsBefore(Instant shippedBefore, int limit);
 
+    /** 자동 구매확정 기한이 {@code now} 이전이고 확정되지 않은 배송 완료 배송. 기한이 오래된 순, 최대 {@code limit}개. */
+    List<UUID> findConfirmDueIds(Instant now, int limit);
+
     /** {@code inTransitBefore} 이전에 배송 중이 된 {@code IN_TRANSIT} 배송. 오래된 순, 최대 {@code limit}개. */
     List<UUID> findInTransitIdsBefore(Instant inTransitBefore, int limit);
 }
