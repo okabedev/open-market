@@ -18,6 +18,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/payments/orders/{orderId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["payment"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -39,6 +55,14 @@ export interface components {
             /** Format: int64 */
             amount?: number;
             method?: string;
+        };
+        PaymentView: {
+            /** Format: uuid */
+            orderId?: string;
+            /** @enum {string} */
+            status?: "READY" | "IN_PROGRESS" | "APPROVED" | "FAILED" | "CANCELLED";
+            /** Format: int64 */
+            amount?: number;
         };
     };
     responses: never;
@@ -69,6 +93,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ConfirmPaymentResponse"];
+                };
+            };
+        };
+    };
+    payment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentView"];
                 };
             };
         };

@@ -32,6 +32,33 @@
           }
         }
       }
+    },
+    "/v1/payments/orders/{orderId}" : {
+      "get" : {
+        "tags" : [ "payment-query-controller" ],
+        "operationId" : "payment",
+        "parameters" : [ {
+          "name" : "orderId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PaymentView"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components" : {
@@ -77,6 +104,23 @@
           },
           "method" : {
             "type" : "string"
+          }
+        }
+      },
+      "PaymentView" : {
+        "type" : "object",
+        "properties" : {
+          "orderId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "status" : {
+            "type" : "string",
+            "enum" : [ "READY", "IN_PROGRESS", "APPROVED", "FAILED", "CANCELLED" ]
+          },
+          "amount" : {
+            "type" : "integer",
+            "format" : "int64"
           }
         }
       }
