@@ -104,7 +104,7 @@ flowchart LR
 | 이벤트 | 시점 | 주요 필드 | 소비자 |
 |---|---|---|---|
 | `OrderPlaced` | 주문 생성(`PENDING`) | orderId, buyerId, lines(skuId, quantity), issuedCouponIds | catalog(재고 예약), promotion(쿠폰 예약) |
-| `OrderAwaitingPayment` | 예약 모두 성공 | orderId, amount(결제 금액), orderName(주문명) | payment(결제 준비) |
+| `OrderAwaitingPayment` | 예약 모두 성공 | orderId, buyerId, amount(결제 금액), orderName(주문명) | payment(결제 준비) |
 | `OrderPaid` | 결제 승인 반영 | orderId, buyerId, 하위 주문 목록(판매자, 항목, 카테고리, 금액, 판매자 쿠폰 부담분), 배송지 스냅샷 | catalog(예약 확정), promotion(쿠폰 사용 확정), fulfillment(배송 생성), notification |
 | `OrderCancelled` | 결제 전 취소(예약 실패, 만료, 구매자 취소) | orderId, reason | catalog(예약 해제), promotion(쿠폰 복원), payment(결제 무효화·보상 취소) |
 
@@ -121,11 +121,14 @@ flowchart LR
 ### payment.payment
 | 이벤트 | 시점 | 주요 필드 | 소비자 |
 |---|---|---|---|
-| `PaymentApproved` | 토스 승인 성공 | orderId, paymentId, 금액, 수단 | order |
-| `PaymentFailed` | 승인 실패 | orderId, 오류 코드 | order, notification |
+| `PaymentApproved` | 토스 승인 성공 | orderId, paymentId, amount, method(토스 결제수단 이름), approvedAt | order |
+| `PaymentFailed` | 승인 실패 | orderId, paymentId, code(토스 오류 코드) | order, notification |
 | `PaymentCancelled` | 전액 취소(보상 포함) | orderId, paymentId, reason | order, notification |
 | `RefundCompleted` | 부분취소 성공 | claimId, sellerOrderId, 금액 | fulfillment |
 | `RefundFailed` | 부분취소 최종 실패 | claimId, 오류 코드 | fulfillment, notification(관리자) |
+
+- 키는 orderId다. 한 주문의 결제 이벤트는 순서대로 온다.
+- JSON 예시는 `services/core/payment/src/test/resources/events/`에 있다. 처리 규칙은 [payment.md](payment.md).
 
 ### fulfillment.shipment
 | 이벤트 | 시점 | 주요 필드 | 소비자 |

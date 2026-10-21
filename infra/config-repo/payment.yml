@@ -1,0 +1,22 @@
+# payment 실행 설정. 공통 설정은 application.yml에 있다. 설계는 docs/architecture/payment.md.
+server:
+  port: 8104
+spring:
+  datasource:
+    password: ${PAYMENT_DB_PASSWORD}
+  kafka:
+    consumer:
+      group-id: payment
+
+openmarket:
+  payment:
+    toss:
+      # E2E는 가짜 PG 주소로 바꾼다(ADR 0018).
+      base-url: ${TOSS_API_URL:https://api.tosspayments.com}
+      # 시크릿 키는 payment만 갖는다. 브라우저에는 클라이언트 키만 간다.
+      secret-key: ${TOSS_SECRET_KEY}
+      connect-timeout: 2s
+      read-timeout: 10s
+    # 결제 재조회 작업(PaymentReconcileJob) 주기와, 승인 요청 뒤 재조회까지 기다리는 시간. 읽기 타임아웃보다 길어야 한다.
+    reconcile-interval: 1m
+    reconcile-after: 1m

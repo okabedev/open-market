@@ -93,6 +93,30 @@ services:
       timeout: 3s
       retries: 30
 
+  payment:
+    <<: *spring-service
+    build:
+      context: ../../services
+      args:
+        MODULE: core/payment
+    image: openmarket/payment:local
+    depends_on:
+      config:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    environment:
+      <<: *spring-env
+      PAYMENT_DB_PASSWORD: ${PAYMENT_DB_PASSWORD:?}
+      TOSS_SECRET_KEY: ${TOSS_SECRET_KEY:?}
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:8104/actuator/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
   search:
     <<: *spring-service
     build:

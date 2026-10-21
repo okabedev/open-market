@@ -23,6 +23,7 @@ include(":core:member")
 include(":core:catalog")
 include(":core:search")
 include(":core:order")
+include(":core:payment")
 
 include(":infra:discovery")
 include(":infra:config")

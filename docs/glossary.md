@@ -47,9 +47,10 @@
 | 주문 항목 | `OrderLine` | order | SKU 하나와 수량, 주문 당시 가격 스냅샷 |
 | 취소 사유 | `CancelReason` | order | 결제 전 주문 취소의 이유. `STOCK_UNAVAILABLE`(재고 예약 실패), `PAYMENT_TIMEOUT`(주문 만료), `BUYER_CANCELLED`(구매자 취소) |
 | 주문 만료 | `OrderExpiryJob` | order | 결제 기한(주문 후 15분) 안에 결제하지 않은 주문. 취소 사유 `PAYMENT_TIMEOUT`으로 `CANCELLED`가 된다 |
-| 결제 | `Payment` | payment | 주문 하나당 하나. 상태: `READY` → `IN_PROGRESS`(토스 승인 요청 중) → `APPROVED` → `PARTIALLY_CANCELLED` 또는 `CANCELLED`. 승인 실패 시 `FAILED`, 결제 전 주문 취소 시 `READY` → `CANCELLED` |
+| 결제 | `Payment` | payment | 주문 하나당 하나. 상태: `READY` → `IN_PROGRESS`(토스 승인 요청 중) → `APPROVED` → `PARTIALLY_CANCELLED` 또는 `CANCELLED`. 승인 실패 시 `FAILED`(주문 결제 기한 안에 다시 승인할 수 있다), 결제 전 주문 취소 시 `READY` → `CANCELLED` |
 | 결제 키 | `paymentKey` | payment | 토스페이먼츠가 발급한 결제 식별자 |
-| 결제 원장 | `PaymentLedgerEntry` | payment | 승인, 취소 요청과 PG 응답의 추가 전용 기록 |
+| 결제 원장 | `PaymentLedgerEntry` | payment | 승인, 조회, 취소 요청과 PG 응답의 추가 전용 기록 |
+| 결제 재조회 | `PaymentReconcileJob` | payment | 승인 결과를 확인하지 못한 `IN_PROGRESS` 결제를 토스 결제 조회로 확정하는 작업 |
 | 환불 | `Refund` | payment | 하위 주문 단위 부분취소. 클레임 ID로 멱등 처리한다 |
 | 금액 | `Money` | 공통 | 원(KRW) 단위 `long`. 소수점은 쓰지 않는다 |
 

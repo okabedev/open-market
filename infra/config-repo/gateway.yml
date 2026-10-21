@@ -73,6 +73,12 @@ spring:
                 - Path=/api/order/**
               filters:
                 - StripPrefix=2
+            - id: payment
+              uri: lb://payment
+              predicates:
+                - Path=/api/payment/**
+              filters:
+                - StripPrefix=2
             - id: search
               uri: lb://search
               predicates:

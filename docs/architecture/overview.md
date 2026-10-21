@@ -36,7 +36,7 @@ flowchart LR
 | member | 8101 | member | 회원 프로필, 배송지, 입점 신청·심사, 판매자([member.md](member.md)) | `Member`, `SellerApplication`, `Seller` |
 | catalog | 8102 | catalog | 카테고리, 상품, SKU, 재고와 재고 예약 | `Category`, `Product`, `Stock`, `StockReservation` |
 | order | 8103 | order | 장바구니, 주문과 하위 주문, 주문 만료([order.md](order.md)) | `Cart`, `Order` |
-| payment | 8104 | payment | 토스 결제 승인·취소·환불, 결제 원장 | `Payment` |
+| payment | 8104 | payment | 토스 결제 승인·취소·환불, 결제 원장([payment.md](payment.md)) | `Payment` |
 | fulfillment | 8105 | fulfillment | 배송, 구매확정, 클레임 | `Shipment`, `Claim` |
 | promotion | 8106 | promotion | 쿠폰 정책, 발급, 예약·사용·복원 | `Coupon`, `IssuedCoupon` |
 | review | 8107 | review | 리뷰, 답글, 별점 요약 | `Review`, `RatingSummary` |

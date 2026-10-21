@@ -49,7 +49,7 @@ class OrderTransitionUseCasesTest {
                             NOW));
 
     @Test
-    @DisplayName("예약이 끝나면 결제 대기가 되고 금액과 주문명을 담아 OrderAwaitingPayment를 낸다. 다시 와도 한 번만 낸다")
+    @DisplayName("예약이 끝나면 결제 대기가 되고 구매자, 금액, 주문명을 담아 OrderAwaitingPayment를 낸다. 다시 와도 한 번만 낸다")
     void awaitsPayment() {
         awaitPayment.execute(new AwaitPaymentCommand(order.id()));
         awaitPayment.execute(new AwaitPaymentCommand(order.id()));
@@ -62,7 +62,8 @@ class OrderTransitionUseCasesTest {
                             assertThat(e.aggregateId()).isEqualTo(order.id().toString());
                             assertThat(e.payload())
                                     .isEqualTo(
-                                            new OrderAwaitingPayment(order.id(), 59_700, "반팔 티셔츠"));
+                                            new OrderAwaitingPayment(
+                                                    order.id(), order.buyerId(), 59_700, "반팔 티셔츠"));
                         });
     }
 

@@ -12,4 +12,5 @@ export type { components as CatalogComponents, paths as CatalogPaths } from "./g
 export type { components as FileComponents, paths as FilePaths } from "./generated/file";
 export type { components as MemberComponents, paths as MemberPaths } from "./generated/member";
 export type { components as OrderComponents, paths as OrderPaths } from "./generated/order";
+export type { components as PaymentComponents, paths as PaymentPaths } from "./generated/payment";
 export type { components as SearchComponents, paths as SearchPaths } from "./generated/search";
