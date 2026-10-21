@@ -190,6 +190,8 @@ export interface components {
             lineCount?: number;
             /** Format: date-time */
             placedAt?: string;
+            /** Format: date-time */
+            paidAt?: string;
         };
         OrderLineView: {
             /** Format: uuid */
@@ -228,6 +230,8 @@ export interface components {
             lines?: components["schemas"]["OrderLineView"][];
             /** Format: date-time */
             placedAt?: string;
+            /** Format: date-time */
+            paidAt?: string;
         };
         CursorPageViewOrderSummaryView: {
             items?: components["schemas"]["OrderSummaryView"][];
@@ -262,6 +266,8 @@ export interface components {
             sellerOrders?: components["schemas"]["OrderSellerOrderView"][];
             /** Format: date-time */
             placedAt?: string;
+            /** Format: date-time */
+            paidAt?: string;
         };
         OrderSellerOrderView: {
             /** Format: uuid */
