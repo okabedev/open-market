@@ -15,6 +15,7 @@
     "@openmarket/api-client": "workspace:*",
     "@openmarket/bff": "workspace:*",
     "@openmarket/ui": "workspace:*",
+    "@tosspayments/tosspayments-sdk": "catalog:",
     "next": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",

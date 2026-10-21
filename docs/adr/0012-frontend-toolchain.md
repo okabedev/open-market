@@ -24,6 +24,7 @@
 | openapi-typescript | 7.13.0 | OpenAPI 문서 → TypeScript 타입(`packages/api-client`). 피어는 `typescript ^5.x`지만 6.0.3에서 생성 결과를 확인했다 |
 | openapi-fetch | 0.17.0 | 생성한 경로 타입으로 부르는 fetch 클라이언트 |
 | server-only | 0.0.1 | 서버 전용 모듈을 클라이언트 컴포넌트에서 불러오면 빌드를 실패시킨다 |
+| `@tosspayments/tosspayments-sdk` | 2.9.0 | 결제위젯 SDK v2의 로더와 타입(ADR 0018, M3에 추가). 2.10.0은 2주가 지나지 않았다. 설치 스크립트와 의존성이 없다 |
 
 설정 위치
 - 외부 패키지 버전은 `clients/pnpm-workspace.yaml`의 `catalog`에만 적는다. 각 `package.json`은 `catalog:`로 참조한다.

@@ -21,6 +21,9 @@
 
 ## 승인(PAY-1)
 `POST /v1/payments/confirm`(`Idempotency-Key` 필수). 구매자의 BFF가 토스 `successUrl`로 받은 값을 그대로 넘긴다. 주체는 토큰의 `sub`(= buyerId)다.
+- shop 흐름: 주문서(`/checkout`) → 결제 화면(`/orders/<id>/pay`, 결제위젯) → 토스 인증 → `successUrl` `/orders/<id>/pay/confirm`(BFF Route Handler가 이 API를 부른다) → 완료 화면(`/orders/<id>/complete`, 주문이 `PAID`가 될 때까지 다시 그린다). `failUrl`은 결제 화면이고 토스 코드와 문구를 보여 준다.
+- BFF의 `Idempotency-Key`는 `confirm-<paymentKey의 SHA-256>`이다. 승인 주소를 새로 고치거나 다시 열어도 한 번만 승인하고, 결제 키가 200자까지라 키 상한(100자)에 맞게 줄인다. 거절되면(4xx) 같은 키로는 같은 응답이 오므로, 다시 결제할 때는 위젯이 새 결제 키를 만든다.
+- 토스 SDK에는 구매자 식별자를 넘기지 않는다(`customerKey`는 `ANONYMOUS`).
 
 | 본문 | 규칙 |
 |---|---|
