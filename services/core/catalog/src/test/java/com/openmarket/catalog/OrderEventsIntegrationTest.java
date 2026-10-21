@@ -143,13 +143,17 @@ class OrderEventsIntegrationTest {
     @DisplayName("재고가 모자라면 StockReservationFailed를 내고, 이어서 온 OrderCancelled는 아무것도 바꾸지 않는다")
     void failsAndCancels() throws Exception {
         UUID orderId = UUID.randomUUID();
+        UUID cancelledEventId = UUID.randomUUID();
 
         send(UUID.randomUUID(), "OrderPlaced", placed(orderId, skuL, 2), orderId);
-        send(UUID.randomUUID(), "OrderCancelled", cancelled(orderId), orderId);
+        send(cancelledEventId, "OrderCancelled", cancelled(orderId), orderId);
 
+        // 다른 테스트가 남긴 처리 기록과 섞이지 않게 이 이벤트의 처리 기록을 기다린다.
         await().atMost(Duration.ofSeconds(15))
                 .untilAsserted(
-                        () -> assertThat(processedFor("catalog.order-cancelled")).isPositive());
+                        () ->
+                                assertThat(processed(cancelledEventId, "catalog.order-cancelled"))
+                                        .isTrue());
         assertThat(status(orderId)).isEqualTo("FAILED");
         assertThat(reserved(skuL)).isZero();
         assertThat(outboxTypes(orderId)).containsExactly("StockReservationFailed");
@@ -292,11 +296,15 @@ class OrderEventsIntegrationTest {
                 .single();
     }
 
-    private int processedFor(String consumer) {
-        return jdbc.sql("SELECT count(*) FROM processed_event WHERE consumer = :consumer")
-                .param("consumer", consumer)
-                .query(Integer.class)
-                .single();
+    private boolean processed(UUID eventId, String consumer) {
+        return jdbc.sql(
+                                "SELECT count(*) FROM processed_event WHERE event_id = :eventId"
+                                        + " AND consumer = :consumer")
+                        .param("eventId", eventId)
+                        .param("consumer", consumer)
+                        .query(Integer.class)
+                        .single()
+                == 1;
     }
 
     private void send(UUID eventId, String type, String payload, UUID key) throws Exception {
