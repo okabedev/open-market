@@ -129,7 +129,11 @@ class OrderTransitionUseCasesTest {
                                     .singleElement()
                                     .satisfies(
                                             l -> {
+                                                assertThat(l.orderLineId())
+                                                        .isEqualTo(order.lines().getFirst().id());
                                                 assertThat(l.skuId()).isEqualTo(ordered);
+                                                assertThat(l.productName()).isEqualTo("반팔 티셔츠");
+                                                assertThat(l.optionValues()).isEmpty();
                                                 assertThat(l.unitPrice()).isEqualTo(19_900);
                                                 assertThat(l.quantity()).isEqualTo(3);
                                                 assertThat(l.amount()).isEqualTo(59_700);

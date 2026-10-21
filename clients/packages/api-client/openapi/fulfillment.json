@@ -1,0 +1,80 @@
+{
+  "openapi" : "3.1.0",
+  "info" : {
+    "title" : "OpenAPI definition",
+    "version" : "v0"
+  },
+  "paths" : {
+    "/v1/seller/seller-orders/{sellerOrderId}" : {
+      "get" : {
+        "tags" : [ "seller-fulfillment-query-controller" ],
+        "operationId" : "detail",
+        "parameters" : [ {
+          "name" : "sellerOrderId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SellerFulfillmentView"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "SellerFulfillmentShipmentView" : {
+        "type" : "object",
+        "properties" : {
+          "shipmentId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "status" : {
+            "type" : "string",
+            "enum" : [ "READY", "ACCEPTED", "SHIPPED", "IN_TRANSIT", "DELIVERED", "CANCELLED" ]
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "SellerFulfillmentView" : {
+        "type" : "object",
+        "properties" : {
+          "sellerOrderId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "orderId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "status" : {
+            "type" : "string",
+            "enum" : [ "READY", "ACCEPTED", "SHIPPED", "IN_TRANSIT", "DELIVERED", "CANCELLED" ]
+          },
+          "shipments" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/SellerFulfillmentShipmentView"
+            }
+          }
+        }
+      }
+    }
+  }
+}
