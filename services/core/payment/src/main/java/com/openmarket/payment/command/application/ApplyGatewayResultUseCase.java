@@ -23,7 +23,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 토스 응답 하나를 원장에 남기고 결제에 반영한다(docs/architecture/payment.md "승인", "원장"). 결제 행을 잠그고, 응답이 지금 승인 시도의 것일
- * 때만 상태를 바꾼다. 승인되면 {@code PaymentApproved}, 실패면 {@code PaymentFailed}를 낸다. 승인과 재조회가 함께 쓴다.
+ * 때만 상태를 바꾼다. 승인되면 {@code PaymentApproved}, 실패면 {@code PaymentFailed}를 낸다. 취소 요청이 있는 결제가 거절되면
+ * {@code CANCELLED}가 되고 이벤트를 내지 않는다(주문이 이미 취소됐다). 승인과 재조회가 함께 쓴다.
  */
 @Service
 public class ApplyGatewayResultUseCase {
@@ -78,7 +79,11 @@ public class ApplyGatewayResultUseCase {
                     attempt,
                     payment.status());
         }
-        return new Applied(payment.status(), payment.method(), payment.failureCode());
+        return new Applied(
+                payment.status(),
+                payment.method(),
+                payment.failureCode(),
+                payment.cancelRequestedAt() != null);
     }
 
     private Payment.Transition approve(
@@ -112,6 +117,8 @@ public class ApplyGatewayResultUseCase {
         Payment.Transition transition = payment.fail(attempt, code, now);
         if (transition == Payment.Transition.APPLIED) {
             payments.save(payment);
+        }
+        if (transition == Payment.Transition.APPLIED && payment.status() == PaymentStatus.FAILED) {
             outbox.append(
                     TOPIC,
                     payment.orderId().toString(),
@@ -181,7 +188,11 @@ public class ApplyGatewayResultUseCase {
      *
      * @param method 승인됐을 때의 토스 결제수단 이름
      * @param failureCode 실패했을 때의 코드
+     * @param cancelRequested 주문이 취소돼 취소 요청이 있다
      */
     public record Applied(
-            PaymentStatus status, @Nullable String method, @Nullable String failureCode) {}
+            PaymentStatus status,
+            @Nullable String method,
+            @Nullable String failureCode,
+            boolean cancelRequested) {}
 }

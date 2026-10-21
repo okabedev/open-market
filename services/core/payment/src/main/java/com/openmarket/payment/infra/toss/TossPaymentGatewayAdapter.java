@@ -10,7 +10,9 @@ import java.net.http.HttpTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
 import java.util.Base64;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import org.jspecify.annotations.Nullable;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -24,14 +26,21 @@ import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 
 /**
- * 토스페이먼츠 결제 API 어댑터(ACL, ADR 0018). 토스 응답을 {@link PaymentGatewayPort}의 네 가지 결과로 바꾼다. 해석 규칙은
- * docs/architecture/payment.md "승인", "조회 결과". 응답 원문과 시크릿 키는 로그에 남기지 않는다.
+ * 토스페이먼츠 결제 API 어댑터(ACL, ADR 0018). 토스 응답을 {@link PaymentGatewayPort}의 결과로 바꾼다. 해석 규칙은
+ * docs/architecture/payment.md "승인", "조회 결과", "보상 취소". 응답 원문과 시크릿 키는 로그에 남기지 않는다.
  */
 @Component
 @EnableConfigurationProperties(TossProperties.class)
 public class TossPaymentGatewayAdapter implements PaymentGatewayPort {
 
     private static final String DEFAULT_REJECT_MESSAGE = "결제가 완료되지 않았습니다.";
+
+    /** 다시 보내면 될 수 있는 취소 오류. 카드사·결제기관 오류, 연속 요청, 같은 멱등 키의 요청이 처리 중이다. */
+    private static final Set<String> RETRYABLE_CANCEL_ERRORS =
+            Set.of(
+                    "PROVIDER_ERROR",
+                    "FORBIDDEN_CONSECUTIVE_REQUEST",
+                    "IDEMPOTENT_REQUEST_PROCESSING");
 
     private final RestClient client;
 
@@ -102,6 +111,30 @@ public class TossPaymentGatewayAdapter implements PaymentGatewayPort {
                                         }));
     }
 
+    @Override
+    public CancelResult cancel(String paymentKey, String reason, String idempotencyKey) {
+        try {
+            CancelResult result =
+                    client.post()
+                            .uri("/v1/payments/{paymentKey}/cancel", paymentKey)
+                            .header("Idempotency-Key", idempotencyKey)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .body(Map.of("cancelReason", reason))
+                            .exchange(
+                                    (request, response) -> {
+                                        HttpStatusCode status = response.getStatusCode();
+                                        if (status.is2xxSuccessful()) {
+                                            return cancelled(response.bodyTo(TossPayment.class));
+                                        }
+                                        return cancelError(
+                                                status, response.bodyTo(TossError.class));
+                                    });
+            return result == null ? new Unknown("EMPTY_RESPONSE") : result;
+        } catch (ResourceAccessException e) {
+            return new Unknown(ioReason(e.getCause()));
+        }
+    }
+
     private static Result call(Call call) {
         try {
             Result result = call.run();
@@ -109,6 +142,35 @@ public class TossPaymentGatewayAdapter implements PaymentGatewayPort {
         } catch (ResourceAccessException e) {
             return new Unknown(ioReason(e.getCause()));
         }
+    }
+
+    /** 전액 취소인지는 상태가 아니라 남은 금액으로 정한다(ADR 0018). */
+    private static CancelResult cancelled(@Nullable TossPayment payment) {
+        if (payment == null || payment.status() == null || payment.balanceAmount() == null) {
+            return new Unknown("INVALID_RESPONSE");
+        }
+        if (payment.balanceAmount() != 0) {
+            return new CancelRejected("BALANCE_REMAINING", "취소 뒤 남은 금액이 있습니다.");
+        }
+        List<TossCancel> cancels = payment.cancels();
+        String transactionKey =
+                cancels == null || cancels.isEmpty() ? null : cancels.getLast().transactionKey();
+        return new Cancelled(payment.status(), transactionKey);
+    }
+
+    /** 취소 오류. 일시적인 오류는 다시 시도하고, 이미 취소된 결제는 취소로 본다. */
+    private static CancelResult cancelError(HttpStatusCode status, @Nullable TossError error) {
+        String code = code(status, error);
+        if ("ALREADY_CANCELED_PAYMENT".equals(code)) {
+            return new Cancelled(code, null);
+        }
+        if (status.is5xxServerError()
+                || error == null
+                || error.code() == null
+                || RETRYABLE_CANCEL_ERRORS.contains(code)) {
+            return new Unknown(code);
+        }
+        return new CancelRejected(code, message(error));
     }
 
     /** 승인 오류. 토스가 이미 처리했을 수 있는 응답은 실패로 보지 않는다(ADR 0018). */
@@ -180,7 +242,13 @@ public class TossPaymentGatewayAdapter implements PaymentGatewayPort {
             @Nullable Long totalAmount,
             @Nullable String method,
             @Nullable OffsetDateTime approvedAt,
-            @Nullable String lastTransactionKey) {}
+            @Nullable String lastTransactionKey,
+            @Nullable Long balanceAmount,
+            @Nullable List<TossCancel> cancels) {}
+
+    /** 토스 취소 거래에서 쓰는 필드. */
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    record TossCancel(@Nullable String transactionKey) {}
 
     /** 토스 오류 응답. */
     @JsonIgnoreProperties(ignoreUnknown = true)

@@ -30,4 +30,13 @@ public interface JpaPaymentRepository extends Repository<Payment, UUID>, Payment
                             + " :requestedBefore ORDER BY requested_at LIMIT :limit",
             nativeQuery = true)
     List<UUID> findInProgressIdsRequestedBefore(Instant requestedBefore, int limit);
+
+    @Override
+    @Query(
+            value =
+                    "SELECT id FROM payment WHERE status = 'APPROVED' AND cancel_requested_at IS NOT"
+                            + " NULL AND cancel_failure_code IS NULL ORDER BY cancel_requested_at"
+                            + " LIMIT :limit",
+            nativeQuery = true)
+    List<UUID> findCancelRequestedApprovedIds(int limit);
 }

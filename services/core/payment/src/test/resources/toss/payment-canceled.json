@@ -1,0 +1,62 @@
+{
+  "mId": "tgen_docs",
+  "lastTransactionKey": "txrd_a01k8zcancel00000000000000",
+  "paymentKey": "${paymentKey}",
+  "orderId": "${orderId}",
+  "orderName": "반팔 티셔츠",
+  "taxExemptionAmount": 0,
+  "status": "${status}",
+  "requestedAt": "2026-10-20T15:01:02+09:00",
+  "approvedAt": "2026-10-20T15:01:20+09:00",
+  "useEscrow": false,
+  "cultureExpense": false,
+  "card": null,
+  "virtualAccount": null,
+  "transfer": null,
+  "mobilePhone": null,
+  "giftCertificate": null,
+  "cashReceipt": null,
+  "cashReceipts": null,
+  "discount": null,
+  "cancels": [
+    {
+      "transactionKey": "txrd_a01k8zcancel00000000000000",
+      "cancelReason": "${cancelReason}",
+      "taxExemptionAmount": 0,
+      "canceledAt": "2026-10-20T15:20:00+09:00",
+      "cardDiscountAmount": 0,
+      "transferDiscountAmount": 0,
+      "easyPayDiscountAmount": 0,
+      "receiptKey": null,
+      "cancelAmount": ${amount},
+      "taxFreeAmount": 0,
+      "refundableAmount": 0,
+      "cancelStatus": "DONE",
+      "cancelRequestId": null
+    }
+  ],
+  "secret": null,
+  "type": "NORMAL",
+  "easyPay": {
+    "provider": "토스페이",
+    "amount": 0,
+    "discountAmount": 16
+  },
+  "country": "KR",
+  "failure": null,
+  "isPartialCancelable": true,
+  "receipt": {
+    "url": "https://dashboard.tosspayments.com/receipt/redirection?transactionId=test"
+  },
+  "checkout": {
+    "url": "https://api.tosspayments.com/v1/payments/test/checkout"
+  },
+  "currency": "KRW",
+  "totalAmount": ${amount},
+  "balanceAmount": ${balanceAmount},
+  "suppliedAmount": 13636,
+  "vat": 1364,
+  "taxFreeAmount": 0,
+  "method": "간편결제",
+  "version": "2022-11-16"
+}

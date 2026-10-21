@@ -48,6 +48,11 @@ final class PaymentFakes {
         public List<UUID> findInProgressIdsRequestedBefore(Instant requestedBefore, int limit) {
             throw new UnsupportedOperationException("통합 테스트에서 확인한다");
         }
+
+        @Override
+        public List<UUID> findCancelRequestedApprovedIds(int limit) {
+            throw new UnsupportedOperationException("통합 테스트에서 확인한다");
+        }
     }
 
     static final class Ledger implements PaymentLedgerRepository {
@@ -64,12 +69,23 @@ final class PaymentFakes {
     static final class Gateway implements PaymentGatewayPort {
         final Deque<Result> confirmResults = new ArrayDeque<>();
         final Deque<Result> findResults = new ArrayDeque<>();
+        final Deque<CancelResult> cancelResults = new ArrayDeque<>();
         final List<String> calls = new ArrayList<>();
+
+        /** 승인 요청을 받는 동안 일어날 일(예: 주문 취소). 응답보다 먼저 반영된다. */
+        Runnable duringConfirm = () -> {};
 
         @Override
         public Result confirm(String paymentKey, UUID orderId, long amount, String idempotencyKey) {
             calls.add("confirm " + paymentKey + " " + amount + " " + idempotencyKey);
+            duringConfirm.run();
             return confirmResults.removeFirst();
+        }
+
+        @Override
+        public CancelResult cancel(String paymentKey, String reason, String idempotencyKey) {
+            calls.add("cancel " + paymentKey + " " + idempotencyKey);
+            return cancelResults.removeFirst();
         }
 
         @Override
