@@ -52,6 +52,7 @@
 | `TossPayments-Test-Code: REJECT_CARD_PAYMENT` | 403 `REJECT_CARD_PAYMENT`. 없는 결제에도 지정한 오류가 그대로 온다 |
 | 잘못된 시크릿 키 | 401 `UNAUTHORIZED_KEY` |
 | 없는 `paymentKey`로 승인 | 404 `NOT_FOUND_PAYMENT_SESSION`(결제 진행 데이터 만료와 같은 코드) |
+| 퀵계좌이체 테스트 흐름(2026-10-21, shop 결제 화면) | 휴대폰 번호가 미리 들어 있고 "다음" → 테스트 비밀번호 `000000`(키패드) → 결제하기 → 비밀번호 `000000`이면 `successUrl`로 돌아온다. 헤드리스 Chromium에서 Playwright로 끝까지 됐다. 승인 응답의 `method`는 `계좌이체`다. 이 결제를 보상 취소 작업으로 전액 취소하자 `CANCELED`, 남은 금액 0이었다 |
 
 설계에 반영한 것([ADR 0018](../adr/0018-toss-payments-integration.md))
 - 승인 타임아웃·재조회는 `orderId`가 아니라 `paymentKey`로 조회한다. 승인 요청에 `paymentKey`가 있으므로 `IN_PROGRESS` 결제는 늘 `paymentKey`를 갖는다.

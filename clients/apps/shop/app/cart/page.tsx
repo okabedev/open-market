@@ -19,7 +19,7 @@ import { changeCartItemQuantity, removeCartItem } from "./actions";
 
 /**
  * 장바구니(ORD-1). 판매자별로 묶고, 상품 정보와 줄 상태는 볼 때마다 catalog에서 읽은 값이다(docs/architecture/order.md "장바구니").
- * 합계는 지금 살 수 있는 줄만 더한다. 주문하기는 주문서 화면과 함께 연다.
+ * 합계는 지금 살 수 있는 줄만 더한다. 살 수 있는 줄은 고를 수 있고(처음에는 모두 선택), 주문하기는 고른 SKU로 주문서(`/checkout`)를 연다.
  */
 export default async function CartPage() {
   await requireSession("/cart");
@@ -92,6 +92,20 @@ export default async function CartPage() {
                             key={item.skuId}
                             className="flex flex-wrap items-start gap-4 py-4 first:pt-0 last:pb-0"
                           >
+                            {item.status === "AVAILABLE" ? (
+                              <input
+                                type="checkbox"
+                                name="skuId"
+                                value={item.skuId}
+                                // 줄마다 수량 폼이 있어 감싸지 못하므로 합계 칸의 주문 폼에 이어 붙인다.
+                                form="checkout"
+                                defaultChecked
+                                aria-label={`${item.productName} ${options} 주문`}
+                                className="mt-1 size-4"
+                              />
+                            ) : (
+                              <span className="size-4" aria-hidden />
+                            )}
                             <ProductImage
                               fileId={item.thumbnailFileId}
                               size={80}
@@ -170,6 +184,11 @@ export default async function CartPage() {
                   품절·재고 부족·판매 중지 상품은 금액에 넣지 않았습니다.
                 </p>
               ) : null}
+              <form id="checkout" action="/checkout" method="get" className="mt-2 grid">
+                <Button type="submit" disabled={summary.orderableCount === 0}>
+                  선택한 상품 주문하기
+                </Button>
+              </form>
             </CardContent>
           </Card>
         </div>

@@ -44,6 +44,8 @@ catalog:
   "@testing-library/user-event": 14.6.7
   "@testing-library/jest-dom": 7.0.1
   jsdom: 30.1.1
+  # 토스페이먼츠 결제위젯 SDK v2(ADR 0018). 스크립트는 토스가 제공하고, 패키지는 로더와 타입이다
+  "@tosspayments/tosspayments-sdk": 2.9.0
   # 마일스톤 E2E(clients/e2e, infra/e2e/run.sh)
   "@playwright/test": 1.63.0
 
