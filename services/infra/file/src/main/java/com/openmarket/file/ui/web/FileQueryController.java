@@ -34,13 +34,16 @@ public class FileQueryController {
         this.files = files;
     }
 
-    /** 이미지 변형을 받는다. 원본이나 없는 변형, 없는 파일은 404 {@code FILE_NOT_FOUND}. */
+    /** 이미지 변형을 받는다. 원본이나 없는 변형, 없는 파일, 비공개 파일은 404 {@code FILE_NOT_FOUND}. */
     @GetMapping(value = "/files/{fileId}/{variant}", produces = MediaType.IMAGE_JPEG_VALUE)
     public ResponseEntity<Resource> variant(
             @PathVariable UUID fileId, @PathVariable String variant) {
-        FileContentView content = files.findVariant(fileId, variant);
+        return image(files.findPublicVariant(fileId, variant), IMMUTABLE);
+    }
+
+    static ResponseEntity<Resource> image(FileContentView content, CacheControl cacheControl) {
         return ResponseEntity.ok()
-                .cacheControl(IMMUTABLE)
+                .cacheControl(cacheControl)
                 .contentType(MediaType.parseMediaType(content.contentType()))
                 .contentLength(content.sizeBytes())
                 .body(new FileSystemResource(content.path()));

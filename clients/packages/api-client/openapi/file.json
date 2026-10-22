@@ -47,6 +47,49 @@
           }
         }
       }
+    },
+    "/v1/files" : {
+      "post" : {
+        "tags" : [ "member-file-controller" ],
+        "operationId" : "upload_1",
+        "parameters" : [ {
+          "name" : "purpose",
+          "in" : "query",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "enum" : [ "CLAIM_IMAGE" ]
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "multipart/form-data" : {
+              "schema" : {
+                "type" : "object",
+                "properties" : {
+                  "file" : {
+                    "type" : "string",
+                    "format" : "binary"
+                  }
+                },
+                "required" : [ "file" ]
+              }
+            }
+          }
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Created",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/UploadFileResponse"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components" : {

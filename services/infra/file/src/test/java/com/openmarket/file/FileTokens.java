@@ -19,6 +19,13 @@ final class FileTokens {
                 .authorities(new SimpleGrantedAuthority("ROLE_BUYER"));
     }
 
+    static RequestPostProcessor admin(UUID memberId) {
+        return jwt().jwt(
+                        token ->
+                                token.subject(memberId.toString()).claim("roles", List.of("ADMIN")))
+                .authorities(new SimpleGrantedAuthority("ROLE_ADMIN"));
+    }
+
     static RequestPostProcessor seller(UUID memberId) {
         return jwt().jwt(
                         token ->
