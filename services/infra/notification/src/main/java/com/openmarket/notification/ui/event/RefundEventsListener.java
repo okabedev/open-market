@@ -1,8 +1,8 @@
 package com.openmarket.notification.ui.event;
 
 import com.openmarket.common.messaging.consumer.IdempotentEventProcessor;
-import com.openmarket.notification.command.application.NotifyInAppCommand;
-import com.openmarket.notification.command.application.NotifyInAppUseCase;
+import com.openmarket.notification.command.application.NotifyCommand;
+import com.openmarket.notification.command.application.NotifyUseCase;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
@@ -22,11 +22,11 @@ class RefundEventsListener {
     static final String LISTENER = "notification.refund-failed";
 
     private final IdempotentEventProcessor processor;
-    private final NotifyInAppUseCase notifyInApp;
+    private final NotifyUseCase notify;
 
-    RefundEventsListener(IdempotentEventProcessor processor, NotifyInAppUseCase notifyInApp) {
+    RefundEventsListener(IdempotentEventProcessor processor, NotifyUseCase notify) {
         this.processor = processor;
-        this.notifyInApp = notifyInApp;
+        this.notify = notify;
     }
 
     @KafkaListener(topics = "payment.payment", groupId = "notification")
@@ -39,16 +39,16 @@ class RefundEventsListener {
                 record,
                 RefundFailedMessage.class,
                 event ->
-                        notifyInApp.execute(
-                                new NotifyInAppCommand(
+                        notify.execute(
+                                new NotifyCommand(
                                         event.id(),
                                         List.of(
-                                                new NotifyInAppCommand.Notice(
-                                                        NotifyInAppCommand.Kind.REFUND_FAILED,
-                                                        NotifyInAppCommand.Audience.ADMIN,
+                                                new NotifyCommand.Notice(
+                                                        NotifyCommand.Kind.REFUND_FAILED,
+                                                        NotifyCommand.Audience.ADMIN,
                                                         null,
                                                         Map.of("code", event.payload().code()),
-                                                        NotifyInAppCommand.Target.REFUND,
+                                                        NotifyCommand.Target.REFUND,
                                                         event.payload().refundId())))));
     }
 

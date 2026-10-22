@@ -4,6 +4,7 @@ import static com.openmarket.member.command.domain.QAddress.address;
 import static com.openmarket.member.command.domain.QMember.member;
 
 import com.openmarket.member.query.dto.AddressView;
+import com.openmarket.member.query.dto.MemberContactView;
 import com.openmarket.member.query.dto.MemberView;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
@@ -37,6 +38,19 @@ public class MemberQueryDao {
                                         member.phone,
                                         member.emailVerifiedAt,
                                         member.createdAt))
+                        .from(member)
+                        .where(member.id.eq(memberId), member.status.stringValue().eq(ACTIVE))
+                        .fetchOne());
+    }
+
+    /** 알림을 보낼 연락처. 탈퇴한 회원은 비어 있다(가명 이메일을 주지 않는다). */
+    public Optional<MemberContactView> findContact(UUID memberId) {
+        return Optional.ofNullable(
+                query.select(
+                                Projections.constructor(
+                                        MemberContactView.class,
+                                        member.email,
+                                        member.emailVerifiedAt.isNotNull()))
                         .from(member)
                         .where(member.id.eq(memberId), member.status.stringValue().eq(ACTIVE))
                         .fetchOne());

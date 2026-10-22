@@ -122,7 +122,7 @@ class InAppEventsIntegrationTest {
                                 "SELLER_APPROVED SELLER 019a0f3c-5e2b-7c41-9d3e-2f6a8b1c4d70 -"),
                         Map.entry(
                                 "member.seller/SellerRejected",
-                                "SELLER_REJECTED BUYER 019a0f3c-5e2b-7c41-9d3e-2f6a8b1c4d70 -"),
+                                "SELLER_REJECTED BUYER 019a0f3c-5e2b-7c41-9d3e-2f6a8b1c4d70 SELLER_APPLICATION"),
                         Map.entry(
                                 "catalog.product/ProductBanned",
                                 "PRODUCT_BANNED SELLER 019a0f3c-5e2b-7c41-9d3e-2f6a8b1c4d70 PRODUCT"));

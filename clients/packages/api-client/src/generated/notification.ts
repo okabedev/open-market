@@ -211,7 +211,7 @@ export interface components {
             kind?: "EMAIL_VERIFICATION" | "ORDER_PAID" | "SHIPMENT_SHIPPED" | "SHIPMENT_DELIVERED" | "CLAIM_APPROVED" | "CLAIM_REJECTED" | "CLAIM_COMPLETED" | "SELLER_REJECTED" | "SELLER_ORDER_RECEIVED" | "CLAIM_REQUESTED" | "SELLER_APPROVED" | "PRODUCT_BANNED" | "CLAIM_MEDIATION_REQUESTED" | "REFUND_FAILED";
             message?: string;
             /** @enum {string} */
-            targetType?: "ORDER" | "SELLER_ORDER" | "CLAIM" | "REFUND" | "PRODUCT";
+            targetType?: "ORDER" | "SELLER_ORDER" | "CLAIM" | "REFUND" | "PRODUCT" | "SELLER_APPLICATION";
             /** Format: uuid */
             targetId?: string;
             read?: boolean;

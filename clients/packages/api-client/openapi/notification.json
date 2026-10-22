@@ -300,7 +300,7 @@
           },
           "targetType" : {
             "type" : "string",
-            "enum" : [ "ORDER", "SELLER_ORDER", "CLAIM", "REFUND", "PRODUCT" ]
+            "enum" : [ "ORDER", "SELLER_ORDER", "CLAIM", "REFUND", "PRODUCT", "SELLER_APPLICATION" ]
           },
           "targetId" : {
             "type" : "string",

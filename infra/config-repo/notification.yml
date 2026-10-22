@@ -7,6 +7,40 @@ spring:
   kafka:
     consumer:
       group-id: notification
+  security:
+    oauth2:
+      client:
+        # member 내부 API(연락처 조회)를 부를 서비스 간 토큰(client_credentials, scope internal). auth.yml의 service-clients와 같은 시크릿이다.
+        registration:
+          notification:
+            provider: auth
+            client-id: notification
+            client-secret: ${NOTIFICATION_CLIENT_SECRET}
+            authorization-grant-type: client_credentials
+            scope: internal
+        provider:
+          auth:
+            token-uri: http://auth.openmarket.local:9000/oauth2/token
+  cloud:
+    openfeign:
+      oauth2:
+        enabled: true
+        client-registration-id: notification
+      circuitbreaker:
+        enabled: true
+        alphanumeric-ids:
+          enabled: true
+      client:
+        config:
+          # 동기 조회의 타임아웃(NFR-4). 값과 이유는 order.yml과 같다.
+          default:
+            connect-timeout: 1000
+            read-timeout: 2000
+    circuitbreaker:
+      resilience4j:
+        # 호출을 발송 작업 스레드에서 그대로 한다. 시간 제한은 위의 Feign 타임아웃이 맡는다.
+        disable-time-limiter: true
+        disable-thread-pool: true
   mail:
     # 로컬은 Mailpit(인증 없음). 컨테이너로 띄우면 compose가 mailpit을 넣는다.
     host: ${MAIL_HOST:localhost}
@@ -16,8 +50,27 @@ spring:
       mail.smtp.timeout: 5000
       mail.smtp.writetimeout: 5000
 
+resilience4j:
+  circuitbreaker:
+    configs:
+      # 최근 호출 20건 중 10건 이상에서 절반이 실패하면 10초 동안 바로 실패시킨다. 4xx(404 = 없는 회원)는 실패로 세지 않는다.
+      default:
+        sliding-window-size: 20
+        minimum-number-of-calls: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 3
+        automatic-transition-from-open-to-half-open-enabled: true
+        ignore-exceptions:
+          - feign.FeignException$FeignClientException
+
 openmarket:
   notification:
+    # 알림 이메일의 앱 링크. 앱 화면 경로는 ConfiguredAppLinks에 있다.
+    app-urls:
+      shop: http://localhost:3000
+      seller: http://localhost:3001
+      admin: http://localhost:3002
     mail-from: "오픈 마켓 <no-reply@openmarket.local>"
     # 보낼 차례인 메일을 찾는 주기(EmailDispatchJob)
     dispatch-interval: 2s

@@ -36,6 +36,13 @@ gateway 경로는 `/api/member` + 아래 경로다. 모두 사용자 토큰이 �
 
 다른 회원의 배송지는 404 `MEMBER_ADDRESS_NOT_FOUND`다(삭제는 204이고 아무것도 지우지 않는다).
 
+## 내부 API
+서비스 간 조회다. `internal` scope 토큰만 부르고 gateway는 `/internal/**`을 넘기지 않는다.
+
+| 메서드 | 경로 | 부르는 곳 | 설명 |
+|---|---|---|---|
+| GET | `/internal/v1/members/{memberId}/contact` | notification(알림 이메일) | `{email, emailVerified}`. 이름·전화번호는 주지 않는다. 없거나 탈퇴한 회원은 404 `MEMBER_NOT_FOUND`(가명 이메일을 주지 않는다) |
+
 ## 탈퇴 (ACC-4)
 `POST /v1/members/me/withdraw`(204). 이미 탈퇴했어도 204다.
 1. 판매자면 422 `MEMBER_SELLER_CANNOT_WITHDRAW`다(2026-10-18 결정). 판매자 정리(폐점·미정산 처리)는 정산이 생기는 M5에서 정한다.
@@ -60,7 +67,7 @@ gateway 경로는 `/api/member` + 아래 경로다. 모두 사용자 토큰이 �
 - 사업자 등록 번호는 국세청 검증 숫자 규칙을 확인하고 `123-45-67890` 형식으로 저장한다.
 - 계좌 번호는 숫자 10~16자리로 정리한 뒤 암호화한 값(`MEMBER_ACCOUNT_NUMBER_KEY`)과 마스킹한 값(`********6789`)만 저장한다. 응답에는 본인에게도 마스킹한 값만 준다. 원문은 정산 지급(M5)에서 복호화한다.
 - 관리자 작업(승인, 반려, 정지, 해제)은 감사 로그(`audit_log`, [data.md](data.md))에 관리자 ID, 작업, 대상, 사유를 남긴다(NFR-8).
-- 승인·반려 알림 메일(notification)은 M4에서 더한다.
+- 승인·반려는 notification이 인앱 알림과 메일로 알린다([notification.md](notification.md) "인앱 알림").
 
 | 메서드 | 경로 | 설명 |
 |---|---|---|

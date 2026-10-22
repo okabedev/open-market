@@ -9,8 +9,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.openmarket.common.test.container.PostgresContainerConfiguration;
 import com.openmarket.common.test.openapi.OpenApiSnapshot;
-import com.openmarket.notification.command.application.NotifyInAppCommand;
-import com.openmarket.notification.command.application.NotifyInAppUseCase;
+import com.openmarket.notification.command.application.NotifyCommand;
+import com.openmarket.notification.command.application.NotifyUseCase;
 import com.openmarket.notification.infra.NotificationPurgeJob;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -43,7 +43,7 @@ class NotificationApiIntegrationTest {
 
     @Autowired MockMvc mockMvc;
 
-    @Autowired NotifyInAppUseCase notify;
+    @Autowired NotifyUseCase notify;
 
     @Autowired NotificationPurgeJob purgeJob;
 
@@ -58,27 +58,24 @@ class NotificationApiIntegrationTest {
     void buyerInbox() throws Exception {
         UUID first =
                 notice(
-                        NotifyInAppCommand.Audience.BUYER,
+                        NotifyCommand.Audience.BUYER,
                         memberId,
-                        NotifyInAppCommand.Kind.SHIPMENT_DELIVERED);
+                        NotifyCommand.Kind.SHIPMENT_DELIVERED);
         UUID second =
                 notice(
-                        NotifyInAppCommand.Audience.BUYER,
+                        NotifyCommand.Audience.BUYER,
                         memberId,
-                        NotifyInAppCommand.Kind.SHIPMENT_DELIVERED);
+                        NotifyCommand.Kind.SHIPMENT_DELIVERED);
         UUID third =
                 notice(
-                        NotifyInAppCommand.Audience.BUYER,
+                        NotifyCommand.Audience.BUYER,
                         memberId,
-                        NotifyInAppCommand.Kind.SHIPMENT_DELIVERED);
+                        NotifyCommand.Kind.SHIPMENT_DELIVERED);
+        notice(NotifyCommand.Audience.SELLER, memberId, NotifyCommand.Kind.SELLER_APPROVED);
         notice(
-                NotifyInAppCommand.Audience.SELLER,
-                memberId,
-                NotifyInAppCommand.Kind.SELLER_APPROVED);
-        notice(
-                NotifyInAppCommand.Audience.BUYER,
+                NotifyCommand.Audience.BUYER,
                 UUID.randomUUID(),
-                NotifyInAppCommand.Kind.SHIPMENT_DELIVERED);
+                NotifyCommand.Kind.SHIPMENT_DELIVERED);
 
         JsonNode page = read("/v1/notifications?size=2", buyer(memberId));
         assertThat(ids(page)).containsExactly(third, second);
@@ -107,23 +104,14 @@ class NotificationApiIntegrationTest {
     @DisplayName("읽음은 다시 해도 204이고 안 읽은 수가 줄어든다. 남의 알림이나 다른 받는 쪽의 알림은 404다. 모두 읽음은 지금까지 온 알림을 읽는다")
     void readsNotifications() throws Exception {
         UUID mine =
-                notice(
-                        NotifyInAppCommand.Audience.SELLER,
-                        memberId,
-                        NotifyInAppCommand.Kind.SELLER_APPROVED);
-        notice(
-                NotifyInAppCommand.Audience.SELLER,
-                memberId,
-                NotifyInAppCommand.Kind.SELLER_APPROVED);
-        notice(
-                NotifyInAppCommand.Audience.SELLER,
-                memberId,
-                NotifyInAppCommand.Kind.SELLER_APPROVED);
+                notice(NotifyCommand.Audience.SELLER, memberId, NotifyCommand.Kind.SELLER_APPROVED);
+        notice(NotifyCommand.Audience.SELLER, memberId, NotifyCommand.Kind.SELLER_APPROVED);
+        notice(NotifyCommand.Audience.SELLER, memberId, NotifyCommand.Kind.SELLER_APPROVED);
         UUID others =
                 notice(
-                        NotifyInAppCommand.Audience.SELLER,
+                        NotifyCommand.Audience.SELLER,
                         UUID.randomUUID(),
-                        NotifyInAppCommand.Kind.SELLER_APPROVED);
+                        NotifyCommand.Kind.SELLER_APPROVED);
 
         for (int i = 0; i < 2; i++) {
             mockMvc.perform(
@@ -146,10 +134,7 @@ class NotificationApiIntegrationTest {
         mockMvc.perform(post("/v1/seller/notifications/read-all").with(seller(memberId)))
                 .andExpect(status().isNoContent());
         assertThat(unread("/v1/seller", seller(memberId))).isZero();
-        notice(
-                NotifyInAppCommand.Audience.SELLER,
-                memberId,
-                NotifyInAppCommand.Kind.SELLER_APPROVED);
+        notice(NotifyCommand.Audience.SELLER, memberId, NotifyCommand.Kind.SELLER_APPROVED);
         assertThat(unread("/v1/seller", seller(memberId))).isEqualTo(1);
     }
 
@@ -161,9 +146,9 @@ class NotificationApiIntegrationTest {
         long before = unread("/v1/admin", admin(firstAdmin));
         UUID mediation =
                 notice(
-                        NotifyInAppCommand.Audience.ADMIN,
+                        NotifyCommand.Audience.ADMIN,
                         null,
-                        NotifyInAppCommand.Kind.CLAIM_MEDIATION_REQUESTED);
+                        NotifyCommand.Kind.CLAIM_MEDIATION_REQUESTED);
 
         assertThat(unread("/v1/admin", admin(firstAdmin))).isEqualTo(before + 1);
         assertThat(ids(read("/v1/admin/notifications", admin(secondAdmin)))).contains(mediation);
@@ -189,14 +174,14 @@ class NotificationApiIntegrationTest {
     void purgesOldNotifications() throws Exception {
         UUID old =
                 notice(
-                        NotifyInAppCommand.Audience.BUYER,
+                        NotifyCommand.Audience.BUYER,
                         memberId,
-                        NotifyInAppCommand.Kind.SHIPMENT_DELIVERED);
+                        NotifyCommand.Kind.SHIPMENT_DELIVERED);
         UUID recent =
                 notice(
-                        NotifyInAppCommand.Audience.BUYER,
+                        NotifyCommand.Audience.BUYER,
                         memberId,
-                        NotifyInAppCommand.Kind.SHIPMENT_DELIVERED);
+                        NotifyCommand.Kind.SHIPMENT_DELIVERED);
         mockMvc.perform(post("/v1/notifications/read-all").with(buyer(memberId)))
                 .andExpect(status().isNoContent());
         UUID pendingEmail = UUID.randomUUID();
@@ -245,24 +230,23 @@ class NotificationApiIntegrationTest {
 
     /** 인앱 알림 하나를 만들고 ID를 돌려준다. */
     private UUID notice(
-            NotifyInAppCommand.Audience audience,
-            @Nullable UUID recipient,
-            NotifyInAppCommand.Kind kind) {
+            NotifyCommand.Audience audience, @Nullable UUID recipient, NotifyCommand.Kind kind) {
         UUID eventId = UUID.randomUUID();
         notify.execute(
-                new NotifyInAppCommand(
+                new NotifyCommand(
                         eventId,
                         List.of(
-                                new NotifyInAppCommand.Notice(
+                                new NotifyCommand.Notice(
                                         kind,
                                         audience,
                                         recipient,
                                         Map.of(
                                                 "type", "RETURN",
                                                 "storeName", "길동상회"),
-                                        NotifyInAppCommand.Target.ORDER,
+                                        NotifyCommand.Target.ORDER,
                                         UUID.randomUUID()))));
-        return jdbc.sql("SELECT id FROM notification WHERE source_event_id = :id")
+        return jdbc.sql(
+                        "SELECT id FROM notification WHERE source_event_id = :id AND channel = 'IN_APP'")
                 .param("id", eventId)
                 .query(UUID.class)
                 .single();

@@ -1,8 +1,8 @@
 package com.openmarket.notification.ui.event;
 
 import com.openmarket.common.messaging.consumer.IdempotentEventProcessor;
-import com.openmarket.notification.command.application.NotifyInAppCommand;
-import com.openmarket.notification.command.application.NotifyInAppUseCase;
+import com.openmarket.notification.command.application.NotifyCommand;
+import com.openmarket.notification.command.application.NotifyUseCase;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
@@ -29,11 +29,11 @@ import org.springframework.stereotype.Component;
 class ClaimEventsListener {
 
     private final IdempotentEventProcessor processor;
-    private final NotifyInAppUseCase notifyInApp;
+    private final NotifyUseCase notify;
 
-    ClaimEventsListener(IdempotentEventProcessor processor, NotifyInAppUseCase notifyInApp) {
+    ClaimEventsListener(IdempotentEventProcessor processor, NotifyUseCase notify) {
         this.processor = processor;
-        this.notifyInApp = notifyInApp;
+        this.notify = notify;
     }
 
     @KafkaListener(topics = "fulfillment.claim", groupId = "notification")
@@ -45,14 +45,14 @@ class ClaimEventsListener {
                             record,
                             ClaimRequestedMessage.class,
                             event ->
-                                    notifyInApp.execute(
+                                    notify.execute(
                                             one(
                                                     event.id(),
-                                                    NotifyInAppCommand.Kind.CLAIM_REQUESTED,
-                                                    NotifyInAppCommand.Audience.SELLER,
+                                                    NotifyCommand.Kind.CLAIM_REQUESTED,
+                                                    NotifyCommand.Audience.SELLER,
                                                     event.payload().sellerId(),
                                                     Map.of("type", event.payload().type()),
-                                                    NotifyInAppCommand.Target.CLAIM,
+                                                    NotifyCommand.Target.CLAIM,
                                                     event.payload().claimId())));
             case "ClaimApproved" ->
                     processor.process(
@@ -61,10 +61,10 @@ class ClaimEventsListener {
                             ClaimApprovedMessage.class,
                             event -> {
                                 if (!"CANCEL".equals(event.payload().type())) {
-                                    notifyInApp.execute(
+                                    notify.execute(
                                             toBuyer(
                                                     event.id(),
-                                                    NotifyInAppCommand.Kind.CLAIM_APPROVED,
+                                                    NotifyCommand.Kind.CLAIM_APPROVED,
                                                     event.payload().buyerId(),
                                                     event.payload().orderId(),
                                                     Map.of(
@@ -80,10 +80,10 @@ class ClaimEventsListener {
                             record,
                             ClaimRejectedMessage.class,
                             event ->
-                                    notifyInApp.execute(
+                                    notify.execute(
                                             toBuyer(
                                                     event.id(),
-                                                    NotifyInAppCommand.Kind.CLAIM_REJECTED,
+                                                    NotifyCommand.Kind.CLAIM_REJECTED,
                                                     event.payload().buyerId(),
                                                     event.payload().orderId(),
                                                     Map.of(
@@ -97,10 +97,10 @@ class ClaimEventsListener {
                             record,
                             ClaimCompletedMessage.class,
                             event ->
-                                    notifyInApp.execute(
+                                    notify.execute(
                                             toBuyer(
                                                     event.id(),
-                                                    NotifyInAppCommand.Kind.CLAIM_COMPLETED,
+                                                    NotifyCommand.Kind.CLAIM_COMPLETED,
                                                     event.payload().buyerId(),
                                                     event.payload().orderId(),
                                                     Map.of(
@@ -114,48 +114,47 @@ class ClaimEventsListener {
                             record,
                             ClaimMediationRequestedMessage.class,
                             event ->
-                                    notifyInApp.execute(
+                                    notify.execute(
                                             one(
                                                     event.id(),
-                                                    NotifyInAppCommand.Kind
-                                                            .CLAIM_MEDIATION_REQUESTED,
-                                                    NotifyInAppCommand.Audience.ADMIN,
+                                                    NotifyCommand.Kind.CLAIM_MEDIATION_REQUESTED,
+                                                    NotifyCommand.Audience.ADMIN,
                                                     null,
                                                     Map.of("type", event.payload().type()),
-                                                    NotifyInAppCommand.Target.CLAIM,
+                                                    NotifyCommand.Target.CLAIM,
                                                     event.payload().claimId())));
             default -> {}
         }
     }
 
-    private static NotifyInAppCommand toBuyer(
+    private static NotifyCommand toBuyer(
             UUID eventId,
-            NotifyInAppCommand.Kind kind,
+            NotifyCommand.Kind kind,
             UUID buyerId,
             UUID orderId,
             Map<String, String> params) {
         return one(
                 eventId,
                 kind,
-                NotifyInAppCommand.Audience.BUYER,
+                NotifyCommand.Audience.BUYER,
                 buyerId,
                 params,
-                NotifyInAppCommand.Target.ORDER,
+                NotifyCommand.Target.ORDER,
                 orderId);
     }
 
-    private static NotifyInAppCommand one(
+    private static NotifyCommand one(
             UUID eventId,
-            NotifyInAppCommand.Kind kind,
-            NotifyInAppCommand.Audience audience,
+            NotifyCommand.Kind kind,
+            NotifyCommand.Audience audience,
             @Nullable UUID recipientId,
             Map<String, String> params,
-            NotifyInAppCommand.Target target,
+            NotifyCommand.Target target,
             UUID targetId) {
-        return new NotifyInAppCommand(
+        return new NotifyCommand(
                 eventId,
                 List.of(
-                        new NotifyInAppCommand.Notice(
+                        new NotifyCommand.Notice(
                                 kind, audience, recipientId, params, target, targetId)));
     }
 
