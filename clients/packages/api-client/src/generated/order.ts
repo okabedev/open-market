@@ -468,6 +468,8 @@ export interface operations {
     list: {
         parameters: {
             query?: {
+                progress?: ("PAID" | "ACCEPTED" | "SHIPPED" | "IN_TRANSIT" | "DELIVERED" | "CONFIRMED" | "CANCELLED" | "RETURNED")[];
+                claimStatus?: ("REQUESTED" | "APPROVED" | "REJECTED" | "MEDIATING" | "COMPLETED")[];
                 page?: number;
                 size?: number;
             };

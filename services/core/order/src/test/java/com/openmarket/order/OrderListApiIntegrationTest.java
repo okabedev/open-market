@@ -204,6 +204,43 @@ class OrderListApiIntegrationTest {
     }
 
     @Test
+    @DisplayName("판매자 하위 주문 목록은 진행 상태와 클레임 상태로 거른다. 둘 다 주면 둘 다 맞는 것만 준다")
+    void sellerListFilter() throws Exception {
+        UUID ready = place(buyerId, line(shirt, 1, 19_900));
+        UUID accepted = place(buyerId, line(shirt, 1, 19_900));
+        UUID claimed = place(buyerId, line(shirt, 1, 19_900));
+        UUID exchanging = place(buyerId, line(shirt, 1, 19_900));
+        markPaid(ready, "2026-10-21T01:00:00Z");
+        markPaid(accepted, "2026-10-21T02:00:00Z");
+        markPaid(claimed, "2026-10-21T03:00:00Z");
+        markPaid(exchanging, "2026-10-21T04:00:00Z");
+        progress(ready, "PAID", null);
+        progress(accepted, "ACCEPTED", null);
+        progress(claimed, "DELIVERED", "REQUESTED");
+        progress(exchanging, "DELIVERED", "APPROVED");
+
+        assertThat(ids(sellerList(Map.of("progress", List.of("PAID", "ACCEPTED"))), "orderId"))
+                .containsExactly(accepted, ready);
+        assertThat(
+                        ids(
+                                sellerList(Map.of("claimStatus", List.of("REQUESTED", "APPROVED"))),
+                                "orderId"))
+                .containsExactly(exchanging, claimed);
+        JsonNode both =
+                sellerList(
+                        Map.of(
+                                "progress", List.of("DELIVERED"),
+                                "claimStatus", List.of("REQUESTED")));
+        assertThat(ids(both, "orderId")).containsExactly(claimed);
+        assertThat(both.get("totalCount").asLong()).isEqualTo(1);
+        assertThat(both.get("items").get(0).get("claim").get("status").asString())
+                .isEqualTo("REQUESTED");
+
+        mockMvc.perform(get("/v1/seller/orders").param("progress", "LOST").with(seller(sellerA)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     @DisplayName("구매자 주문 상세는 결제된 주문에만 결제 시각이 있다")
     void buyerDetailPaidAt() throws Exception {
         UUID paid = place(buyerId, line(shirt, 1, 19_900));
@@ -247,6 +284,32 @@ class OrderListApiIntegrationTest {
     private void markPaid(UUID orderId, String paidAt) {
         jdbc.sql("UPDATE orders SET status = 'PAID', paid_at = :paidAt::timestamptz WHERE id = :id")
                 .param("paidAt", paidAt)
+                .param("id", orderId)
+                .update();
+    }
+
+    private JsonNode sellerList(Map<String, List<String>> filters) throws Exception {
+        var request = get("/v1/seller/orders").with(seller(sellerA));
+        filters.forEach((name, values) -> request.param(name, values.toArray(String[]::new)));
+        return json.readTree(
+                mockMvc.perform(request)
+                        .andExpect(status().isOk())
+                        .andReturn()
+                        .getResponse()
+                        .getContentAsString());
+    }
+
+    private void progress(UUID orderId, String progress, @Nullable String claimStatus) {
+        jdbc.sql(
+                        """
+                        UPDATE seller_order
+                        SET progress = :progress, claim_id = :claimId, claim_type = :claimType,
+                            claim_status = :claimStatus
+                        WHERE order_id = :id""")
+                .param("progress", progress)
+                .param("claimId", claimStatus == null ? null : UUID.randomUUID())
+                .param("claimType", claimStatus == null ? null : "RETURN")
+                .param("claimStatus", claimStatus)
                 .param("id", orderId)
                 .update();
     }

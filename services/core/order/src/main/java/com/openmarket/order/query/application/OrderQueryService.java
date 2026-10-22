@@ -2,6 +2,7 @@ package com.openmarket.order.query.application;
 
 import com.openmarket.common.core.error.NotFoundException;
 import com.openmarket.order.query.dao.OrderQueryDao;
+import com.openmarket.order.query.dto.ClaimStatus;
 import com.openmarket.order.query.dto.CursorPageView;
 import com.openmarket.order.query.dto.OngoingOrdersView;
 import com.openmarket.order.query.dto.OrderDetailView;
@@ -9,7 +10,9 @@ import com.openmarket.order.query.dto.OrderStatus;
 import com.openmarket.order.query.dto.OrderSummaryView;
 import com.openmarket.order.query.dto.PageView;
 import com.openmarket.order.query.dto.SellerOrderDetailView;
+import com.openmarket.order.query.dto.SellerOrderProgress;
 import com.openmarket.order.query.dto.SellerOrderSummaryView;
+import java.util.Collection;
 import java.util.Set;
 import java.util.UUID;
 import org.jspecify.annotations.Nullable;
@@ -41,8 +44,13 @@ public class OrderQueryService {
     }
 
     @Transactional(readOnly = true)
-    public PageView<SellerOrderSummaryView> sellerOrders(UUID sellerId, int page, int size) {
-        return dao.findSellerOrders(sellerId, SELLER_VISIBLE, page, size);
+    public PageView<SellerOrderSummaryView> sellerOrders(
+            UUID sellerId,
+            Collection<SellerOrderProgress> progress,
+            Collection<ClaimStatus> claimStatuses,
+            int page,
+            int size) {
+        return dao.findSellerOrders(sellerId, SELLER_VISIBLE, progress, claimStatuses, page, size);
     }
 
     @Transactional(readOnly = true)
