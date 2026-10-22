@@ -1,9 +1,6 @@
 import { expect, type Page } from "@playwright/test";
-import { randomUUID } from "node:crypto";
-import { readFile } from "node:fs/promises";
 import { env } from "./env";
-import { OAuthClient } from "./oauth";
-import { addToCart, openFakePgCheckout, orderFromCart } from "./orders";
+import { addToCart, openFakePgCheckout, orderFromCart, placeOrder } from "./orders";
 import { PRODUCT_IMAGE } from "./products";
 
 /** 장바구니에 담아 주문하고 가짜 PG로 결제한다. 결제 완료 화면에서 끝나고 주문 ID를 돌려준다. */
@@ -63,64 +60,64 @@ export async function ship(
   await expect(seller.getByText("발송했습니다.")).toBeVisible();
 }
 
+/** 상품 상세에서 옵션 없는 상품을 바로 구매한다(장바구니를 거치지 않는다). 결제 완료 화면에서 끝나고 주문 ID를 돌려준다. */
+export async function buyNowPaid(
+  buyer: Page,
+  productId: string,
+  quantity: number,
+): Promise<string> {
+  await buyer.goto(`${env.shop}/products/${productId}`);
+  await buyer.getByLabel("기본 수량").fill(String(quantity));
+  await buyer.getByRole("button", { name: "바로 구매" }).click();
+  await expect(buyer.getByRole("heading", { name: "주문서" })).toBeVisible();
+  await expect(buyer.getByText("주문 상품 1개")).toBeVisible();
+  const orderId = await placeOrder(buyer);
+  await openFakePgCheckout(buyer);
+  await buyer.getByRole("button", { name: "결제 승인" }).click();
+  await expect(buyer.getByRole("heading", { name: "결제가 완료되었습니다" })).toBeVisible({
+    timeout: 30_000,
+  });
+  return orderId;
+}
+
+/** 구매자 주문 상세에서 판매자 하나(하위 주문)의 배송 조회로 간다. 주문의 하위 주문은 하나다. */
+export async function openDelivery(buyer: Page, orderId: string): Promise<void> {
+  await buyer.goto(`${env.shop}/orders/${orderId}`);
+  await buyer.getByRole("link", { name: /배송 조회/ }).click();
+  await expect(buyer.getByRole("heading", { name: /배송 조회/ })).toBeVisible();
+}
+
+/** 구매자 배송 조회를 다시 읽어 그 요소가 보일 때까지 기다린다. */
+export async function waitForDelivery(
+  buyer: Page,
+  orderId: string,
+  visible: (page: Page) => ReturnType<Page["getByText"]>,
+  timeout = 60_000,
+): Promise<void> {
+  await expect(async () => {
+    await openDelivery(buyer, orderId);
+    await expect(visible(buyer).first()).toBeVisible({ timeout: 1_000 });
+  }).toPass({ timeout, intervals: [1_000] });
+}
+
 /**
- * 구매자 API. 구매자 클레임 화면(shop)이 생기기 전에 반품·교환 신청을 gateway로 직접 한다. 토큰은 shop 클라이언트로 받는다.
+ * 구매자 배송 조회에서 반품·교환을 신청한다(shop 화면). 사진은 `photo`면 fixture 이미지 한 장을 올린다. 배송 조회로 돌아와 끝난다.
  */
-export class BuyerApi {
-  private constructor(
-    private readonly oauth: OAuthClient,
-    private readonly accessToken: string,
-  ) {}
-
-  static async login(email: string, password: string): Promise<BuyerApi> {
-    const oauth = await OAuthClient.create("shop", env.shopClientSecret, env.shop);
-    return new BuyerApi(oauth, (await oauth.login(email, password)).access_token);
+export async function requestClaim(
+  buyer: Page,
+  orderId: string,
+  claim: { type: "반품" | "교환"; reason: string; description: string; photo?: boolean },
+): Promise<void> {
+  await openDelivery(buyer, orderId);
+  await buyer.getByRole("link", { name: "반품·교환 신청" }).click();
+  await expect(buyer.getByRole("heading", { name: "반품·교환 신청" })).toBeVisible();
+  await buyer.getByRole("radio", { name: new RegExp(`^${claim.type}`) }).check();
+  await buyer.getByLabel("사유").selectOption({ label: claim.reason });
+  await buyer.getByLabel("자세한 내용").fill(claim.description);
+  if (claim.photo) {
+    await buyer.getByLabel("사진(선택)").setInputFiles(PRODUCT_IMAGE);
+    await expect(buyer.getByRole("img", { name: "올린 사진 1" })).toBeVisible();
   }
-
-  /** 클레임 사진(`CLAIM_IMAGE`)을 올리고 파일 ID를 돌려준다. */
-  async uploadClaimImage(): Promise<string> {
-    const form = new FormData();
-    form.set(
-      "file",
-      new Blob([await readFile(PRODUCT_IMAGE)], { type: "image/jpeg" }),
-      "claim.jpg",
-    );
-    const response = await fetch(`${env.gateway}/api/file/v1/files?purpose=CLAIM_IMAGE`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${this.accessToken}` },
-      body: form,
-    });
-    expect(response.ok, await response.clone().text()).toBe(true);
-    return ((await response.json()) as { fileId: string }).fileId;
-  }
-
-  /** 반품·교환을 신청한다(CLM-2). 클레임 ID를 돌려준다. */
-  async requestClaim(
-    sellerOrderId: string,
-    claim: {
-      type: "RETURN" | "EXCHANGE";
-      reason: string;
-      description: string;
-      fileIds?: string[];
-    },
-  ): Promise<string> {
-    const response = await fetch(
-      `${env.gateway}/api/fulfillment/v1/seller-orders/${sellerOrderId}/claims`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${this.accessToken}`,
-          "Content-Type": "application/json",
-          "Idempotency-Key": randomUUID(),
-        },
-        body: JSON.stringify({ fileIds: [], ...claim }),
-      },
-    );
-    expect(response.status, await response.clone().text()).toBe(201);
-    return ((await response.json()) as { claimId: string }).claimId;
-  }
-
-  async dispose(): Promise<void> {
-    await this.oauth.dispose();
-  }
+  await buyer.getByRole("button", { name: "신청하기" }).click();
+  await expect(buyer.getByText("신청했습니다.")).toBeVisible();
 }

@@ -53,3 +53,15 @@ export async function placeOrder(_: FormState, form: FormData): Promise<FormStat
   }
   redirect(`/orders/${data.orderId}/pay`);
 }
+
+/**
+ * 상품 상세의 "바로 구매". 장바구니에 담지 않고 그 SKU와 수량으로 주문서를 연다. 판매 여부·품절·수량은 주문서가 상품을 다시 읽어 본다.
+ */
+export async function buyNow(form: FormData): Promise<void> {
+  const query = new URLSearchParams({
+    buyNow: text(form, "skuId"),
+    productId: text(form, "productId"),
+    quantity: text(form, "quantity").trim(),
+  });
+  redirect(`/checkout?${query.toString()}`);
+}

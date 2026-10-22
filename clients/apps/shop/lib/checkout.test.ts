@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  buyNowLine,
   cancelReasonMessage,
   checkoutLines,
   confirmIdempotencyKey,
@@ -138,5 +139,38 @@ describe("payStage", () => {
 
   it("취소된 주문은 취소 사유를 보여 준다", () => {
     expect(payStage("CANCELLED", null)).toBe("CANCELLED");
+  });
+});
+
+describe("buyNowLine", () => {
+  const product = {
+    status: "ON_SALE",
+    name: "반팔 티셔츠",
+    storeName: "길동상회",
+    skus: [
+      { skuId: A, optionValues: ["M"], price: 19_900, inStock: true },
+      { skuId: B, optionValues: ["L"], price: 21_900, inStock: false },
+    ],
+  };
+
+  it("판매 중이고 품절 아닌 SKU 하나를 수량만큼 주문서 줄로 만든다", () => {
+    expect(buyNowLine(product, A, "2")).toEqual({
+      skuId: A,
+      storeName: "길동상회",
+      productName: "반팔 티셔츠",
+      options: "M",
+      expectedPrice: 19_900,
+      quantity: 2,
+      amount: 39_800,
+    });
+  });
+
+  it("품절, 판매 중지, 없는 SKU, 1~99가 아닌 수량이면 줄이 없다", () => {
+    expect(buyNowLine(product, B, "1")).toBeNull();
+    expect(buyNowLine({ ...product, status: "STOPPED" }, A, "1")).toBeNull();
+    expect(buyNowLine(product, C, "1")).toBeNull();
+    for (const quantity of ["0", "100", "1.5", "abc", undefined]) {
+      expect(buyNowLine(product, A, quantity)).toBeNull();
+    }
   });
 });

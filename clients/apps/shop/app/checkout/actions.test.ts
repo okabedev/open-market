@@ -17,7 +17,7 @@ vi.mock("next/navigation", () => ({ redirect: (url: string) => redirect(url) }))
 const revalidatePath = vi.fn();
 vi.mock("next/cache", () => ({ revalidatePath: (path: string) => revalidatePath(path) }));
 
-const { placeOrder } = await import("./actions");
+const { buyNow, placeOrder } = await import("./actions");
 
 const SKU_A = "0199f000-0000-7000-8000-0000000000a1";
 const SKU_B = "0199f000-0000-7000-8000-0000000000b2";
@@ -106,5 +106,18 @@ describe("placeOrder", () => {
     expect(state).toMatchObject({ status: "error", message: "가격이 바뀐 상품이 있습니다." });
     expect(revalidatePath).toHaveBeenCalledWith("/checkout");
     expect(redirect).not.toHaveBeenCalled();
+  });
+});
+
+describe("buyNow", () => {
+  it("상품 상세의 SKU와 수량으로 바로 구매 주문서를 연다. 수량은 주문서가 확인한다", async () => {
+    const data = new FormData();
+    data.set("skuId", SKU_A);
+    data.set("productId", "0199f000-0000-7000-8000-0000000000f1");
+    data.set("quantity", " 3 ");
+
+    await expect(buyNow(data)).rejects.toThrow(
+      `redirect:/checkout?buyNow=${SKU_A}&productId=0199f000-0000-7000-8000-0000000000f1&quantity=3`,
+    );
   });
 });

@@ -8,16 +8,14 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  carrierLabel,
   ClaimBadge,
-  claimReasonLabel,
+  ClaimCard,
   ConfirmActionForm,
-  faultLabel,
   formatDateTime,
   formatPrice,
   PageHeader,
   ProgressBadge,
-  shipmentStatusLabel,
+  ShipmentTable,
   ShippingCard,
   Table,
   TableBody,
@@ -27,7 +25,6 @@ import {
   TableRow,
 } from "@openmarket/ui";
 import type { FulfillmentComponents } from "@openmarket/api-client";
-import type { ReactNode } from "react";
 import { bff } from "@/lib/bff";
 import { orderNotice } from "@/lib/order-notice";
 import { requireSeller } from "@/lib/session";
@@ -146,7 +143,6 @@ export default async function SellerOrderPage({
 }
 
 type FulfillmentView = FulfillmentComponents["schemas"]["SellerFulfillmentView"];
-type ClaimView = FulfillmentComponents["schemas"]["ClaimView"];
 
 /** 배송 처리(발주 확인, 발송)와 배송 이력, 클레임. */
 function Fulfillment({ sellerOrderId, view }: { sellerOrderId: string; view: FulfillmentView }) {
@@ -186,134 +182,19 @@ function Fulfillment({ sellerOrderId, view }: { sellerOrderId: string; view: Ful
           </CardContent>
         </Card>
       ) : null}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">배송</CardTitle>
-        </CardHeader>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>구분</TableHead>
-              <TableHead>상태</TableHead>
-              <TableHead>송장</TableHead>
-              <TableHead>발주 확인</TableHead>
-              <TableHead>발송</TableHead>
-              <TableHead>배송 완료</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {shipments.map((shipment, index) => (
-              <TableRow key={shipment.shipmentId}>
-                <TableCell>{index === 0 ? "첫 배송" : "교환 재발송"}</TableCell>
-                <TableCell>{shipmentStatusLabel(shipment.status)}</TableCell>
-                <TableCell className="whitespace-nowrap">
-                  {shipment.trackingNumber
-                    ? `${carrierLabel(shipment.carrier)} ${shipment.trackingNumber}`
-                    : "-"}
-                </TableCell>
-                <TableCell className="whitespace-nowrap">
-                  {formatDateTime(shipment.acceptedAt)}
-                </TableCell>
-                <TableCell className="whitespace-nowrap">
-                  {formatDateTime(shipment.shippedAt)}
-                </TableCell>
-                <TableCell className="whitespace-nowrap">
-                  {formatDateTime(shipment.deliveredAt)}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </Card>
+      <ShipmentTable shipments={shipments} />
       {claims.map((claim) => (
-        <ClaimCard key={claim.claimId} sellerOrderId={sellerOrderId} claim={claim} />
+        <ClaimCard key={claim.claimId} claim={claim}>
+          {claim.status === "REQUESTED" &&
+          (claim.type === "RETURN" || claim.type === "EXCHANGE") ? (
+            <ClaimDecision
+              sellerOrderId={sellerOrderId}
+              claimId={claim.claimId ?? ""}
+              type={claim.type}
+            />
+          ) : null}
+        </ClaimCard>
       ))}
-    </>
-  );
-}
-
-function ClaimCard({ sellerOrderId, claim }: { sellerOrderId: string; claim: ClaimView }) {
-  const waiting =
-    claim.status === "REQUESTED" && (claim.type === "RETURN" || claim.type === "EXCHANGE");
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base">
-          클레임 <ClaimBadge claim={claim} />
-        </CardTitle>
-        <CardDescription>신청 {formatDateTime(claim.requestedAt)}</CardDescription>
-      </CardHeader>
-      <CardContent className="grid gap-4 text-sm">
-        <dl className="grid gap-x-6 gap-y-2 sm:grid-cols-[8rem_1fr]">
-          <Row label="사유">
-            {claimReasonLabel(claim.reason)} (귀책 {faultLabel(claim.fault)})
-          </Row>
-          {claim.description ? (
-            <Row label="설명">
-              <span className="whitespace-pre-wrap">{claim.description}</span>
-            </Row>
-          ) : null}
-          {claim.type === "RETURN" && claim.restock !== undefined ? (
-            <Row label="재입고">{claim.restock ? "한다" : "하지 않는다"}</Row>
-          ) : null}
-          {claim.refundAmount !== undefined ? (
-            <Row label="환불 금액">{formatPrice(claim.refundAmount)}</Row>
-          ) : null}
-          {claim.rejectionReason ? (
-            <Row label="거부 사유">
-              {claim.rejectionReason} ({formatDateTime(claim.rejectedAt)})
-            </Row>
-          ) : null}
-          {claim.mediationRequestedAt ? (
-            <Row label="중재 요청">{formatDateTime(claim.mediationRequestedAt)}</Row>
-          ) : null}
-          {claim.mediationReason ? (
-            <Row label="중재 결과">거부 확정. {claim.mediationReason}</Row>
-          ) : null}
-          {claim.approvedAt ? <Row label="승인">{formatDateTime(claim.approvedAt)}</Row> : null}
-          {claim.completedAt ? <Row label="완료">{formatDateTime(claim.completedAt)}</Row> : null}
-        </dl>
-        {(claim.fileIds ?? []).length > 0 ? (
-          <ul aria-label="클레임 사진" className="flex flex-wrap gap-2">
-            {(claim.fileIds ?? []).map((fileId, index) => (
-              <li key={fileId}>
-                <a
-                  href={`/api/claim-images/${fileId}/w800`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="block"
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element -- 비공개 변형 JPEG을 BFF로 그대로 받는다. */}
-                  <img
-                    src={`/api/claim-images/${fileId}/w300`}
-                    alt={`클레임 사진 ${index + 1}`}
-                    width={96}
-                    height={96}
-                    loading="lazy"
-                    className="size-24 rounded-md border bg-muted object-cover"
-                  />
-                </a>
-              </li>
-            ))}
-          </ul>
-        ) : null}
-        {waiting ? (
-          <ClaimDecision
-            sellerOrderId={sellerOrderId}
-            claimId={claim.claimId ?? ""}
-            type={claim.type as "RETURN" | "EXCHANGE"}
-          />
-        ) : null}
-      </CardContent>
-    </Card>
-  );
-}
-
-function Row({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <>
-      <dt className="text-muted-foreground">{label}</dt>
-      <dd>{children}</dd>
     </>
   );
 }

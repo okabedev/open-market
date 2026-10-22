@@ -1,6 +1,6 @@
 "use client";
 
-import { idleState, Input, SubmitButton, type FormState } from "@openmarket/ui";
+import { Button, idleState, Input, SubmitButton, type FormState } from "@openmarket/ui";
 import { useActionState } from "react";
 
 type QuantityFormProps = {
@@ -13,6 +13,8 @@ type QuantityFormProps = {
   label: string;
   defaultQuantity: number;
   submitText: string;
+  /** 같은 수량으로 다른 일을 하는 두 번째 버튼(상품 상세의 바로 구매). 그 버튼은 이 액션으로 제출한다 */
+  secondary?: { action: (form: FormData) => Promise<void>; text: string };
 };
 
 /** 수량 입력과 제출 버튼 한 줄. 상품 상세의 담기와 장바구니의 수량 바꾸기가 쓴다. 실패하면 문구를 아래에 보여 준다. */
@@ -23,6 +25,7 @@ export function QuantityForm({
   label,
   defaultQuantity,
   submitText,
+  secondary,
 }: QuantityFormProps) {
   const [state, formAction] = useActionState(action, idleState);
   const error = state.status === "error" ? (state.fieldErrors?.quantity ?? state.message) : null;
@@ -50,6 +53,11 @@ export function QuantityForm({
         <SubmitButton size="sm" variant="outline">
           {submitText}
         </SubmitButton>
+        {secondary ? (
+          <Button type="submit" size="sm" formAction={secondary.action}>
+            {secondary.text}
+          </Button>
+        ) : null}
       </div>
       {error ? (
         <p id={`${id}-error`} role="alert" className="text-xs text-destructive">

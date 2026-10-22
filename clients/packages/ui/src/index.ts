@@ -41,6 +41,8 @@ export {
   progressLabel,
   shipmentStatusLabel,
 } from "./fulfillment-badges";
+export { ClaimCard, type ClaimSummaryView } from "./claim-card";
+export { ShipmentTable, type ShipmentSummaryView } from "./shipment-table";
 export { ShippingCard, type ShippingAddress } from "./shipping-card";
 export { AccountBar, loginErrorMessage } from "./account-bar";
 export { AppShell, PageHeader, type NavItem } from "./app-shell";
