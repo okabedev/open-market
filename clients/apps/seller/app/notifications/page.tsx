@@ -5,7 +5,7 @@ import { notificationHref } from "@/lib/notifications";
 import { requireSeller } from "@/lib/session";
 import { openNotification, readAllNotifications } from "./actions";
 
-/** 알림함(NTF-2). 최근 순 커서 목록이고, 알림을 열면 읽음이 되고 그 화면으로 간다. */
+/** 알림함(NTF-1). 최근 순 커서 목록이고, 알림을 열면 읽음이 되고 그 화면으로 간다. */
 export default async function NotificationsPage({ searchParams }: PageProps<"/notifications">) {
   await requireSeller("/notifications");
   const { cursor } = await searchParams;

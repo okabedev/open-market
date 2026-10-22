@@ -123,9 +123,9 @@ flowchart LR
 | 이벤트 | 시점 | 주요 필드 | 소비자 |
 |---|---|---|---|
 | `PaymentApproved` | 토스 승인 성공 | orderId, paymentId, amount, method(토스 결제수단 이름), approvedAt | order |
-| `PaymentFailed` | 승인 실패 | orderId, paymentId, code(토스 오류 코드) | order, notification |
-| `PaymentCancelled` | 토스 전액 취소 성공(보상 포함) | orderId, paymentId, amount(취소 금액), reason, cancelledAt | notification |
-| `RefundCompleted` | 환불(부분취소) 성공. 금액 0이면 토스를 부르지 않고 낸다 | orderId, refundId, claimId, sellerOrderId, amount, refundedAt | fulfillment, notification |
+| `PaymentFailed` | 승인 실패 | orderId, paymentId, code(토스 오류 코드) | order(받고 넘긴다. 주문은 결제 대기로 남아 다시 결제할 수 있다) |
+| `PaymentCancelled` | 토스 전액 취소 성공(보상 포함) | orderId, paymentId, amount(취소 금액), reason, cancelledAt | 없음(구매자는 결제 화면에서 바로 결과를 본다. [notification.md](notification.md) "인앱 알림") |
+| `RefundCompleted` | 환불(부분취소) 성공. 금액 0이면 토스를 부르지 않고 낸다 | orderId, refundId, claimId, sellerOrderId, amount, refundedAt | fulfillment(구매자 알림은 `ClaimCompleted`로 간다) |
 | `RefundFailed` | 토스가 환불을 거절했거나 환불할 수 없다(일시 오류는 다시 시도하고 내지 않는다) | orderId, refundId, claimId, sellerOrderId, code(토스 오류 코드, 또는 `PAYMENT_NOT_REFUNDABLE`, `REFUND_AMOUNT_EXCEEDED`) | fulfillment, notification(관리자) |
 
 - 키는 orderId다. 한 주문의 결제 이벤트는 순서대로 온다.

@@ -23,7 +23,7 @@ async function openNotification(page: Page, message: RegExp): Promise<void> {
 }
 
 /**
- * M4(docs/roadmap.md) 관리자 화면과 세 앱의 인앱 알림(NTF-2): 판매자가 거부한 교환을 구매자가 중재 요청하면 관리자가 알림을 받고 사진을
+ * M4(docs/roadmap.md) 관리자 화면과 세 앱의 인앱 알림(NTF-1): 판매자가 거부한 교환을 구매자가 중재 요청하면 관리자가 알림을 받고 사진을
  * 보고 판매자 귀책으로 승인한다(CLM-3, ADM-2). 토스(가짜 PG)가 반품 환불을 거절하면 관리자가 알림을 받고, 원인을 푼 뒤 환불을 다시
  * 시도한다(PAY-2). 판매자·구매자도 머리글 알림에서 새 클레임과 결과를 보고 해당 화면으로 간다.
  */
