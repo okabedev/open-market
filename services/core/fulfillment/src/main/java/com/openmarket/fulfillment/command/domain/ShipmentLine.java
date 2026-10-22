@@ -68,6 +68,20 @@ public class ShipmentLine {
         this.amount = amount;
     }
 
+    /** 교환 재발송의 새 배송에 넣을 같은 내용의 항목. 엔티티끼리 임베디드 값을 나눠 쓰지 않는다. */
+    ShipmentLine copy() {
+        return new ShipmentLine(
+                orderLineId,
+                skuId,
+                productId,
+                productName,
+                optionValues(),
+                categoryId,
+                unitPrice,
+                quantity,
+                amount);
+    }
+
     public UUID orderLineId() {
         return orderLineId;
     }

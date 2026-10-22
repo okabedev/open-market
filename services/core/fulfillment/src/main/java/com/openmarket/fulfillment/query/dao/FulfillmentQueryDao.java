@@ -4,6 +4,7 @@ import static com.openmarket.fulfillment.command.domain.QClaim.claim;
 import static com.openmarket.fulfillment.command.domain.QPurchaseConfirmation.purchaseConfirmation;
 import static com.openmarket.fulfillment.command.domain.QShipment.shipment;
 
+import com.openmarket.fulfillment.command.domain.QClaimFile;
 import com.openmarket.fulfillment.query.dto.BuyerFulfillmentView;
 import com.openmarket.fulfillment.query.dto.Carrier;
 import com.openmarket.fulfillment.query.dto.ClaimReason;
@@ -20,7 +21,10 @@ import com.querydsl.core.types.Predicate;
 import com.querydsl.core.types.dsl.StringExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
@@ -88,6 +92,20 @@ public class FulfillmentQueryDao {
     }
 
     private List<ClaimView> claims(UUID sellerOrderId) {
+        QClaimFile file = new QClaimFile("file");
+        Map<UUID, List<UUID>> files = new HashMap<>();
+        query.select(claim.id, file.fileId)
+                .from(claim)
+                .join(claim.files, file)
+                .where(claim.sellerOrderId.eq(sellerOrderId))
+                .orderBy(file.position.asc())
+                .fetch()
+                .forEach(
+                        row ->
+                                files.computeIfAbsent(
+                                                Objects.requireNonNull(row.get(claim.id)),
+                                                id -> new ArrayList<>())
+                                        .add(Objects.requireNonNull(row.get(file.fileId))));
         return query
                 .select(
                         claim.id,
@@ -95,10 +113,14 @@ public class FulfillmentQueryDao {
                         CLAIM_STATUS,
                         REASON,
                         FAULT,
+                        claim.description,
+                        claim.restock,
                         claim.refundAmount,
                         claim.refundFailureCode,
+                        claim.rejectionReason,
                         claim.requestedAt,
                         claim.approvedAt,
+                        claim.rejectedAt,
                         claim.completedAt)
                 .from(claim)
                 .where(claim.sellerOrderId.eq(sellerOrderId))
@@ -106,21 +128,26 @@ public class FulfillmentQueryDao {
                 .fetch()
                 .stream()
                 .map(
-                        row ->
-                                new ClaimView(
-                                        Objects.requireNonNull(row.get(claim.id)),
-                                        ClaimType.valueOf(
-                                                Objects.requireNonNull(row.get(CLAIM_TYPE))),
-                                        ClaimStatus.valueOf(
-                                                Objects.requireNonNull(row.get(CLAIM_STATUS))),
-                                        ClaimReason.valueOf(
-                                                Objects.requireNonNull(row.get(REASON))),
-                                        Fault.valueOf(Objects.requireNonNull(row.get(FAULT))),
-                                        Objects.requireNonNull(row.get(claim.refundAmount)),
-                                        row.get(claim.refundFailureCode),
-                                        Objects.requireNonNull(row.get(claim.requestedAt)),
-                                        row.get(claim.approvedAt),
-                                        row.get(claim.completedAt)))
+                        row -> {
+                            UUID id = Objects.requireNonNull(row.get(claim.id));
+                            return new ClaimView(
+                                    id,
+                                    ClaimType.valueOf(Objects.requireNonNull(row.get(CLAIM_TYPE))),
+                                    ClaimStatus.valueOf(
+                                            Objects.requireNonNull(row.get(CLAIM_STATUS))),
+                                    ClaimReason.valueOf(Objects.requireNonNull(row.get(REASON))),
+                                    Fault.valueOf(Objects.requireNonNull(row.get(FAULT))),
+                                    row.get(claim.description),
+                                    List.copyOf(files.getOrDefault(id, List.of())),
+                                    row.get(claim.restock),
+                                    Objects.requireNonNull(row.get(claim.refundAmount)),
+                                    row.get(claim.refundFailureCode),
+                                    row.get(claim.rejectionReason),
+                                    Objects.requireNonNull(row.get(claim.requestedAt)),
+                                    row.get(claim.approvedAt),
+                                    row.get(claim.rejectedAt),
+                                    row.get(claim.completedAt));
+                        })
                 .toList();
     }
 

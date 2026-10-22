@@ -35,7 +35,9 @@ class ShippingUseCasesTest {
     final UUID sellerId = UUID.randomUUID();
 
     final AcceptShipmentUseCase accept = new AcceptShipmentUseCase(shipments, outbox, clock);
-    final ShipShipmentUseCase ship = new ShipShipmentUseCase(shipments, outbox, clock);
+    final ShipShipmentUseCase ship =
+            new ShipShipmentUseCase(
+                    shipments, new FulfillmentFakes.FakeClaimRepository(), outbox, clock);
     final StartTransitUseCase startTransit = new StartTransitUseCase(shipments, outbox, clock);
     final DeliverShipmentUseCase deliver =
             new DeliverShipmentUseCase(shipments, outbox, clock, Duration.ofDays(7));

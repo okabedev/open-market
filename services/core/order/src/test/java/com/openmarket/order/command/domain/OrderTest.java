@@ -251,6 +251,54 @@ class OrderTest {
         assertThat(order.sellerOrders().get(0).progress()).isEqualTo(SellerOrderProgress.PAID);
     }
 
+    @Test
+    @DisplayName("반품이 거부되면 REJECTED이고 진행 상태는 그대로다. 새 반품이 끝나면 진행 상태가 RETURNED다")
+    void appliesReturnClaim() {
+        Order order = twoSellers();
+        order.awaitPayment(NOW);
+        order.pay(order.amount(), NOW, NOW);
+        UUID first = order.sellerOrders().get(0).id();
+        order.advanceSellerOrder(first, SellerOrderProgress.DELIVERED, NOW);
+        UUID rejected = UUID.randomUUID();
+        order.applyClaim(first, rejected, ClaimType.RETURN, ClaimStatus.REQUESTED, NOW);
+
+        assertThat(order.applyClaim(first, rejected, ClaimType.RETURN, ClaimStatus.REJECTED, NOW))
+                .isEqualTo(Order.Transition.APPLIED);
+        assertThat(order.sellerOrders().get(0).claimStatus()).isEqualTo(ClaimStatus.REJECTED);
+        assertThat(order.sellerOrders().get(0).progress()).isEqualTo(SellerOrderProgress.DELIVERED);
+
+        UUID returned = UUID.randomUUID();
+        for (ClaimStatus status :
+                List.of(ClaimStatus.REQUESTED, ClaimStatus.APPROVED, ClaimStatus.COMPLETED)) {
+            order.applyClaim(first, returned, ClaimType.RETURN, status, NOW);
+        }
+
+        assertThat(order.sellerOrders().get(0).progress()).isEqualTo(SellerOrderProgress.RETURNED);
+        assertThat(order.advanceSellerOrder(first, SellerOrderProgress.CONFIRMED, NOW))
+                .isEqualTo(Order.Transition.ALREADY);
+    }
+
+    @Test
+    @DisplayName("교환이 끝나도 진행 상태는 배송 완료이고, 재발송의 배송 이벤트는 진행 상태를 바꾸지 않는다")
+    void appliesExchangeClaim() {
+        Order order = twoSellers();
+        order.awaitPayment(NOW);
+        order.pay(order.amount(), NOW, NOW);
+        UUID first = order.sellerOrders().get(0).id();
+        order.advanceSellerOrder(first, SellerOrderProgress.DELIVERED, NOW);
+        UUID exchange = UUID.randomUUID();
+        for (ClaimStatus status :
+                List.of(ClaimStatus.REQUESTED, ClaimStatus.APPROVED, ClaimStatus.COMPLETED)) {
+            order.applyClaim(first, exchange, ClaimType.EXCHANGE, status, NOW);
+        }
+
+        assertThat(order.advanceSellerOrder(first, SellerOrderProgress.SHIPPED, NOW))
+                .isEqualTo(Order.Transition.ALREADY);
+        assertThat(order.sellerOrders().get(0).progress()).isEqualTo(SellerOrderProgress.DELIVERED);
+        assertThat(order.advanceSellerOrder(first, SellerOrderProgress.CONFIRMED, NOW))
+                .isEqualTo(Order.Transition.APPLIED);
+    }
+
     private Order twoSellers() {
         return Order.place(
                 buyerId,

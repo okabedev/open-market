@@ -75,6 +75,8 @@ class InternalOrderApiIntegrationTest {
         expectOngoing(false);
         markProgress(orderId, "CANCELLED");
         expectOngoing(false);
+        markProgress(orderId, "RETURNED");
+        expectOngoing(false);
 
         markStatus(orderId, "CANCELLED");
         expectOngoing(false);

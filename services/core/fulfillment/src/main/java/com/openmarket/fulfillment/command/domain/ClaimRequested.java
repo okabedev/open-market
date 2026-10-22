@@ -37,7 +37,7 @@ public record ClaimRequested(
                 claim.buyerId(),
                 claim.reason().name(),
                 claim.fault().name(),
-                List.of(),
+                claim.fileIds(),
                 claim.requestedAt());
     }
 }

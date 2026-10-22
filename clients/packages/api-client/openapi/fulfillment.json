@@ -55,6 +55,66 @@
         }
       }
     },
+    "/v1/seller/claims/{claimId}/reject" : {
+      "post" : {
+        "tags" : [ "seller-claim-command-controller" ],
+        "operationId" : "reject",
+        "parameters" : [ {
+          "name" : "claimId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/RejectClaimRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        }
+      }
+    },
+    "/v1/seller/claims/{claimId}/approve" : {
+      "post" : {
+        "tags" : [ "seller-claim-command-controller" ],
+        "operationId" : "approve",
+        "parameters" : [ {
+          "name" : "claimId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ApproveClaimRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        }
+      }
+    },
     "/v1/seller-orders/{sellerOrderId}/confirm" : {
       "post" : {
         "tags" : [ "buyer-fulfillment-controller" ],
@@ -71,6 +131,43 @@
         "responses" : {
           "204" : {
             "description" : "No Content"
+          }
+        }
+      }
+    },
+    "/v1/seller-orders/{sellerOrderId}/claims" : {
+      "post" : {
+        "tags" : [ "buyer-fulfillment-controller" ],
+        "operationId" : "requestClaim",
+        "parameters" : [ {
+          "name" : "sellerOrderId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/RequestClaimRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Created",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RequestClaimResponse"
+                }
+              }
+            }
           }
         }
       }
@@ -164,6 +261,56 @@
         },
         "required" : [ "carrier", "trackingNumber" ]
       },
+      "RejectClaimRequest" : {
+        "type" : "object",
+        "properties" : {
+          "reason" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "reason" ]
+      },
+      "ApproveClaimRequest" : {
+        "type" : "object",
+        "properties" : {
+          "restock" : {
+            "type" : "boolean"
+          }
+        }
+      },
+      "RequestClaimRequest" : {
+        "type" : "object",
+        "properties" : {
+          "type" : {
+            "type" : "string",
+            "enum" : [ "RETURN", "EXCHANGE" ]
+          },
+          "reason" : {
+            "type" : "string",
+            "enum" : [ "CHANGE_OF_MIND", "DEFECTIVE", "WRONG_ITEM", "NOT_AS_DESCRIBED" ]
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "fileIds" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string",
+              "format" : "uuid"
+            }
+          }
+        },
+        "required" : [ "description", "reason", "type" ]
+      },
+      "RequestClaimResponse" : {
+        "type" : "object",
+        "properties" : {
+          "claimId" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }
+      },
       "ClaimView" : {
         "type" : "object",
         "properties" : {
@@ -187,6 +334,19 @@
             "type" : "string",
             "enum" : [ "BUYER", "SELLER" ]
           },
+          "description" : {
+            "type" : "string"
+          },
+          "fileIds" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string",
+              "format" : "uuid"
+            }
+          },
+          "restock" : {
+            "type" : "boolean"
+          },
           "refundAmount" : {
             "type" : "integer",
             "format" : "int64"
@@ -194,11 +354,18 @@
           "refundFailureCode" : {
             "type" : "string"
           },
+          "rejectionReason" : {
+            "type" : "string"
+          },
           "requestedAt" : {
             "type" : "string",
             "format" : "date-time"
           },
           "approvedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "rejectedAt" : {
             "type" : "string",
             "format" : "date-time"
           },

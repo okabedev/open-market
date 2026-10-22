@@ -150,7 +150,7 @@ flowchart LR
 |---|---|---|---|
 | `ClaimRequested` | 신청 | claimId, type, orderId, sellerOrderId, sellerId, buyerId, reason, fault, fileIds, requestedAt | order, notification(판매자), file(첨부 확정) |
 | `ClaimApproved` | 승인(취소는 신청과 함께) | claimId, type, orderId, sellerOrderId, sellerId, buyerId, fault, refundAmount(교환은 0), approvedAt | payment(환불, 교환 제외), order, notification |
-| `ClaimRejected` | 판매자 거부, 중재 거부 확정 | claimId, type, orderId, sellerOrderId, buyerId, reason(거부 사유), final(중재 결과면 true), rejectedAt | order, notification |
+| `ClaimRejected` | 판매자 거부, 중재 거부 확정 | claimId, type, orderId, sellerOrderId, buyerId, reason(거부 사유), mediated(중재 결과로 거부가 확정됐으면 true), rejectedAt | order, notification |
 | `ClaimMediationRequested` | 구매자 중재 요청 | claimId, type, orderId, sellerOrderId, sellerId | order, notification(관리자) |
 | `ClaimCompleted` | 환불 완료, 교환 재발송 | claimId, type, orderId, sellerOrderId, buyerId, refundAmount, restockLines(skuId, quantity. 재입고하지 않으면 빈 목록), completedAt | order, catalog(재입고), notification |
 
@@ -158,7 +158,8 @@ flowchart LR
 - type은 `CANCEL`, `RETURN`, `EXCHANGE`, reason은 [fulfillment.md](fulfillment.md) "사유와 귀책"의 코드다.
 - `CANCEL`은 `ClaimRequested`와 `ClaimApproved`를 한 트랜잭션에서 함께 낸다. 사유는 `BUYER_CANCEL`, fileIds는 빈 목록이다.
 - JSON 예시는 `services/core/fulfillment/src/test/resources/events/`에 있다.
-- 관리자 중재 승인은 `ClaimApproved`, 거부 확정은 `ClaimRejected`(final=true)다.
+- 관리자 중재 승인은 `ClaimApproved`, 거부 확정은 `ClaimRejected`(mediated=true)다. 필드 이름은 M4 클레임 PR에서 `final`에서 바꿨다(Java 예약어라 이벤트 레코드 필드로 쓸 수 없다).
+- 교환의 `ClaimCompleted`는 새 배송을 발송할 때 낸다. refundAmount는 0, restockLines는 빈 목록이다.
 
 ### review.review, review.rating-summary
 | 이벤트 | 토픽 | 시점 | 주요 필드 | 소비자 |

@@ -25,7 +25,8 @@ public interface ShipmentRepository {
     List<UUID> findShippedIdsBefore(Instant shippedBefore, int limit);
 
     /**
-     * 자동 구매확정 기한이 {@code now} 이전이고 확정되지 않았고 진행 중인 클레임이 없는 배송 완료 배송. 기한이 오래된 순, 최대 {@code limit}개.
+     * 자동 구매확정 기한이 {@code now} 이전이고 확정되지 않았고 진행 중인 클레임이 없는 배송 완료 배송. 하위 주문의 마지막 배송만이다. 기한이 오래된 순, 최대
+     * {@code limit}개.
      */
     List<UUID> findConfirmDueIds(Instant now, int limit);
 

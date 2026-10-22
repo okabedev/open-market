@@ -52,7 +52,8 @@ M4 시작(2026-10-21)에 정한 규칙이다. API와 화면은 각 PR에서 이 
 - 구매자 확정: 구매자가 직접 한다. 이미 확정했으면 그대로 204, 배송 완료 전이면 409 `FULFILLMENT_INVALID_STATE`(지금 배송 상태 `shipmentStatus`), 진행 중인 클레임이 있으면 409 `FULFILLMENT_CLAIM_IN_PROGRESS`다.
 - 자동 확정(`PurchaseConfirmJob`): `openmarket.fulfillment.purchase-confirm.interval`(기본 1시간)마다 돌고 ShedLock(`fulfillment-purchase-confirm`)으로 한 인스턴스에서만 돈다. 확정 기한(`confirm_due_at`)이 지나고 확정되지 않았고 진행 중인 클레임이 없는 배송 완료 배송을 기한이 오래된 순으로 100건씩, 배송마다 트랜잭션을 따로 열어 확정한다. 다 못 하면 다음 주기에 이어 한다.
 - 구매자 확정과 자동 확정이 겹치면 하위 주문의 마지막 배송 행을 먼저 잠근 쪽이 확정하고, 다른 쪽은 이미 확정된 것을 보고 넘긴다.
-- 확정 기한은 배송 완료 시각 + `openmarket.fulfillment.purchase-confirm.auto-confirm-after`(기본 7일)다. 시뮬레이터가 배송 완료로 바꿀 때 정한다. E2E는 `FULFILLMENT_CONFIRM_INTERVAL`, `FULFILLMENT_AUTO_CONFIRM_AFTER`로 줄인다. 반품·교환이 거부로 끝나면 거부 시각 + 7일과 비교해 늦은 쪽으로 미룬다. 구매자가 중재를 요청할 시간을 남기기 위해서다.
+- 확정 기한은 배송 완료 시각 + `openmarket.fulfillment.purchase-confirm.auto-confirm-after`(기본 7일)다. 시뮬레이터가 배송 완료로 바꿀 때 정한다. E2E는 `FULFILLMENT_CONFIRM_INTERVAL`, `FULFILLMENT_AUTO_CONFIRM_AFTER`로 줄인다. 반품·교환이 거부되면 거부 시각 + 중재 요청 기한(`openmarket.fulfillment.claim.mediation-window`, 기본 7일)과 비교해 늦은 쪽으로 미룬다. 구매자가 중재를 요청할 시간을 남기기 위해서다.
+- 자동 확정은 하위 주문의 마지막 배송만 본다. 교환 재발송이 있으면 처음 배송의 기한은 쓰지 않는다.
 - 확정은 하위 주문 ID 유니크 제약으로 한 번만 생긴다. 확정한 뒤에는 클레임을 신청할 수 없다.
 - 확정하면 `PurchaseConfirmed`(확정 방식 `BUYER`, `AUTO`)를 낸다. 리뷰 작성 자격과 정산 대상(M5)이 이것으로 생긴다.
 - 클레임 신청과 확정도 하위 주문의 마지막 배송 행을 잠그고 하므로, 겹치면 먼저 잠근 쪽만 된다.
@@ -77,6 +78,7 @@ M4 시작(2026-10-21)에 정한 규칙이다. API와 화면은 각 PR에서 이 
 - 반품·교환 신청에는 사유 코드, 설명(1~500자), 사진(`CLAIM_IMAGE`, 0~5장)을 넣는다(CLM-2).
 - 중재 요청은 거부 후 7일 안에, 구매확정 전에 한 번만 할 수 있다. 관리자는 승인(귀책을 고른다, 재입고 안 함)하거나 거부를 확정한다.
 - `RefundFailed`면 클레임은 `APPROVED`로 남는다. 관리자가 payment에서 환불을 다시 시도한다([messaging.md](messaging.md) "클레임 환불 흐름").
+- 클레임을 바꾸는 동작(승인, 거부, 환불 결과)은 클레임 행을 잠그고 한다. 신청과 구매확정은 하위 주문의 마지막 배송 행을 잠근다.
 
 ### 발송 전 취소(CLM-1)
 구매자가 `POST /v1/seller-orders/{sellerOrderId}/cancel`로 한다. 본문은 없다(사유는 `BUYER_CANCEL`).
@@ -86,8 +88,38 @@ M4 시작(2026-10-21)에 정한 규칙이다. API와 화면은 각 PR에서 이 
 - 진행 중인 클레임이 있으면 409 `FULFILLMENT_CLAIM_IN_PROGRESS`다. 교환 승인으로 만든 새 배송(`READY`)이 여기에 걸린다. 교환을 취소하는 기능은 없다.
 - 남의 하위 주문이거나 배송이 아직 없으면 404 `FULFILLMENT_NOT_FOUND`다. 결제 직후 배송이 생기기 전에는 취소할 수 없다.
 
+### 반품·교환 신청(CLM-2)
+구매자가 `POST /v1/seller-orders/{sellerOrderId}/claims`로 한다. `Idempotency-Key`가 필요하다. 응답은 201 `{claimId}`다.
+| 항목 | 규칙 |
+|---|---|
+| `type` | `RETURN` 또는 `EXCHANGE`. 발송 전 취소는 위 "발송 전 취소"로 한다 |
+| `reason` | `CHANGE_OF_MIND`, `DEFECTIVE`, `WRONG_ITEM`, `NOT_AS_DESCRIBED`. 교환은 판매자 귀책 사유만 |
+| `description` | 1~500자. 앞뒤 공백은 지운다 |
+| `fileIds` | 클레임 사진(`CLAIM_IMAGE`) 0~5장, 중복 없이. file이 `ClaimRequested`를 받아 붙인다([file.md](file.md) "클레임 사진") |
+
+- 규칙을 어기면 400 `FULFILLMENT_INVALID_INPUT`이다.
+- 하위 주문의 마지막 배송 행을 잠그고, 배송이 `DELIVERED`가 아니면 409 `FULFILLMENT_INVALID_STATE`(`shipmentStatus`), 구매확정했으면 409 `FULFILLMENT_PURCHASE_CONFIRMED`, 진행 중인 클레임이 있으면 409 `FULFILLMENT_CLAIM_IN_PROGRESS`다. 남의 하위 주문은 404 `FULFILLMENT_NOT_FOUND`다.
+- 클레임은 `REQUESTED`로 만들고 `ClaimRequested`를 낸다. 귀책은 사유로 정한다.
+
+### 판매자 승인과 거부(CLM-3)
+판매자는 회수품을 검수한 뒤 승인하거나 거부한다. 회수 자체는 기록하지 않는다(위 "범위 결정").
+| 동작 | 경로 | 할 수 있는 상태 | 결과 |
+|---|---|---|---|
+| 승인 | `POST /v1/seller/claims/{claimId}/approve` 본문 `{"restock"}` | `REQUESTED` | `APPROVED` + `ClaimApproved`. 반품은 재입고 여부(`restock`, 반품이면 필수)를 남긴다. 교환은 새 배송을 만든다(아래 "교환 재발송") |
+| 거부 | `POST /v1/seller/claims/{claimId}/reject` 본문 `{"reason"}` | `REQUESTED` | `REJECTED` + `ClaimRejected`(`mediated=false`). 거부 사유는 1~500자 |
+
+- 같은 동작을 다시 하면(이미 승인했는데 승인, 이미 거부했는데 거부) 204, 이벤트 없음이다. 상태로 결과가 정해져 `Idempotency-Key`는 받지 않는다. 그 밖의 상태면 409 `FULFILLMENT_CLAIM_INVALID_STATE`(지금 클레임 상태 `claimStatus`)다.
+- 다른 판매자의 클레임이거나 발송 전 취소 클레임이면 404 `FULFILLMENT_CLAIM_NOT_FOUND`다.
+- 반품 승인의 환불 금액은 아래 "환불 금액"이다. 반품 배송비는 `openmarket.fulfillment.return-shipping-fee`(기본 6,000원)다.
+- 거부하면 하위 주문의 마지막 배송의 자동 구매확정 기한을 거부 시각 + 중재 요청 기한과 비교해 늦은 쪽으로 미룬다(위 "구매확정").
+
+### 교환 재발송
+- 교환을 승인하면 대상 배송과 같은 항목·금액으로 새 배송(`READY`, `claim_id` = 교환 클레임)을 만든다. 판매자는 하위 주문의 마지막 배송, 곧 새 배송을 발주 확인하고 발송한다. 배송 이벤트는 처음 배송과 같이 나간다.
+- 새 배송을 발송하면 같은 트랜잭션에서 교환 클레임을 `COMPLETED`로 바꾸고 `ClaimCompleted`(환불 0, 재입고 없음)를 낸다. 회수한 상품을 입고하고 새 상품을 보내 재고 변동이 없다.
+- 새 배송이 배송 완료되면 그 시각부터 자동 구매확정 기한을 다시 센다. 교환이 끝난 뒤 다시 반품·교환을 신청할 수 있다.
+
 ### 환불 결과 반영
-- `RefundCompleted`: 클레임을 잠그고 `APPROVED`면 `COMPLETED`로 바꾸고 `ClaimCompleted`를 낸다. 재입고 항목(`restockLines`)은 `CANCEL`이면 대상 배송의 항목 전부를 SKU별로 합친 것이다. 이미 `COMPLETED`면 넘긴다.
+- `RefundCompleted`: 클레임을 잠그고 `APPROVED`면 `COMPLETED`로 바꾸고 `ClaimCompleted`를 낸다. 재입고 항목(`restockLines`)은 `CANCEL`이거나 재입고를 고른 `RETURN`이면 대상 배송의 항목 전부를 SKU별로 합친 것이고, 그 밖에는 빈 목록이다. 이미 `COMPLETED`면 넘긴다.
 - `RefundFailed`: 클레임은 `APPROVED`로 두고 실패 코드(`refund_failure_code`)를 남긴다. 관리자 재시도로 `RefundCompleted`가 오면 지운다.
 - 모르는 클레임의 환불 결과는 경고 로그만 남기고 넘긴다.
 
@@ -124,8 +156,10 @@ M4 시작(2026-10-21)에 정한 규칙이다. API와 화면은 각 PR에서 이 
 | `ShipmentInTransit` | 시뮬레이터가 배송 중으로 바꿨다 |
 | `ShipmentDelivered` | 시뮬레이터가 배송 완료로 바꿨다 |
 | `PurchaseConfirmed` | 구매자 확정, 자동 확정 |
-| `ClaimRequested`, `ClaimApproved` | 발송 전 취소(함께 낸다) |
-| `ClaimCompleted` | 환불 완료 |
+| `ClaimRequested` | 발송 전 취소, 반품·교환 신청 |
+| `ClaimApproved` | 발송 전 취소(신청과 함께), 판매자 승인 |
+| `ClaimRejected` | 판매자 거부 |
+| `ClaimCompleted` | 환불 완료, 교환 재발송 |
 
 - 리스너는 처리 기록(`processed_event`)으로 같은 이벤트를 한 번만 처리한다. 리스너 이름은 `fulfillment.<이벤트>`다(예: `fulfillment.order-paid`).
 - 항목에 주문 항목 ID·상품명·옵션이 없는 M4 이전 형식의 `OrderPaid`는 배송을 만들 수 없어 영구 오류(`InvalidEventException`)로 바로 DLT에 보낸다. fulfillment 소비자 그룹은 `order.order`를 처음부터 읽으므로, M4 전에 결제된 개발용 스택의 주문이 여기에 걸린다(2026-10-21 확인). 빈 볼륨으로 띄운 스택에는 없다.
@@ -137,11 +171,14 @@ gateway 경로는 `/api/fulfillment` + 아래 경로다. 판매자 경로는 `SE
 | GET | `/v1/seller-orders/{sellerOrderId}` | 구매자 본인 하위 주문의 배송 조회(FUL-2). 판매자 조회와 같은 진행 상태·배송 목록에 구매확정 시각·방식, 확정 기한을 더한다. 남의 것이거나 배송이 아직 없으면 404 `FULFILLMENT_NOT_FOUND` |
 | POST | `/v1/seller-orders/{sellerOrderId}/confirm` | 구매확정(FUL-3). 204. 위 "구매확정" |
 | POST | `/v1/seller-orders/{sellerOrderId}/cancel` | 발송 전 취소(CLM-1). 204. 위 "발송 전 취소" |
+| POST | `/v1/seller-orders/{sellerOrderId}/claims` | 반품·교환 신청(CLM-2). 본문 `{"type", "reason", "description", "fileIds"}`. 201 `{claimId}`. 위 "반품·교환 신청" |
 | GET | `/v1/seller/seller-orders/{sellerOrderId}` | 본인 하위 주문의 배송 진행. 진행 상태(마지막 배송의 상태)와 배송 목록(배송 ID, 상태, 택배사, 송장 번호, 만든·발주 확인·발송·배송 중·배송 완료 시각. 만든 순서)이다. 다른 판매자의 것이거나 배송이 아직 없으면 404 `FULFILLMENT_NOT_FOUND` |
 | POST | `/v1/seller/seller-orders/{sellerOrderId}/accept` | 발주 확인. 204. 위 "발주 확인과 발송" |
 | POST | `/v1/seller/seller-orders/{sellerOrderId}/ship` | 발송. 본문 `{"carrier", "trackingNumber"}`. 204 |
+| POST | `/v1/seller/claims/{claimId}/approve` | 반품·교환 승인. 본문 `{"restock"}`. 204. 위 "판매자 승인과 거부" |
+| POST | `/v1/seller/claims/{claimId}/reject` | 반품·교환 거부. 본문 `{"reason"}`. 204 |
 
-- 구매자·판매자 조회 모두 클레임 목록(클레임 ID, 유형, 상태, 사유, 귀책, 환불 금액, 환불 실패 코드, 신청·승인·완료 시각. 신청 순서)을 함께 준다.
+- 구매자·판매자 조회 모두 클레임 목록(클레임 ID, 유형, 상태, 사유, 귀책, 설명, 사진 ID, 재입고 여부, 환불 금액, 환불 실패 코드, 거부 사유, 신청·승인·거부·완료 시각. 신청 순서)을 함께 준다. 사진은 file의 비공개 경로로 받는다([file.md](file.md) "비공개 파일").
 - 발주 확인과 발송도 다른 판매자의 하위 주문이나 배송이 없는 하위 주문이면 404 `FULFILLMENT_NOT_FOUND`다.
 - 하위 주문 목록, 항목, 배송지는 order의 판매자 하위 주문 조회에 있다([order.md](order.md) "조회"). 이 API는 처리 화면이 배송 상태와 할 수 있는 동작을 정하는 데 쓴다.
 - 배송은 `OrderPaid`를 받아 만들므로 결제 직후 잠깐 없다. 화면은 404인 동안 "배송 준비 중"으로 보여 준다.
