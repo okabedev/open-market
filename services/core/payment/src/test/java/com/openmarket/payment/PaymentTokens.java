@@ -18,4 +18,10 @@ final class PaymentTokens {
                                 token.subject(memberId.toString()).claim("roles", List.of("BUYER")))
                 .authorities(new SimpleGrantedAuthority("ROLE_BUYER"));
     }
+
+    static RequestPostProcessor admin(UUID adminId) {
+        return jwt().jwt(
+                        token -> token.subject(adminId.toString()).claim("roles", List.of("ADMIN")))
+                .authorities(new SimpleGrantedAuthority("ROLE_ADMIN"));
+    }
 }

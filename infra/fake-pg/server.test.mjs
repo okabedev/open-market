@@ -256,6 +256,24 @@ describe("취소 POST /v1/payments/{paymentKey}/cancel", () => {
     assert.equal((await over.json()).code, "NOT_CANCELABLE_AMOUNT");
   });
 
+  test("제어 API로 정한 취소 거절을 돌려준다. 설정을 지우면 다른 멱등 키로 취소된다", async () => {
+    const payment = await authenticatedPayment();
+    await confirm(payment);
+    await control(ORDER, {
+      cancelError: { status: 403, code: "NOT_CANCELABLE_PAYMENT", message: "취소 할 수 없는 결제 입니다." },
+    });
+    const rejected = await cancel(payment.paymentKey, "refund-1", 10000);
+    assert.equal(rejected.status, 403);
+    assert.equal((await rejected.json()).code, "NOT_CANCELABLE_PAYMENT");
+
+    await control(ORDER, {});
+    const again = await cancel(payment.paymentKey, "refund-1", 10000);
+    assert.equal(again.status, 403);
+    const retried = await cancel(payment.paymentKey, "refund-2", 10000);
+    assert.equal(retried.status, 200);
+    assert.equal((await retried.json()).balanceAmount, 29800);
+  });
+
   test("승인하지 않은 결제는 403 NOT_CANCELABLE_PAYMENT", async () => {
     const payment = await authenticatedPayment();
     const response = await cancel(payment.paymentKey);

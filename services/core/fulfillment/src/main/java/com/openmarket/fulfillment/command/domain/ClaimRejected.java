@@ -34,4 +34,17 @@ public record ClaimRejected(
                 false,
                 Objects.requireNonNull(claim.rejectedAt()));
     }
+
+    /** 관리자의 중재 거부 확정. */
+    public static ClaimRejected byMediation(Claim claim) {
+        return new ClaimRejected(
+                claim.id(),
+                claim.type().name(),
+                claim.orderId(),
+                claim.sellerOrderId(),
+                claim.buyerId(),
+                Objects.requireNonNull(claim.mediationReason()),
+                true,
+                Objects.requireNonNull(claim.mediationDecidedAt()));
+    }
 }

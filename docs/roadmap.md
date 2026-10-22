@@ -196,10 +196,10 @@
   - [x] 발송 전 취소(CLM-1)와 catalog 재입고. order의 하위 주문 클레임과 진행 중 주문
   - [x] file: 클레임 사진(`CLAIM_IMAGE`, 비공개)
   - [x] 반품·교환 신청, 판매자 승인(재입고 선택)·거부, 교환 재발송(CLM-2, CLM-3)
-  - [ ] 중재(관리자 결정)
+  - [x] 중재(관리자 결정)
 - [ ] payment: 부분취소 환불(PAY-2)
   - [x] 환불(`Refund`, 환불 작업, 원장), `RefundCompleted`·`RefundFailed`
-  - [ ] 환불 실패와 보상 취소 거절(`cancel_failure_code`)의 관리자 재시도
+  - [x] 환불 실패와 보상 취소 거절(`cancel_failure_code`)의 관리자 재시도
 - [ ] notification: 발송, 클레임 결과 알림, 인앱 알림
 - [ ] 판매자 주문·배송·클레임 화면, 구매자 배송 조회·클레임 화면
   - [ ] seller 발주 확인·발송·클레임 처리

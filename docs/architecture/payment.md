@@ -94,7 +94,7 @@ order가 결제 전에 주문을 취소하면(`OrderCancelled`: 재고 부족, �
 
 ### 취소 작업(`PaymentCancelJob`)
 - 1분마다(`openmarket.payment.cancel-interval`) 돌고 ShedLock(`payment-cancel`)으로 한 인스턴스에서만 돈다. 취소 요청이 있고 토스가 거절한 적 없는 `APPROVED` 결제를 오래된 요청 순으로 100건씩 읽는다.
-- 결제마다 토스 `POST /v1/payments/{paymentKey}/cancel`(전액, `cancelReason` "주문 취소")을 트랜잭션 밖에서 부르고, 원장에 남긴 뒤 결제를 다시 잠가 반영한다. 토스 `Idempotency-Key`는 `<결제 ID>-cancel`이다. 전액 취소는 결제마다 한 번이라 결제 ID로 만든다(환불은 환불 ID로 만든다, 아래 "환불").
+- 결제마다 토스 `POST /v1/payments/{paymentKey}/cancel`(전액, `cancelReason` "주문 취소")을 트랜잭션 밖에서 부르고, 원장에 남긴 뒤 결제를 다시 잠가 반영한다. 토스 `Idempotency-Key`는 `<결제 ID>-cancel`이고, 관리자 재시도로 시도 번호(`cancel_attempt`)가 2 이상이면 `<결제 ID>-cancel-<시도 번호>`다. 같은 키로 다시 보내면 토스가 처음 거절을 그대로 돌려주기 때문이다(환불은 환불 ID로 만든다, 아래 "환불").
 - 리스너에서 바로 부르지 않고 작업으로 미룬 것은, 토스 호출을 리스너 트랜잭션 밖에 두고 실패하면 같은 경로로 다시 시도하기 위해서다. 보상 취소는 드문 경로라 최대 1분 늦어도 된다. E2E는 환경 변수 `PAYMENT_CANCEL_INTERVAL`로 줄인다([dev-setup.md](../dev-setup.md) "E2E").
 
 | 토스 응답 | 처리 |
@@ -102,7 +102,7 @@ order가 결제 전에 주문을 취소하면(`OrderCancelled`: 재고 부족, �
 | 200, 남은 금액(`balanceAmount`) 0 | `CANCELLED` + `PaymentCancelled`. 전액 취소인지는 상태가 아니라 남은 금액으로 정한다(ADR 0018) |
 | 400 `ALREADY_CANCELED_PAYMENT` | 이미 취소됐다. 위와 같다 |
 | 5xx, 연결 실패, 타임아웃, 400 `PROVIDER_ERROR`, 403 `FORBIDDEN_CONSECUTIVE_REQUEST`, 409 `IDEMPOTENT_REQUEST_PROCESSING` | 정하지 못했다. `APPROVED`로 두고 다음 주기에 같은 멱등 키로 다시 부른다 |
-| 그 밖의 4xx(`NOT_CANCELABLE_PAYMENT` 등), 200인데 남은 금액이 있다(`BALANCE_REMAINING`) | 토스가 취소를 거절했다. 실패 코드(`cancel_failure_code`)를 남기고 `APPROVED`로 둔다. 자동으로 다시 부르지 않고 ERROR 로그를 남긴다. 관리자가 환불 실패(`RefundFailed`)와 같은 화면에서 다시 시도한다(M4, 2026-10-21 결정. API는 구현할 때 이 문서에 더한다) |
+| 그 밖의 4xx(`NOT_CANCELABLE_PAYMENT` 등), 200인데 남은 금액이 있다(`BALANCE_REMAINING`) | 토스가 취소를 거절했다. 실패 코드(`cancel_failure_code`)를 남기고 `APPROVED`로 둔다. 자동으로 다시 부르지 않고 ERROR 로그를 남긴다. 관리자가 환불 실패(`RefundFailed`)와 같은 화면에서 다시 시도한다(아래 "관리자 재시도") |
 
 ## 환불(`Refund`, PAY-2)
 결제 후 클레임(발송 전 취소, 반품)이 승인되면 하위 주문 단위로 토스 부분취소를 한다. 클레임과 환불 금액은 fulfillment가 정한다([fulfillment.md](fulfillment.md) "환불 금액"). 흐름 전체는 [messaging.md](messaging.md) "클레임 환불 흐름"에 있다.
@@ -111,7 +111,7 @@ order가 결제 전에 주문을 취소하면(`OrderCancelled`: 재고 부족, �
 |---|---|
 | `REQUESTED` | 환불 작업이 토스 부분취소를 부를 차례다 |
 | `COMPLETED` | 토스가 부분취소했다. 금액이 0이면 토스를 부르지 않고 바로 이 상태다 |
-| `FAILED` | 토스가 거절했거나 환불할 수 없다. 실패 코드를 남긴다. 관리자 재시도는 M4의 다음 PR에서 더한다 |
+| `FAILED` | 토스가 거절했거나 환불할 수 없다. 실패 코드를 남긴다. 관리자가 다시 시도하면 `REQUESTED`로 돌아간다(아래 "관리자 재시도") |
 
 ### 환불 요청
 `fulfillment.claim`의 `ClaimApproved`를 받는다. 교환(`EXCHANGE`)은 환불이 없으므로 넘긴다. 리스너는 처리 기록으로 거르고, 같은 클레임의 환불이 이미 있으면 아무것도 하지 않는다(클레임 ID 유일 인덱스).
@@ -136,6 +136,20 @@ order가 결제 전에 주문을 취소하면(`OrderCancelled`: 재고 부족, �
 
 - 남은 금액은 토스 응답이 아니라 payment가 센 금액으로 정한다. 토스는 전액을 부분취소로 모두 돌려줘도 상태를 `PARTIAL_CANCELED`로 둔다(R9).
 - 환불은 `PaymentCancelled`를 내지 않는다. 결제가 환불로 `CANCELLED`가 돼도 알림은 `RefundCompleted`로 간다.
+
+## 관리자 재시도
+토스가 거절한 환불과 보상 취소는 자동으로 다시 부르지 않는다. 관리자가 원인을 확인하고(토스 상점관리자 등) 다시 시도한다. `ADMIN` 역할이 있어야 한다.
+| 메서드 | 경로 | 설명 |
+|---|---|---|
+| GET | `/v1/admin/refunds/failed?page=&size=` | 실패한 환불. 오래된 순, 쪽 번호(`size` 1~100, 기본 20). 환불 ID, 주문 ID, 클레임 ID, 하위 주문 ID, 금액, 실패 코드, 시도 번호, 요청·실패 시각 |
+| POST | `/v1/admin/refunds/{refundId}/retry` | 환불 재시도. 204 |
+| GET | `/v1/admin/payments/cancel-failures?page=&size=` | 토스가 보상 취소를 거절한 결제. 오래된 요청 순, 쪽 번호. 결제 ID, 주문 ID, 금액, 실패 코드, 시도 번호, 취소 요청 시각 |
+| POST | `/v1/admin/payments/{paymentId}/cancel-retry` | 보상 취소 재시도. 204 |
+
+- 환불 재시도: 결제와 환불을 잠그고 `FAILED`면 다시 확인한다("환불 요청"의 확인과 같다). 통과하면 `REQUESTED`로 바꾸고 시도 번호를 올리고 실패 코드를 지운다. 환불 작업이 새 `Idempotency-Key`로 토스를 부른다. 확인을 통과하지 못하면 `FAILED`로 두고 409 `PAYMENT_NOT_REFUNDABLE` 또는 `PAYMENT_REFUND_AMOUNT_EXCEEDED`다.
+- 보상 취소 재시도: 결제를 잠그고 취소 실패 코드가 있으면 지우고 시도 번호를 올린다. 취소 작업이 다음 주기에 새 `Idempotency-Key`로 부른다.
+- 이미 재시도 중이면(환불 `REQUESTED`, 실패 코드 없는 취소 대기) 204다. 끝난 환불(`COMPLETED`)이나 취소할 것이 없는 결제는 409 `PAYMENT_NOT_RETRYABLE`이다. 없으면 404 `PAYMENT_REFUND_NOT_FOUND`, `PAYMENT_NOT_FOUND`다.
+- 재시도는 감사 로그(`REFUND_RETRIED`, `PAYMENT_CANCEL_RETRIED`, 관리자 ID, 대상 ID, 이전 실패 코드)를 남긴다(NFR-8). 재시도가 다시 거절되면 이벤트(`RefundFailed`)와 ERROR 로그가 다시 나간다.
 
 ## 토스 연동(`TossPaymentGatewayAdapter`)
 - 토스 API 형식은 `infra` 어댑터 밖으로 내보내지 않는다(ACL). `command.application`의 `PaymentGatewayPort`는 승인·조회 결과로 승인됨, 거절됨, 미정, 알 수 없음을, 취소 결과로 취소됨, 취소 거절, 알 수 없음을 안다.

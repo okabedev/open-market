@@ -12,10 +12,12 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.IntStream;
 import org.jspecify.annotations.Nullable;
@@ -96,6 +98,16 @@ public class Claim {
 
     @Column(name = "rejected_at")
     private @Nullable Instant rejectedAt;
+
+    @Column(name = "mediation_requested_at")
+    private @Nullable Instant mediationRequestedAt;
+
+    // 관리자의 중재 거부 확정 사유. 판매자의 거부 사유는 rejectionReason에 남는다.
+    @Column(name = "mediation_reason")
+    private @Nullable String mediationReason;
+
+    @Column(name = "mediation_decided_at")
+    private @Nullable Instant mediationDecidedAt;
 
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
@@ -199,10 +211,86 @@ public class Claim {
         if (status != ClaimStatus.REQUESTED) {
             throw new ClaimInvalidStateException(status, "승인할 수 없는 클레임입니다.");
         }
+        if (type == ClaimType.RETURN && restock == null) {
+            throw new InvalidFulfillmentInputException("반품을 승인할 때는 재입고 여부를 고르세요.");
+        }
+        applyApproval(target, restock, returnShippingFee, now);
+        return Approval.APPROVED;
+    }
+
+    /**
+     * 구매자 중재 요청. 거부된 클레임에 거부 시각 + {@code window} 안에 한 번만 할 수 있다.
+     *
+     * @return 처음 요청하면 {@code true}, 이미 중재 중이면 {@code false}
+     * @throws MediationClosedException 기한이 지났다
+     * @throws ClaimInvalidStateException 거부되지 않았거나 이미 중재를 거쳤다
+     */
+    public boolean requestMediation(Instant now, Duration window) {
+        if (status == ClaimStatus.MEDIATING) {
+            return false;
+        }
+        if (status != ClaimStatus.REJECTED || mediationRequestedAt != null) {
+            throw new ClaimInvalidStateException(status, "중재를 요청할 수 없는 클레임입니다.");
+        }
+        if (now.isAfter(Objects.requireNonNull(rejectedAt).plus(window))) {
+            throw new MediationClosedException();
+        }
+        status = ClaimStatus.MEDIATING;
+        mediationRequestedAt = now;
+        updatedAt = now;
+        return true;
+    }
+
+    /**
+     * 관리자 중재 승인. 관리자가 고른 귀책으로 환불 금액을 정하고 반품은 재입고하지 않는다. 교환은 판매자 귀책이어야 한다.
+     *
+     * @return 이미 승인했으면 {@code UNCHANGED}
+     * @throws ClaimInvalidStateException 중재 중이거나 승인된 클레임이 아니다
+     */
+    public Approval approveByMediation(
+            Shipment target, Fault fault, long returnShippingFee, Instant now) {
+        if (status == ClaimStatus.APPROVED) {
+            return Approval.UNCHANGED;
+        }
+        if (status != ClaimStatus.MEDIATING) {
+            throw new ClaimInvalidStateException(status, "중재 중인 클레임이 아닙니다.");
+        }
+        if (type == ClaimType.EXCHANGE && fault != Fault.SELLER) {
+            throw new InvalidFulfillmentInputException("교환은 판매자 귀책일 때만 승인할 수 있습니다.");
+        }
+        this.fault = fault;
+        applyApproval(target, false, returnShippingFee, now);
+        mediationDecidedAt = now;
+        return Approval.APPROVED;
+    }
+
+    /**
+     * 관리자 중재 거부 확정. 사유(1~500자)를 판매자의 거부 사유와 따로 남긴다. 다시 중재를 요청할 수 없다.
+     *
+     * @return 처음 확정하면 {@code true}, 이미 확정했으면 {@code false}
+     * @throws ClaimInvalidStateException 중재 중이거나 중재로 거부된 클레임이 아니다
+     */
+    public boolean rejectByMediation(String reason, Instant now) {
+        if (status == ClaimStatus.REJECTED && mediationDecidedAt != null) {
+            return false;
+        }
+        if (status != ClaimStatus.MEDIATING) {
+            throw new ClaimInvalidStateException(status, "중재 중인 클레임이 아닙니다.");
+        }
+        String text = reason.strip();
+        if (text.isEmpty() || text.length() > DESCRIPTION_MAX) {
+            throw new InvalidFulfillmentInputException("거부 사유는 1~500자입니다.");
+        }
+        status = ClaimStatus.REJECTED;
+        mediationReason = text;
+        mediationDecidedAt = now;
+        updatedAt = now;
+        return true;
+    }
+
+    private void applyApproval(
+            Shipment target, @Nullable Boolean restock, long returnShippingFee, Instant now) {
         if (type == ClaimType.RETURN) {
-            if (restock == null) {
-                throw new InvalidFulfillmentInputException("반품을 승인할 때는 재입고 여부를 고르세요.");
-            }
             long fee = fault == Fault.BUYER ? returnShippingFee : 0;
             this.restock = restock;
             this.refundAmount = Math.max(0, target.amount() - fee);
@@ -210,7 +298,6 @@ public class Claim {
         status = ClaimStatus.APPROVED;
         approvedAt = now;
         updatedAt = now;
-        return Approval.APPROVED;
     }
 
     /** 교환 승인으로 대상 배송과 같은 항목·금액의 새 배송({@code READY})을 만든다. */
@@ -354,6 +441,18 @@ public class Claim {
 
     public @Nullable Instant rejectedAt() {
         return rejectedAt;
+    }
+
+    public @Nullable Instant mediationRequestedAt() {
+        return mediationRequestedAt;
+    }
+
+    public @Nullable String mediationReason() {
+        return mediationReason;
+    }
+
+    public @Nullable Instant mediationDecidedAt() {
+        return mediationDecidedAt;
     }
 
     /** {@link #approve}의 결과. */

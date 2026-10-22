@@ -299,6 +299,25 @@ class OrderTest {
                 .isEqualTo(Order.Transition.APPLIED);
     }
 
+    @Test
+    @DisplayName("중재 요청은 MEDIATING, 중재 승인과 거부 확정은 다시 APPROVED·REJECTED다")
+    void appliesMediation() {
+        Order order = twoSellers();
+        order.awaitPayment(NOW);
+        order.pay(order.amount(), NOW, NOW);
+        UUID first = order.sellerOrders().get(0).id();
+        UUID claimId = UUID.randomUUID();
+        for (ClaimStatus status :
+                List.of(ClaimStatus.REQUESTED, ClaimStatus.REJECTED, ClaimStatus.MEDIATING)) {
+            order.applyClaim(first, claimId, ClaimType.RETURN, status, NOW);
+        }
+        assertThat(order.sellerOrders().get(0).claimStatus()).isEqualTo(ClaimStatus.MEDIATING);
+
+        assertThat(order.applyClaim(first, claimId, ClaimType.RETURN, ClaimStatus.REJECTED, NOW))
+                .isEqualTo(Order.Transition.APPLIED);
+        assertThat(order.sellerOrders().get(0).claimStatus()).isEqualTo(ClaimStatus.REJECTED);
+    }
+
     private Order twoSellers() {
         return Order.place(
                 buyerId,

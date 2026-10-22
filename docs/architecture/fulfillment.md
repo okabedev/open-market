@@ -113,6 +113,21 @@ M4 시작(2026-10-21)에 정한 규칙이다. API와 화면은 각 PR에서 이 
 - 반품 승인의 환불 금액은 아래 "환불 금액"이다. 반품 배송비는 `openmarket.fulfillment.return-shipping-fee`(기본 6,000원)다.
 - 거부하면 하위 주문의 마지막 배송의 자동 구매확정 기한을 거부 시각 + 중재 요청 기한과 비교해 늦은 쪽으로 미룬다(위 "구매확정").
 
+### 중재(CLM-3, ADM-2)
+판매자가 거부한 반품·교환을 구매자가 관리자에게 다시 판단해 달라고 요청한다.
+- 구매자 요청 `POST /v1/claims/{claimId}/mediation`(본문 없음, 204). 하위 주문의 마지막 배송 행을 잠그고 클레임을 잠가 `REJECTED` → `MEDIATING`으로 바꾸고 `ClaimMediationRequested`를 낸다.
+  - 거부 시각 + 중재 요청 기한(`openmarket.fulfillment.claim.mediation-window`, 기본 7일) 안에만 된다. 지나면 409 `FULFILLMENT_MEDIATION_CLOSED`다.
+  - 클레임마다 한 번이다. 이미 `MEDIATING`이면 204, 중재를 거쳐 거부가 확정됐거나 그 밖의 상태면 409 `FULFILLMENT_CLAIM_INVALID_STATE`(`claimStatus`)다.
+  - 구매확정했으면 409 `FULFILLMENT_PURCHASE_CONFIRMED`, 그사이 새 클레임을 신청해 진행 중이면 409 `FULFILLMENT_CLAIM_IN_PROGRESS`다. 남의 클레임이거나 발송 전 취소면 404 `FULFILLMENT_CLAIM_NOT_FOUND`다.
+- 관리자 목록 `GET /v1/admin/claims?page=&size=`: 중재 중인 클레임을 중재 요청이 오래된 순으로 준다(쪽 번호, `size` 1~100, 기본 20). 줄은 클레임 조회의 필드에 판매자·구매자 ID, 하위 주문 금액, 중재 요청 시각을 더한 것이다. 사진은 file의 관리자 경로로 받는다([file.md](file.md) "비공개 파일").
+- 관리자 결정(`MEDIATING`에서만. 같은 결정을 다시 하면 204, 다른 상태면 409 `FULFILLMENT_CLAIM_INVALID_STATE`)
+  | 결정 | 경로 | 결과 |
+  |---|---|---|
+  | 승인 | `POST /v1/admin/claims/{claimId}/approve` 본문 `{"fault"}` | 관리자가 귀책(`BUYER`, `SELLER`)을 고른다. `APPROVED` + `ClaimApproved`. 반품은 재입고하지 않고, 환불 금액은 고른 귀책으로 정한다. 교환은 귀책이 `SELLER`여야 하고(어기면 400 `FULFILLMENT_INVALID_INPUT`) 새 배송을 만든다 |
+  | 거부 확정 | `POST /v1/admin/claims/{claimId}/reject` 본문 `{"reason"}` | `REJECTED` + `ClaimRejected`(`mediated=true`). 사유 1~500자. 판매자의 거부 사유는 따로 남는다. 다시 중재를 요청할 수 없다 |
+- 관리자 결정은 감사 로그(`CLAIM_MEDIATION_APPROVED`, `CLAIM_MEDIATION_REJECTED`, 관리자 ID, 클레임 ID, 귀책 또는 사유)를 남긴다(NFR-8).
+- 중재 중에는 진행 중인 클레임이라 자동 구매확정이 되지 않는다. 거부가 확정되면 그때 지난 기한으로 자동 확정될 수 있다.
+
 ### 교환 재발송
 - 교환을 승인하면 대상 배송과 같은 항목·금액으로 새 배송(`READY`, `claim_id` = 교환 클레임)을 만든다. 판매자는 하위 주문의 마지막 배송, 곧 새 배송을 발주 확인하고 발송한다. 배송 이벤트는 처음 배송과 같이 나간다.
 - 새 배송을 발송하면 같은 트랜잭션에서 교환 클레임을 `COMPLETED`로 바꾸고 `ClaimCompleted`(환불 0, 재입고 없음)를 낸다. 회수한 상품을 입고하고 새 상품을 보내 재고 변동이 없다.
@@ -157,8 +172,9 @@ M4 시작(2026-10-21)에 정한 규칙이다. API와 화면은 각 PR에서 이 
 | `ShipmentDelivered` | 시뮬레이터가 배송 완료로 바꿨다 |
 | `PurchaseConfirmed` | 구매자 확정, 자동 확정 |
 | `ClaimRequested` | 발송 전 취소, 반품·교환 신청 |
-| `ClaimApproved` | 발송 전 취소(신청과 함께), 판매자 승인 |
-| `ClaimRejected` | 판매자 거부 |
+| `ClaimApproved` | 발송 전 취소(신청과 함께), 판매자 승인, 중재 승인 |
+| `ClaimRejected` | 판매자 거부, 중재 거부 확정 |
+| `ClaimMediationRequested` | 구매자 중재 요청 |
 | `ClaimCompleted` | 환불 완료, 교환 재발송 |
 
 - 리스너는 처리 기록(`processed_event`)으로 같은 이벤트를 한 번만 처리한다. 리스너 이름은 `fulfillment.<이벤트>`다(예: `fulfillment.order-paid`).
@@ -172,13 +188,17 @@ gateway 경로는 `/api/fulfillment` + 아래 경로다. 판매자 경로는 `SE
 | POST | `/v1/seller-orders/{sellerOrderId}/confirm` | 구매확정(FUL-3). 204. 위 "구매확정" |
 | POST | `/v1/seller-orders/{sellerOrderId}/cancel` | 발송 전 취소(CLM-1). 204. 위 "발송 전 취소" |
 | POST | `/v1/seller-orders/{sellerOrderId}/claims` | 반품·교환 신청(CLM-2). 본문 `{"type", "reason", "description", "fileIds"}`. 201 `{claimId}`. 위 "반품·교환 신청" |
+| POST | `/v1/claims/{claimId}/mediation` | 중재 요청. 204. 위 "중재" |
 | GET | `/v1/seller/seller-orders/{sellerOrderId}` | 본인 하위 주문의 배송 진행. 진행 상태(마지막 배송의 상태)와 배송 목록(배송 ID, 상태, 택배사, 송장 번호, 만든·발주 확인·발송·배송 중·배송 완료 시각. 만든 순서)이다. 다른 판매자의 것이거나 배송이 아직 없으면 404 `FULFILLMENT_NOT_FOUND` |
 | POST | `/v1/seller/seller-orders/{sellerOrderId}/accept` | 발주 확인. 204. 위 "발주 확인과 발송" |
 | POST | `/v1/seller/seller-orders/{sellerOrderId}/ship` | 발송. 본문 `{"carrier", "trackingNumber"}`. 204 |
 | POST | `/v1/seller/claims/{claimId}/approve` | 반품·교환 승인. 본문 `{"restock"}`. 204. 위 "판매자 승인과 거부" |
 | POST | `/v1/seller/claims/{claimId}/reject` | 반품·교환 거부. 본문 `{"reason"}`. 204 |
+| GET | `/v1/admin/claims?page=&size=` | 중재 중인 클레임 목록. `ADMIN` |
+| POST | `/v1/admin/claims/{claimId}/approve` | 중재 승인. 본문 `{"fault"}`. 204 |
+| POST | `/v1/admin/claims/{claimId}/reject` | 중재 거부 확정. 본문 `{"reason"}`. 204 |
 
-- 구매자·판매자 조회 모두 클레임 목록(클레임 ID, 유형, 상태, 사유, 귀책, 설명, 사진 ID, 재입고 여부, 환불 금액, 환불 실패 코드, 거부 사유, 신청·승인·거부·완료 시각. 신청 순서)을 함께 준다. 사진은 file의 비공개 경로로 받는다([file.md](file.md) "비공개 파일").
+- 구매자·판매자 조회 모두 클레임 목록(클레임 ID, 유형, 상태, 사유, 귀책, 설명, 사진 ID, 재입고 여부, 환불 금액, 환불 실패 코드, 거부 사유, 중재 거부 사유, 신청·승인·거부·중재 요청·완료 시각. 신청 순서)을 함께 준다. 사진은 file의 비공개 경로로 받는다([file.md](file.md) "비공개 파일").
 - 발주 확인과 발송도 다른 판매자의 하위 주문이나 배송이 없는 하위 주문이면 404 `FULFILLMENT_NOT_FOUND`다.
 - 하위 주문 목록, 항목, 배송지는 order의 판매자 하위 주문 조회에 있다([order.md](order.md) "조회"). 이 API는 처리 화면이 배송 상태와 할 수 있는 동작을 정하는 데 쓴다.
 - 배송은 `OrderPaid`를 받아 만들므로 결제 직후 잠깐 없다. 화면은 404인 동안 "배송 준비 중"으로 보여 준다.

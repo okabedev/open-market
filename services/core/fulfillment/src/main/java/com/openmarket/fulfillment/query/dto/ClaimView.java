@@ -15,7 +15,9 @@ import org.jspecify.annotations.Nullable;
  * @param refundFailureCode 마지막 환불 실패 코드. 환불이 실패한 채 승인 상태일 때만
  * @param approvedAt 승인 시각. 승인됐을 때만
  * @param rejectionReason 거부 사유. 거부됐을 때만
- * @param rejectedAt 거부 시각. 거부됐을 때만
+ * @param rejectedAt 판매자 거부 시각. 거부됐을 때만
+ * @param mediationReason 관리자의 중재 거부 확정 사유. 확정됐을 때만
+ * @param mediationRequestedAt 중재 요청 시각. 요청했을 때만
  * @param completedAt 완료 시각. 끝났을 때만
  */
 public record ClaimView(
@@ -30,7 +32,9 @@ public record ClaimView(
         long refundAmount,
         @Nullable String refundFailureCode,
         @Nullable String rejectionReason,
+        @Nullable String mediationReason,
         Instant requestedAt,
         @Nullable Instant approvedAt,
         @Nullable Instant rejectedAt,
+        @Nullable Instant mediationRequestedAt,
         @Nullable Instant completedAt) {}

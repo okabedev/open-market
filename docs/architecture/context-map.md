@@ -151,7 +151,7 @@ flowchart LR
 | `ClaimRequested` | 신청 | claimId, type, orderId, sellerOrderId, sellerId, buyerId, reason, fault, fileIds, requestedAt | order, notification(판매자), file(첨부 확정) |
 | `ClaimApproved` | 승인(취소는 신청과 함께) | claimId, type, orderId, sellerOrderId, sellerId, buyerId, fault, refundAmount(교환은 0), approvedAt | payment(환불, 교환 제외), order, notification |
 | `ClaimRejected` | 판매자 거부, 중재 거부 확정 | claimId, type, orderId, sellerOrderId, buyerId, reason(거부 사유), mediated(중재 결과로 거부가 확정됐으면 true), rejectedAt | order, notification |
-| `ClaimMediationRequested` | 구매자 중재 요청 | claimId, type, orderId, sellerOrderId, sellerId | order, notification(관리자) |
+| `ClaimMediationRequested` | 구매자 중재 요청 | claimId, type, orderId, sellerOrderId, sellerId, buyerId, requestedAt | order, notification(관리자) |
 | `ClaimCompleted` | 환불 완료, 교환 재발송 | claimId, type, orderId, sellerOrderId, buyerId, refundAmount, restockLines(skuId, quantity. 재입고하지 않으면 빈 목록), completedAt | order, catalog(재입고), notification |
 
 - 키는 sellerOrderId다. 배송 토픽과 사이 순서는 보장하지 않는다. order는 두 토픽을 함께 보고 하위 주문 진행 상태를 정한다.

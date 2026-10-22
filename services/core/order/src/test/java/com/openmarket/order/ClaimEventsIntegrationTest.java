@@ -173,6 +173,29 @@ class ClaimEventsIntegrationTest {
         assertThat(column(sellerOrderId, "claim_status")).isEqualTo("REJECTED");
         assertThat(hasOngoingOrders(order)).isTrue();
 
+        UUID mediation = UUID.randomUUID();
+        send(
+                CLAIM_TOPIC,
+                mediation,
+                "ClaimMediationRequested",
+                order,
+                sellerOrderId,
+                rejected,
+                "RETURN");
+        awaitProcessed(mediation);
+        assertThat(column(sellerOrderId, "claim_status")).isEqualTo("MEDIATING");
+        UUID finalRejection = UUID.randomUUID();
+        send(
+                CLAIM_TOPIC,
+                finalRejection,
+                "ClaimRejected",
+                order,
+                sellerOrderId,
+                rejected,
+                "RETURN");
+        awaitProcessed(finalRejection);
+        assertThat(column(sellerOrderId, "claim_status")).isEqualTo("REJECTED");
+
         UUID returned = UUID.randomUUID();
         send(
                 CLAIM_TOPIC,

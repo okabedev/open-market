@@ -3,6 +3,8 @@ package com.openmarket.fulfillment.query.application;
 import com.openmarket.common.core.error.NotFoundException;
 import com.openmarket.fulfillment.query.dao.FulfillmentQueryDao;
 import com.openmarket.fulfillment.query.dto.BuyerFulfillmentView;
+import com.openmarket.fulfillment.query.dto.MediationClaimView;
+import com.openmarket.fulfillment.query.dto.PageView;
 import com.openmarket.fulfillment.query.dto.SellerFulfillmentView;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -31,6 +33,12 @@ public class FulfillmentQueryService {
     public BuyerFulfillmentView buyerFulfillment(UUID buyerId, UUID sellerOrderId) {
         return dao.findForBuyer(buyerId, sellerOrderId)
                 .orElseThrow(FulfillmentQueryService::notFound);
+    }
+
+    /** 관리자 중재 목록(docs/architecture/fulfillment.md "중재"). */
+    @Transactional(readOnly = true)
+    public PageView<MediationClaimView> mediatingClaims(int page, int size) {
+        return dao.findMediatingClaims(page, size);
     }
 
     private static NotFoundException notFound() {

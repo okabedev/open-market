@@ -18,6 +18,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/refunds/{refundId}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["retryRefund"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/payments/{paymentId}/cancel-retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["retryCancel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/payments/orders/{orderId}": {
         parameters: {
             query?: never;
@@ -26,6 +58,38 @@ export interface paths {
             cookie?: never;
         };
         get: operations["payment"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/refunds/failed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["failedRefunds"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/payments/cancel-failures": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["cancelFailures"];
         put?: never;
         post?: never;
         delete?: never;
@@ -64,6 +128,56 @@ export interface components {
             /** Format: int64 */
             amount?: number;
         };
+        FailedRefundView: {
+            /** Format: uuid */
+            refundId?: string;
+            /** Format: uuid */
+            orderId?: string;
+            /** Format: uuid */
+            claimId?: string;
+            /** Format: uuid */
+            sellerOrderId?: string;
+            /** Format: int64 */
+            amount?: number;
+            failureCode?: string;
+            /** Format: int32 */
+            attempt?: number;
+            /** Format: date-time */
+            requestedAt?: string;
+            /** Format: date-time */
+            failedAt?: string;
+        };
+        PageViewFailedRefundView: {
+            items?: components["schemas"]["FailedRefundView"][];
+            /** Format: int64 */
+            totalCount?: number;
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+        };
+        CancelFailureView: {
+            /** Format: uuid */
+            paymentId?: string;
+            /** Format: uuid */
+            orderId?: string;
+            /** Format: int64 */
+            amount?: number;
+            cancelFailureCode?: string;
+            /** Format: int32 */
+            cancelAttempt?: number;
+            /** Format: date-time */
+            cancelRequestedAt?: string;
+        };
+        PageViewCancelFailureView: {
+            items?: components["schemas"]["CancelFailureView"][];
+            /** Format: int64 */
+            totalCount?: number;
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+        };
     };
     responses: never;
     parameters: never;
@@ -97,6 +211,46 @@ export interface operations {
             };
         };
     };
+    retryRefund: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                refundId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    retryCancel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                paymentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     payment: {
         parameters: {
             query?: never;
@@ -115,6 +269,52 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PaymentView"];
+                };
+            };
+        };
+    };
+    failedRefunds: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageViewFailedRefundView"];
+                };
+            };
+        };
+    };
+    cancelFailures: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageViewCancelFailureView"];
                 };
             };
         };
