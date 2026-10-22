@@ -4,6 +4,7 @@ import type { paths as CatalogPaths } from "./generated/catalog";
 import type { paths as FilePaths } from "./generated/file";
 import type { paths as FulfillmentPaths } from "./generated/fulfillment";
 import type { paths as MemberPaths } from "./generated/member";
+import type { paths as NotificationPaths } from "./generated/notification";
 import type { paths as OrderPaths } from "./generated/order";
 import type { paths as PaymentPaths } from "./generated/payment";
 import type { paths as SearchPaths } from "./generated/search";
@@ -15,6 +16,7 @@ type ServicePaths = {
   file: FilePaths;
   fulfillment: FulfillmentPaths;
   member: MemberPaths;
+  notification: NotificationPaths;
   order: OrderPaths;
   payment: PaymentPaths;
   search: SearchPaths;

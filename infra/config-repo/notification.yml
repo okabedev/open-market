@@ -21,3 +21,6 @@ openmarket:
     mail-from: "오픈 마켓 <no-reply@openmarket.local>"
     # 보낼 차례인 메일을 찾는 주기(EmailDispatchJob)
     dispatch-interval: 2s
+    # 인앱·이메일 알림 보관 기간과 정리 작업(NotificationPurgeJob) 주기
+    retention: 90d
+    purge-interval: 1h

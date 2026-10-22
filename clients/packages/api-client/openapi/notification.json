@@ -1,0 +1,329 @@
+{
+  "openapi" : "3.1.0",
+  "info" : {
+    "title" : "OpenAPI definition",
+    "version" : "v0"
+  },
+  "paths" : {
+    "/v1/seller/notifications/{notificationId}/read" : {
+      "post" : {
+        "tags" : [ "notification-command-controller" ],
+        "operationId" : "sellerRead",
+        "parameters" : [ {
+          "name" : "notificationId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        }
+      }
+    },
+    "/v1/seller/notifications/read-all" : {
+      "post" : {
+        "tags" : [ "notification-command-controller" ],
+        "operationId" : "sellerReadAll",
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        }
+      }
+    },
+    "/v1/notifications/{notificationId}/read" : {
+      "post" : {
+        "tags" : [ "notification-command-controller" ],
+        "operationId" : "buyerRead",
+        "parameters" : [ {
+          "name" : "notificationId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        }
+      }
+    },
+    "/v1/notifications/read-all" : {
+      "post" : {
+        "tags" : [ "notification-command-controller" ],
+        "operationId" : "buyerReadAll",
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        }
+      }
+    },
+    "/v1/admin/notifications/{notificationId}/read" : {
+      "post" : {
+        "tags" : [ "notification-command-controller" ],
+        "operationId" : "adminRead",
+        "parameters" : [ {
+          "name" : "notificationId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        }
+      }
+    },
+    "/v1/admin/notifications/read-all" : {
+      "post" : {
+        "tags" : [ "notification-command-controller" ],
+        "operationId" : "adminReadAll",
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        }
+      }
+    },
+    "/v1/seller/notifications" : {
+      "get" : {
+        "tags" : [ "notification-query-controller" ],
+        "operationId" : "sellerInbox",
+        "parameters" : [ {
+          "name" : "cursor",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "size",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 20,
+            "maximum" : 50,
+            "minimum" : 1
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CursorPageViewNotificationView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/seller/notifications/unread-count" : {
+      "get" : {
+        "tags" : [ "notification-query-controller" ],
+        "operationId" : "sellerUnreadCount",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/UnreadCountView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notifications" : {
+      "get" : {
+        "tags" : [ "notification-query-controller" ],
+        "operationId" : "buyerInbox",
+        "parameters" : [ {
+          "name" : "cursor",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "size",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 20,
+            "maximum" : 50,
+            "minimum" : 1
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CursorPageViewNotificationView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notifications/unread-count" : {
+      "get" : {
+        "tags" : [ "notification-query-controller" ],
+        "operationId" : "buyerUnreadCount",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/UnreadCountView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/notifications" : {
+      "get" : {
+        "tags" : [ "notification-query-controller" ],
+        "operationId" : "adminInbox",
+        "parameters" : [ {
+          "name" : "cursor",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "size",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 20,
+            "maximum" : 50,
+            "minimum" : 1
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CursorPageViewNotificationView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/notifications/unread-count" : {
+      "get" : {
+        "tags" : [ "notification-query-controller" ],
+        "operationId" : "adminUnreadCount",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/UnreadCountView"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "CursorPageViewNotificationView" : {
+        "type" : "object",
+        "properties" : {
+          "items" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/NotificationView"
+            }
+          },
+          "totalCount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "nextCursor" : {
+            "type" : "string"
+          }
+        }
+      },
+      "NotificationView" : {
+        "type" : "object",
+        "properties" : {
+          "notificationId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "kind" : {
+            "type" : "string",
+            "enum" : [ "EMAIL_VERIFICATION", "ORDER_PAID", "SHIPMENT_SHIPPED", "SHIPMENT_DELIVERED", "CLAIM_APPROVED", "CLAIM_REJECTED", "CLAIM_COMPLETED", "SELLER_REJECTED", "SELLER_ORDER_RECEIVED", "CLAIM_REQUESTED", "SELLER_APPROVED", "PRODUCT_BANNED", "CLAIM_MEDIATION_REQUESTED", "REFUND_FAILED" ]
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "targetType" : {
+            "type" : "string",
+            "enum" : [ "ORDER", "SELLER_ORDER", "CLAIM", "REFUND", "PRODUCT" ]
+          },
+          "targetId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "read" : {
+            "type" : "boolean"
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "UnreadCountView" : {
+        "type" : "object",
+        "properties" : {
+          "count" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }
+      }
+    }
+  }
+}

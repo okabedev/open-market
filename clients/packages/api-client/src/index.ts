@@ -15,6 +15,10 @@ export type {
   paths as FulfillmentPaths,
 } from "./generated/fulfillment";
 export type { components as MemberComponents, paths as MemberPaths } from "./generated/member";
+export type {
+  components as NotificationComponents,
+  paths as NotificationPaths,
+} from "./generated/notification";
 export type { components as OrderComponents, paths as OrderPaths } from "./generated/order";
 export type { components as PaymentComponents, paths as PaymentPaths } from "./generated/payment";
 export type { components as SearchComponents, paths as SearchPaths } from "./generated/search";

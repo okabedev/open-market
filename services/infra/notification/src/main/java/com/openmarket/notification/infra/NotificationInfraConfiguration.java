@@ -4,6 +4,8 @@ import com.openmarket.notification.command.application.EmailRendererPort;
 import com.openmarket.notification.command.application.MailSenderPort;
 import com.openmarket.notification.infra.mail.SpringMailSender;
 import com.openmarket.notification.infra.mail.ThymeleafEmailRenderer;
+import com.querydsl.jpa.impl.JPAQueryFactory;
+import jakarta.persistence.EntityManager;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import org.springframework.beans.factory.annotation.Value;
@@ -15,13 +17,18 @@ import org.thymeleaf.spring6.SpringTemplateEngine;
 import org.thymeleaf.templatemode.TemplateMode;
 import org.thymeleaf.templateresolver.ClassLoaderTemplateResolver;
 
-/** notification의 어댑터: SMTP 발송, 메일 템플릿. */
+/** notification의 어댑터: SMTP 발송, 메일 템플릿, 조회(QueryDSL). */
 @Configuration(proxyBeanMethods = false)
 public class NotificationInfraConfiguration {
 
     @Bean
     Clock clock() {
         return Clock.systemUTC();
+    }
+
+    @Bean
+    JPAQueryFactory jpaQueryFactory(EntityManager entityManager) {
+        return new JPAQueryFactory(entityManager);
     }
 
     @Bean

@@ -83,6 +83,8 @@
 | 정산 | `Settlement` | settlement | 판매자별 주 단위 묶음. 상태: `PENDING` → `CONFIRMED` → `PAID_OUT` |
 | 수수료율 | `CommissionRate` | settlement | 카테고리별 요율(정산이 소유) |
 | 알림 | `Notification` | notification | 채널: `EMAIL`, `IN_APP`. 상태: `PENDING` → `SENT`, 다섯 번 실패하면 `FAILED`. 원인 이벤트 ID로 중복을 막는다 |
+| 받는 쪽 | `NotificationAudience` | notification | 인앱 알림을 보이는 앱: `BUYER`(shop), `SELLER`(seller), `ADMIN`(admin, 관리자 전체가 함께 보는 역할 대상 알림) |
+| 알림 읽음 | `NotificationRead` | notification | 회원이 인앱 알림을 읽은 기록. 관리자 알림은 관리자마다 따로 남는다 |
 
 ## 기술 용어
 | 용어 | 코드 이름 | 설명 |
