@@ -80,17 +80,29 @@ export async function buyNowPaid(
   return orderId;
 }
 
-/** 구매자 주문 상세에서 판매자 하나(하위 주문)의 배송 조회로 간다. 주문의 하위 주문은 하나다. */
-export async function openDelivery(buyer: Page, orderId: string): Promise<void> {
-  await buyer.goto(`${env.shop}/orders/${orderId}`);
-  await buyer.getByRole("link", { name: /배송 조회/ }).click();
+/** 구매자 배송 조회의 대상. 주문 ID만 주면 하위 주문이 하나인 주문이다. */
+export type Delivery = string | { orderId: string; sellerOrderId: string };
+
+/**
+ * 구매자 배송 조회를 연다. 주문 ID만 주면 주문 상세에서 하나뿐인 "배송 조회" 링크를 누르고, 하위 주문 ID까지 주면 그 화면으로 바로
+ * 간다(판매자가 둘인 주문).
+ */
+export async function openDelivery(buyer: Page, delivery: Delivery): Promise<void> {
+  if (typeof delivery === "string") {
+    await buyer.goto(`${env.shop}/orders/${delivery}`);
+    await buyer.getByRole("link", { name: /배송 조회/ }).click();
+  } else {
+    await buyer.goto(
+      `${env.shop}/orders/${delivery.orderId}/seller-orders/${delivery.sellerOrderId}`,
+    );
+  }
   await expect(buyer.getByRole("heading", { name: /배송 조회/ })).toBeVisible();
 }
 
 /** 구매자 배송 조회를 다시 읽어 그 요소가 보일 때까지 기다린다. */
 export async function waitForDelivery(
   buyer: Page,
-  orderId: string,
+  orderId: Delivery,
   visible: (page: Page) => ReturnType<Page["getByText"]>,
   timeout = 60_000,
 ): Promise<void> {
@@ -105,7 +117,7 @@ export async function waitForDelivery(
  */
 export async function requestClaim(
   buyer: Page,
-  orderId: string,
+  orderId: Delivery,
   claim: { type: "반품" | "교환"; reason: string; description: string; photo?: boolean },
 ): Promise<void> {
   await openDelivery(buyer, orderId);

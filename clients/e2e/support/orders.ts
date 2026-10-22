@@ -58,7 +58,7 @@ export async function openFakePgCheckout(buyer: Page): Promise<void> {
 export type FakePgOrder = {
   confirmRequests: number;
   cancelRequests: number;
-  payments: { paymentKey: string; status: string; totalAmount: number }[];
+  payments: { paymentKey: string; status: string; totalAmount: number; balanceAmount: number }[];
 };
 
 /** 가짜 PG 제어 API로 본 주문의 결제와 승인·취소 요청 수. */
