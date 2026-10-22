@@ -145,7 +145,7 @@ class ClaimImageIntegrationTest {
                         () ->
                                 assertThat(
                                                 jdbc.sql(
-                                                                "SELECT status || '/' || owner_type"
+                                                                "SELECT status || '/' || coalesce(owner_type, '-')"
                                                                         + " FROM stored_file WHERE id"
                                                                         + " = :id")
                                                         .param("id", fileId)
