@@ -120,11 +120,11 @@ class StoredFileTest {
     @Test
     @DisplayName("소유자 리비전은 커질 때만 오른다")
     void ownerRevisionOnlyAdvances() {
-        FileOwner owner = FileOwner.create(FileOwnerType.PRODUCT, PRODUCT, 2, NOW);
+        FileOwner owner = FileOwner.create(FileOwnerType.PRODUCT, PRODUCT, UPLOADER, 2, NOW);
 
-        assertThat(owner.advance(2, NOW)).isFalse();
-        assertThat(owner.advance(1, NOW)).isFalse();
-        assertThat(owner.advance(3, NOW)).isTrue();
+        assertThat(owner.advance(2, UPLOADER, NOW)).isFalse();
+        assertThat(owner.advance(1, UPLOADER, NOW)).isFalse();
+        assertThat(owner.advance(3, UPLOADER, NOW)).isTrue();
         assertThat(owner.revision()).isEqualTo(3);
     }
 
@@ -152,5 +152,27 @@ class StoredFileTest {
             result[i] = (byte) values[i];
         }
         return result;
+    }
+
+    @Test
+    @DisplayName("클레임 사진은 비공개이고 claim-image 디렉터리에 둔다. 클레임에만 붙고 상품에는 붙지 않는다")
+    void claimImage() {
+        StoredFile file =
+                StoredFile.upload(
+                        ID,
+                        FilePurpose.CLAIM_IMAGE,
+                        UPLOADER,
+                        ImageFormat.JPEG,
+                        100,
+                        new ImageDimensions(1000, 1000),
+                        NOW);
+
+        assertThat(FilePurpose.CLAIM_IMAGE.isPublic()).isFalse();
+        assertThat(FilePurpose.PRODUCT_IMAGE.isPublic()).isTrue();
+        assertThat(file.storageKey()).startsWith("claim-image/2026/10/");
+        assertThat(file.attachTo(FileOwnerType.PRODUCT, PRODUCT, UPLOADER, NOW))
+                .isEqualTo(AttachOutcome.REJECTED);
+        assertThat(file.attachTo(FileOwnerType.CLAIM, PRODUCT, UPLOADER, NOW))
+                .isEqualTo(AttachOutcome.ATTACHED);
     }
 }

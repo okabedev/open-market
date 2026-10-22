@@ -37,13 +37,19 @@ public class FileCommandController {
     public UploadFileResponse upload(
             Principal principal,
             @RequestPart("file") MultipartFile file,
-            @RequestParam UploadFileCommand.Purpose purpose) {
+            @RequestParam SellerUploadPurpose purpose) {
         return UploadFileResponse.of(
                 uploadFile.execute(
                         new UploadFileCommand(
                                 UUID.fromString(principal.getName()),
-                                purpose,
+                                UploadFileCommand.Purpose.valueOf(purpose.name()),
                                 file.getSize(),
-                                file::getInputStream)));
+                                file::getInputStream)),
+                FileQueryController::variantUrl);
+    }
+
+    /** 판매자 경로가 받는 용도. 다른 값이면 400 {@code COMMON_INVALID_REQUEST}. */
+    public enum SellerUploadPurpose {
+        PRODUCT_IMAGE
     }
 }

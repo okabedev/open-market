@@ -41,7 +41,8 @@ public class SyncProductImagesUseCase {
     public void execute(SyncProductImagesCommand command) {
         Instant now = clock.instant();
         Optional<FileOwner> found = owners.findById(command.productId());
-        if (found.isPresent() && !found.get().advance(command.revision(), now)) {
+        if (found.isPresent()
+                && !found.get().advance(command.revision(), command.sellerId(), now)) {
             return;
         }
         owners.save(
@@ -50,6 +51,7 @@ public class SyncProductImagesUseCase {
                                 FileOwner.create(
                                         FileOwnerType.PRODUCT,
                                         command.productId(),
+                                        command.sellerId(),
                                         command.revision(),
                                         now)));
 

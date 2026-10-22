@@ -12,9 +12,10 @@ import java.util.UUID;
  */
 public record UploadFileCommand(UUID uploaderId, Purpose purpose, long sizeBytes, Content content) {
 
-    /** 파일 용도. 판매자 업로드는 상품 이미지만 받는다. */
+    /** 파일 용도. 경로마다 받는 용도가 정해져 있다(판매자는 상품 이미지, 회원은 클레임 사진). */
     public enum Purpose {
-        PRODUCT_IMAGE
+        PRODUCT_IMAGE,
+        CLAIM_IMAGE
     }
 
     /** 업로드 내용을 여는 방법. */
