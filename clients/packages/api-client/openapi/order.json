@@ -390,7 +390,7 @@
           },
           "status" : {
             "type" : "string",
-            "enum" : [ "REQUESTED", "APPROVED", "REJECTED", "COMPLETED" ]
+            "enum" : [ "REQUESTED", "APPROVED", "REJECTED", "MEDIATING", "COMPLETED" ]
           }
         }
       },

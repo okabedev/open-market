@@ -33,6 +33,46 @@
         }
       }
     },
+    "/v1/admin/refunds/{refundId}/retry" : {
+      "post" : {
+        "tags" : [ "admin-payment-command-controller" ],
+        "operationId" : "retryRefund",
+        "parameters" : [ {
+          "name" : "refundId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        }
+      }
+    },
+    "/v1/admin/payments/{paymentId}/cancel-retry" : {
+      "post" : {
+        "tags" : [ "admin-payment-command-controller" ],
+        "operationId" : "retryCancel",
+        "parameters" : [ {
+          "name" : "paymentId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        }
+      }
+    },
     "/v1/payments/orders/{orderId}" : {
       "get" : {
         "tags" : [ "payment-query-controller" ],
@@ -53,6 +93,86 @@
               "application/json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/PaymentView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/refunds/failed" : {
+      "get" : {
+        "tags" : [ "admin-payment-query-controller" ],
+        "operationId" : "failedRefunds",
+        "parameters" : [ {
+          "name" : "page",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 0,
+            "minimum" : 0
+          }
+        }, {
+          "name" : "size",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 20,
+            "maximum" : 100,
+            "minimum" : 1
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PageViewFailedRefundView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/payments/cancel-failures" : {
+      "get" : {
+        "tags" : [ "admin-payment-query-controller" ],
+        "operationId" : "cancelFailures",
+        "parameters" : [ {
+          "name" : "page",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 0,
+            "minimum" : 0
+          }
+        }, {
+          "name" : "size",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 20,
+            "maximum" : 100,
+            "minimum" : 1
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PageViewCancelFailureView"
                 }
               }
             }
@@ -121,6 +241,120 @@
           "amount" : {
             "type" : "integer",
             "format" : "int64"
+          }
+        }
+      },
+      "FailedRefundView" : {
+        "type" : "object",
+        "properties" : {
+          "refundId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "orderId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "claimId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "sellerOrderId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "amount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "failureCode" : {
+            "type" : "string"
+          },
+          "attempt" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "requestedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "failedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "PageViewFailedRefundView" : {
+        "type" : "object",
+        "properties" : {
+          "items" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/FailedRefundView"
+            }
+          },
+          "totalCount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "page" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "size" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }
+      },
+      "CancelFailureView" : {
+        "type" : "object",
+        "properties" : {
+          "paymentId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "orderId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "amount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "cancelFailureCode" : {
+            "type" : "string"
+          },
+          "cancelAttempt" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "cancelRequestedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "PageViewCancelFailureView" : {
+        "type" : "object",
+        "properties" : {
+          "items" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/CancelFailureView"
+            }
+          },
+          "totalCount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "page" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "size" : {
+            "type" : "integer",
+            "format" : "int32"
           }
         }
       }

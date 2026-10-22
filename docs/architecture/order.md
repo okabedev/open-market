@@ -122,11 +122,11 @@ order는 `payment.payment`에서 결제 결과를 받는다([payment.md](payment
 |---|---|---|
 | `REQUESTED` | 요청됨 | `ClaimRequested` |
 | `APPROVED` | 승인됨(환불·재발송 대기) | `ClaimApproved` |
-| `REJECTED` | 거부됨 | `ClaimRejected` |
+| `REJECTED` | 거부됨 | `ClaimRejected`(판매자 거부, 중재 거부 확정) |
+| `MEDIATING` | 중재 중 | `ClaimMediationRequested` |
 | `COMPLETED` | 완료 | `ClaimCompleted` |
 
 - 클레임 이벤트는 하위 주문 ID가 키라 한 하위 주문 안에서 순서대로 온다. 다른 클레임 ID의 이벤트가 오면 새 클레임으로 바꾼다. 같은 클레임에서 같은 상태이거나 이미 `COMPLETED`면 넘긴다.
-- 중재(`MEDIATING`)는 중재 PR에서 더한다.
 - 리스너는 배송 이벤트와 같이 처리 기록으로 거르고 주문 행을 잠그고 바꾼다. 리스너 이름은 `order.claim-<상태>`다(예: `order.claim-approved`). 이벤트를 내지 않는다.
 
 ### 만료와 결제 전 취소

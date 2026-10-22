@@ -64,6 +64,10 @@ public class Payment {
     @Column(name = "cancel_failure_code")
     private @Nullable String cancelFailureCode;
 
+    // 보상 취소의 토스 시도 번호. 관리자 재시도가 올린다.
+    @Column(name = "cancel_attempt", nullable = false)
+    private int cancelAttempt = 1;
+
     // 환불(부분취소)로 돌려준 금액의 합(원).
     @Column(name = "refunded_amount", nullable = false)
     private long refundedAmount;
@@ -228,6 +232,26 @@ public class Payment {
         return Transition.APPLIED;
     }
 
+    /**
+     * 관리자 보상 취소 재시도(docs/architecture/payment.md "관리자 재시도"). 토스가 거절한 취소의 실패 코드를 지우고 시도 번호를 올려 취소
+     * 작업이 새 {@code Idempotency-Key}로 다시 부르게 한다.
+     *
+     * @return 재시도를 시작하면 {@code APPLIED}, 이미 취소를 기다리면 {@code ALREADY}
+     * @throws PaymentNotRetryableException 다시 시도할 보상 취소가 없다
+     */
+    public Transition retryCancel(Instant now) {
+        if (needsGatewayCancel()) {
+            return Transition.ALREADY;
+        }
+        if (status != PaymentStatus.APPROVED || !isCancelRequested() || cancelFailureCode == null) {
+            throw new PaymentNotRetryableException();
+        }
+        cancelFailureCode = null;
+        cancelAttempt++;
+        updatedAt = now;
+        return Transition.APPLIED;
+    }
+
     /** 환불(부분취소)할 수 있는가. 승인됐거나 일부를 환불했고, 결제 전 취소(보상 취소) 대상이 아니다. */
     public boolean isRefundable() {
         return (status == PaymentStatus.APPROVED || status == PaymentStatus.PARTIALLY_CANCELLED)
@@ -268,9 +292,12 @@ public class Payment {
         return id + "-" + confirmAttempt;
     }
 
-    /** 토스 전액 취소의 {@code Idempotency-Key}. 전액 취소는 결제마다 한 번이라 결제 ID로 만든다. */
+    /**
+     * 토스 전액 취소의 {@code Idempotency-Key}. 결제 ID로 만들고, 관리자 재시도로 시도 번호가 2 이상이면 번호를 붙인다. 같은 키로 다시 보내면
+     * 토스가 처음 거절을 그대로 돌려주기 때문이다.
+     */
     public String gatewayCancelIdempotencyKey() {
-        return id + "-cancel";
+        return cancelAttempt == 1 ? id + "-cancel" : id + "-cancel-" + cancelAttempt;
     }
 
     public UUID id() {

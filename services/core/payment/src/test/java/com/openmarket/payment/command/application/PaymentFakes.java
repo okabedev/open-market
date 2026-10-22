@@ -76,6 +76,11 @@ final class PaymentFakes {
         }
 
         @Override
+        public Optional<Refund> findById(UUID id) {
+            return Optional.ofNullable(rows.get(id));
+        }
+
+        @Override
         public Optional<Refund> findForUpdateById(UUID id) {
             return Optional.ofNullable(rows.get(id));
         }

@@ -5,6 +5,7 @@ import static com.openmarket.fulfillment.command.domain.QPurchaseConfirmation.pu
 import static com.openmarket.fulfillment.command.domain.QShipment.shipment;
 
 import com.openmarket.fulfillment.command.domain.QClaimFile;
+import com.openmarket.fulfillment.command.domain.QShipment;
 import com.openmarket.fulfillment.query.dto.BuyerFulfillmentView;
 import com.openmarket.fulfillment.query.dto.Carrier;
 import com.openmarket.fulfillment.query.dto.ClaimReason;
@@ -13,6 +14,8 @@ import com.openmarket.fulfillment.query.dto.ClaimType;
 import com.openmarket.fulfillment.query.dto.ClaimView;
 import com.openmarket.fulfillment.query.dto.ConfirmMode;
 import com.openmarket.fulfillment.query.dto.Fault;
+import com.openmarket.fulfillment.query.dto.MediationClaimView;
+import com.openmarket.fulfillment.query.dto.PageView;
 import com.openmarket.fulfillment.query.dto.SellerFulfillmentView;
 import com.openmarket.fulfillment.query.dto.ShipmentStatus;
 import com.openmarket.fulfillment.query.dto.ShipmentView;
@@ -92,12 +95,68 @@ public class FulfillmentQueryDao {
     }
 
     private List<ClaimView> claims(UUID sellerOrderId) {
+        return claimViews(claim.sellerOrderId.eq(sellerOrderId)).stream()
+                .map(row -> row.view)
+                .toList();
+    }
+
+    /** 중재 중인 클레임. 중재 요청이 오래된 순(claim_mediating_idx), 쪽 번호. */
+    public PageView<MediationClaimView> findMediatingClaims(int page, int size) {
+        QShipment target = new QShipment("target");
+        Predicate mediating = claim.status.stringValue().eq(ClaimStatus.MEDIATING.name());
+        List<UUID> ids =
+                query.select(claim.id)
+                        .from(claim)
+                        .where(mediating)
+                        .orderBy(claim.mediationRequestedAt.asc(), claim.id.asc())
+                        .offset((long) page * size)
+                        .limit(size)
+                        .fetch();
+        Long total = query.select(claim.count()).from(claim).where(mediating).fetchOne();
+        if (ids.isEmpty()) {
+            return new PageView<>(List.of(), total == null ? 0 : total, page, size);
+        }
+        Map<UUID, ClaimRow> rows = new HashMap<>();
+        claimViews(claim.id.in(ids)).forEach(row -> rows.put(row.view.claimId(), row));
+        Map<UUID, Long> amounts = new HashMap<>();
+        query.select(claim.id, target.amount)
+                .from(claim)
+                .join(target)
+                .on(target.id.eq(claim.shipmentId))
+                .where(claim.id.in(ids))
+                .fetch()
+                .forEach(
+                        row ->
+                                amounts.put(
+                                        Objects.requireNonNull(row.get(claim.id)),
+                                        Objects.requireNonNull(row.get(target.amount))));
+        List<MediationClaimView> items =
+                ids.stream()
+                        .map(rows::get)
+                        .map(
+                                row ->
+                                        new MediationClaimView(
+                                                row.orderId,
+                                                row.sellerOrderId,
+                                                row.sellerId,
+                                                row.buyerId,
+                                                Objects.requireNonNull(
+                                                        amounts.get(row.view.claimId())),
+                                                Objects.requireNonNull(
+                                                        row.view.mediationRequestedAt()),
+                                                row.view))
+                        .toList();
+        return new PageView<>(items, total == null ? 0 : total, page, size);
+    }
+
+    /** 조건에 맞는 클레임을 신청 순서로 읽는다. 사진은 따로 한 번 읽어 붙인다. */
+    private List<ClaimRow> claimViews(Predicate where) {
         QClaimFile file = new QClaimFile("file");
         Map<UUID, List<UUID>> files = new HashMap<>();
         query.select(claim.id, file.fileId)
                 .from(claim)
                 .join(claim.files, file)
-                .where(claim.sellerOrderId.eq(sellerOrderId))
+                .where(where)
                 .orderBy(file.position.asc())
                 .fetch()
                 .forEach(
@@ -118,38 +177,59 @@ public class FulfillmentQueryDao {
                         claim.refundAmount,
                         claim.refundFailureCode,
                         claim.rejectionReason,
+                        claim.mediationReason,
                         claim.requestedAt,
                         claim.approvedAt,
                         claim.rejectedAt,
-                        claim.completedAt)
+                        claim.mediationRequestedAt,
+                        claim.completedAt,
+                        claim.orderId,
+                        claim.sellerOrderId,
+                        claim.sellerId,
+                        claim.buyerId)
                 .from(claim)
-                .where(claim.sellerOrderId.eq(sellerOrderId))
+                .where(where)
                 .orderBy(claim.requestedAt.asc(), claim.id.asc())
                 .fetch()
                 .stream()
                 .map(
                         row -> {
                             UUID id = Objects.requireNonNull(row.get(claim.id));
-                            return new ClaimView(
-                                    id,
-                                    ClaimType.valueOf(Objects.requireNonNull(row.get(CLAIM_TYPE))),
-                                    ClaimStatus.valueOf(
-                                            Objects.requireNonNull(row.get(CLAIM_STATUS))),
-                                    ClaimReason.valueOf(Objects.requireNonNull(row.get(REASON))),
-                                    Fault.valueOf(Objects.requireNonNull(row.get(FAULT))),
-                                    row.get(claim.description),
-                                    List.copyOf(files.getOrDefault(id, List.of())),
-                                    row.get(claim.restock),
-                                    Objects.requireNonNull(row.get(claim.refundAmount)),
-                                    row.get(claim.refundFailureCode),
-                                    row.get(claim.rejectionReason),
-                                    Objects.requireNonNull(row.get(claim.requestedAt)),
-                                    row.get(claim.approvedAt),
-                                    row.get(claim.rejectedAt),
-                                    row.get(claim.completedAt));
+                            ClaimView view =
+                                    new ClaimView(
+                                            id,
+                                            ClaimType.valueOf(
+                                                    Objects.requireNonNull(row.get(CLAIM_TYPE))),
+                                            ClaimStatus.valueOf(
+                                                    Objects.requireNonNull(row.get(CLAIM_STATUS))),
+                                            ClaimReason.valueOf(
+                                                    Objects.requireNonNull(row.get(REASON))),
+                                            Fault.valueOf(Objects.requireNonNull(row.get(FAULT))),
+                                            row.get(claim.description),
+                                            List.copyOf(files.getOrDefault(id, List.of())),
+                                            row.get(claim.restock),
+                                            Objects.requireNonNull(row.get(claim.refundAmount)),
+                                            row.get(claim.refundFailureCode),
+                                            row.get(claim.rejectionReason),
+                                            row.get(claim.mediationReason),
+                                            Objects.requireNonNull(row.get(claim.requestedAt)),
+                                            row.get(claim.approvedAt),
+                                            row.get(claim.rejectedAt),
+                                            row.get(claim.mediationRequestedAt),
+                                            row.get(claim.completedAt));
+                            return new ClaimRow(
+                                    view,
+                                    Objects.requireNonNull(row.get(claim.orderId)),
+                                    Objects.requireNonNull(row.get(claim.sellerOrderId)),
+                                    Objects.requireNonNull(row.get(claim.sellerId)),
+                                    Objects.requireNonNull(row.get(claim.buyerId)));
                         })
                 .toList();
     }
+
+    /** 클레임 조회 결과와 관리자 목록에만 쓰는 당사자. */
+    private record ClaimRow(
+            ClaimView view, UUID orderId, UUID sellerOrderId, UUID sellerId, UUID buyerId) {}
 
     private List<Tuple> shipments(UUID sellerOrderId, Predicate owner) {
         return query.select(

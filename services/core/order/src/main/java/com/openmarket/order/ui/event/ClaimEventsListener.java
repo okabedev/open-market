@@ -25,6 +25,7 @@ class ClaimEventsListener {
                     "ClaimRequested", ApplyClaimCommand.Status.REQUESTED,
                     "ClaimApproved", ApplyClaimCommand.Status.APPROVED,
                     "ClaimRejected", ApplyClaimCommand.Status.REJECTED,
+                    "ClaimMediationRequested", ApplyClaimCommand.Status.MEDIATING,
                     "ClaimCompleted", ApplyClaimCommand.Status.COMPLETED);
 
     private final IdempotentEventProcessor processor;

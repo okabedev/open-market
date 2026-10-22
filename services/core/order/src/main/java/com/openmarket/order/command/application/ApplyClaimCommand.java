@@ -18,6 +18,7 @@ public record ApplyClaimCommand(
         REQUESTED,
         APPROVED,
         REJECTED,
+        MEDIATING,
         COMPLETED
     }
 }

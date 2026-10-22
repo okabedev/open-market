@@ -188,18 +188,18 @@
 
 ## M4 — 배송·클레임
 - [x] 설계: 배송·클레임 상태와 환불 금액([fulfillment.md](architecture/fulfillment.md)), 이벤트 필드([context-map.md](architecture/context-map.md))
-- [ ] fulfillment: 발주 확인, 발송, 배송 시뮬레이터, 구매확정(자동 포함, ShedLock)
+- [x] fulfillment: 발주 확인, 발송, 배송 시뮬레이터, 구매확정(자동 포함, ShedLock)
   - [x] 골격, `OrderPaid` → 배송 생성, 판매자 배송 조회. order는 `OrderPaid`에 주문 항목 ID·상품명·옵션을 더한다
   - [x] 발주 확인, 발송(송장), 배송 시뮬레이터. order의 하위 주문 진행 상태
   - [x] 구매확정(구매자·자동). order의 진행 중 주문 정의 갱신(ACC-4)
-- [ ] 클레임: 발송 전 취소, 반품, 교환, 거부·중재
+- [x] 클레임: 발송 전 취소, 반품, 교환, 거부·중재
   - [x] 발송 전 취소(CLM-1)와 catalog 재입고. order의 하위 주문 클레임과 진행 중 주문
   - [x] file: 클레임 사진(`CLAIM_IMAGE`, 비공개)
   - [x] 반품·교환 신청, 판매자 승인(재입고 선택)·거부, 교환 재발송(CLM-2, CLM-3)
-  - [ ] 중재(관리자 결정)
-- [ ] payment: 부분취소 환불(PAY-2)
+  - [x] 중재(관리자 결정)
+- [x] payment: 부분취소 환불(PAY-2)
   - [x] 환불(`Refund`, 환불 작업, 원장), `RefundCompleted`·`RefundFailed`
-  - [ ] 환불 실패와 보상 취소 거절(`cancel_failure_code`)의 관리자 재시도
+  - [x] 환불 실패와 보상 취소 거절(`cancel_failure_code`)의 관리자 재시도
 - [ ] notification: 발송, 클레임 결과 알림, 인앱 알림
 - [ ] 판매자 주문·배송·클레임 화면, 구매자 배송 조회·클레임 화면
   - [ ] seller 발주 확인·발송·클레임 처리

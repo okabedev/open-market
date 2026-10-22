@@ -149,6 +149,7 @@ E2E는 토스페이먼츠 대신 가짜 PG(`infra/fake-pg`)로 결제한다([ADR
   |---|---|
   | `PUT /control/orders/{orderId}` `{"confirmDelayMs": 15000}` | 그 주문의 승인 응답을 늦춘다. 승인은 요청을 받은 때 끝나므로(조회하면 `DONE`) 만료와 승인의 경합, 응답 타임아웃을 재현한다 |
   | `PUT /control/orders/{orderId}` `{"confirmError": {"status": 403, "code": "REJECT_CARD_PAYMENT", "message": "…"}}` | 그 주문의 승인을 그 오류로 거절한다(결제는 `ABORTED`) |
+  | `PUT /control/orders/{orderId}` `{"cancelError": {"status": 403, "code": "NOT_CANCELABLE_PAYMENT", "message": "…"}}` | 그 주문의 취소·부분취소를 그 오류로 거절한다. 관리자 재시도(환불, 보상 취소)를 재현한다. `{}`로 다시 보내면 설정이 지워진다 |
   | `GET /control/orders/{orderId}` | 그 주문의 결제 객체 목록과 승인·취소 요청 수(`confirmRequests`, `cancelRequests`) |
   | `DELETE /control` | 결제와 설정을 모두 지운다 |
 - 상태는 메모리에만 있다. 컨테이너를 다시 띄우면 지워진다.

@@ -180,7 +180,7 @@ export interface components {
             /** @enum {string} */
             type?: "CANCEL" | "RETURN" | "EXCHANGE";
             /** @enum {string} */
-            status?: "REQUESTED" | "APPROVED" | "REJECTED" | "COMPLETED";
+            status?: "REQUESTED" | "APPROVED" | "REJECTED" | "MEDIATING" | "COMPLETED";
         };
         SellerOrderSummaryView: {
             /** Format: uuid */

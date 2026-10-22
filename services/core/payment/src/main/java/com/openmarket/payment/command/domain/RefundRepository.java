@@ -11,6 +11,8 @@ public interface RefundRepository {
 
     boolean existsByClaimId(UUID claimId);
 
+    Optional<Refund> findById(UUID id);
+
     /** 환불 행을 잠그고 읽는다(환불 작업의 반영). */
     Optional<Refund> findForUpdateById(UUID id);
 

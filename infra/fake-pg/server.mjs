@@ -1,7 +1,7 @@
 // 가짜 PG(ADR 0018). 마일스톤 E2E에서 토스페이먼츠 대신 쓴다. Node 표준 라이브러리만 쓰고 상태는 메모리에 둔다.
 // - 브라우저: SDK v2 스크립트(GET /v2/standard)와 결제 인증 화면(GET /checkout → 승인·취소 버튼)
 // - payment 서비스: 토스 API 승인·조회·취소(/v1/payments/...). 응답 형식은 payment가 읽는 필드를 실제 토스 응답에 맞췄다
-// - 시나리오: 제어 API(/control/...)로 주문별 승인 지연과 거절을 정하고, 승인·취소 요청을 확인한다
+// - 시나리오: 제어 API(/control/...)로 주문별 승인 지연과 승인·취소 거절을 정하고, 승인·취소 요청을 확인한다
 // 사용법은 docs/dev-setup.md "E2E". 테스트는 레포 루트에서 `node --test infra/fake-pg/*.test.mjs`.
 import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
@@ -135,6 +135,10 @@ export function createFakePg() {
       if (!payment) {
         return error(404, "NOT_FOUND_PAYMENT", "존재하지 않는 결제 정보 입니다.");
       }
+      const { cancelError } = settings.get(payment.orderId) ?? {};
+      if (cancelError) {
+        return error(cancelError.status, cancelError.code, cancelError.message);
+      }
       if (payment.status === "CANCELED") {
         return error(400, "ALREADY_CANCELED_PAYMENT", "이미 취소된 결제 입니다.");
       }
@@ -180,15 +184,19 @@ export function createFakePg() {
     return response;
   }
 
-  function configure(orderId, { confirmDelayMs, confirmError }) {
+  function configure(orderId, { confirmDelayMs, confirmError, cancelError }) {
     const delayValid = confirmDelayMs === undefined || (Number.isInteger(confirmDelayMs) && confirmDelayMs >= 0);
-    const errorValid =
-      confirmError === undefined ||
-      (Number.isInteger(confirmError.status) && typeof confirmError.code === "string" && typeof confirmError.message === "string");
-    if (!delayValid || !errorValid) {
-      return error(400, "INVALID_SETTINGS", "confirmDelayMs는 0 이상 정수, confirmError는 { status, code, message }다.");
+    const errorValid = (value) =>
+      value === undefined ||
+      (Number.isInteger(value.status) && typeof value.code === "string" && typeof value.message === "string");
+    if (!delayValid || !errorValid(confirmError) || !errorValid(cancelError)) {
+      return error(
+        400,
+        "INVALID_SETTINGS",
+        "confirmDelayMs는 0 이상 정수, confirmError·cancelError는 { status, code, message }다.",
+      );
     }
-    settings.set(orderId, { confirmDelayMs, confirmError });
+    settings.set(orderId, { confirmDelayMs, confirmError, cancelError });
     return { status: 204 };
   }
 

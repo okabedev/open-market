@@ -137,6 +137,38 @@ public class Refund {
         return Transition.APPLIED;
     }
 
+    /**
+     * 관리자 환불 재시도(docs/architecture/payment.md "관리자 재시도"). 환불 요청과 같은 확인을 다시 하고, 통과하면 {@code
+     * REQUESTED}로 돌리고 시도 번호를 올린다. 확인을 통과하지 못하면 {@code FAILED}로 둔다.
+     *
+     * @param payment 주문의 결제. 결제가 없으면 비어 있다
+     * @param available 결제의 남은 금액에서 진행 중인 환불 금액을 뺀 금액(원)
+     * @return 재시도를 시작하면 {@code APPLIED}, 이미 {@code REQUESTED}면 {@code ALREADY}
+     * @throws PaymentNotRetryableException 끝난 환불이다
+     * @throws PaymentNotRefundableException 결제가 없거나 환불할 수 없는 상태다
+     * @throws RefundAmountExceededException 남은 금액보다 크다
+     */
+    public Transition retry(@Nullable Payment payment, long available, Instant now) {
+        if (status == RefundStatus.REQUESTED) {
+            return Transition.ALREADY;
+        }
+        if (status != RefundStatus.FAILED) {
+            throw new PaymentNotRetryableException();
+        }
+        if (payment == null || !payment.isRefundable()) {
+            throw new PaymentNotRefundableException();
+        }
+        if (amount > available) {
+            throw new RefundAmountExceededException();
+        }
+        paymentId = payment.id();
+        status = RefundStatus.REQUESTED;
+        failureCode = null;
+        attempt++;
+        updatedAt = now;
+        return Transition.APPLIED;
+    }
+
     /** 토스 부분취소의 {@code Idempotency-Key}. 같은 시도를 다시 보내도 토스가 한 번만 처리한다. */
     public String gatewayIdempotencyKey() {
         return id + "-" + attempt;

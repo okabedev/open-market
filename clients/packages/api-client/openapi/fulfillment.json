@@ -192,6 +192,86 @@
         }
       }
     },
+    "/v1/claims/{claimId}/mediation" : {
+      "post" : {
+        "tags" : [ "buyer-claim-command-controller" ],
+        "operationId" : "requestMediation",
+        "parameters" : [ {
+          "name" : "claimId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        }
+      }
+    },
+    "/v1/admin/claims/{claimId}/reject" : {
+      "post" : {
+        "tags" : [ "admin-claim-command-controller" ],
+        "operationId" : "reject_1",
+        "parameters" : [ {
+          "name" : "claimId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/RejectMediationRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        }
+      }
+    },
+    "/v1/admin/claims/{claimId}/approve" : {
+      "post" : {
+        "tags" : [ "admin-claim-command-controller" ],
+        "operationId" : "approve_1",
+        "parameters" : [ {
+          "name" : "claimId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ApproveMediationRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        }
+      }
+    },
     "/v1/seller/seller-orders/{sellerOrderId}" : {
       "get" : {
         "tags" : [ "seller-fulfillment-query-controller" ],
@@ -239,6 +319,46 @@
               "application/json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/BuyerFulfillmentView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/claims" : {
+      "get" : {
+        "tags" : [ "admin-claim-query-controller" ],
+        "operationId" : "mediating",
+        "parameters" : [ {
+          "name" : "page",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 0,
+            "minimum" : 0
+          }
+        }, {
+          "name" : "size",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 20,
+            "maximum" : 100,
+            "minimum" : 1
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PageViewMediationClaimView"
                 }
               }
             }
@@ -311,6 +431,25 @@
           }
         }
       },
+      "RejectMediationRequest" : {
+        "type" : "object",
+        "properties" : {
+          "reason" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "reason" ]
+      },
+      "ApproveMediationRequest" : {
+        "type" : "object",
+        "properties" : {
+          "fault" : {
+            "type" : "string",
+            "enum" : [ "BUYER", "SELLER" ]
+          }
+        },
+        "required" : [ "fault" ]
+      },
       "ClaimView" : {
         "type" : "object",
         "properties" : {
@@ -357,6 +496,9 @@
           "rejectionReason" : {
             "type" : "string"
           },
+          "mediationReason" : {
+            "type" : "string"
+          },
           "requestedAt" : {
             "type" : "string",
             "format" : "date-time"
@@ -366,6 +508,10 @@
             "format" : "date-time"
           },
           "rejectedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "mediationRequestedAt" : {
             "type" : "string",
             "format" : "date-time"
           },
@@ -486,6 +632,61 @@
             "items" : {
               "$ref" : "#/components/schemas/ClaimView"
             }
+          }
+        }
+      },
+      "MediationClaimView" : {
+        "type" : "object",
+        "properties" : {
+          "orderId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "sellerOrderId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "sellerId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "buyerId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "amount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "mediationRequestedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "claim" : {
+            "$ref" : "#/components/schemas/ClaimView"
+          }
+        }
+      },
+      "PageViewMediationClaimView" : {
+        "type" : "object",
+        "properties" : {
+          "items" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/MediationClaimView"
+            }
+          },
+          "totalCount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "page" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "size" : {
+            "type" : "integer",
+            "format" : "int32"
           }
         }
       }
