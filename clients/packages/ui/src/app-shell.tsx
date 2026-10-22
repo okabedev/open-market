@@ -12,10 +12,19 @@ type AppShellProps = {
   children: ReactNode;
   /** 머리글과 본문 폭. 관리자 표는 넓게 쓴다 */
   width?: "default" | "wide";
+  /** 계정 앞에 붙는 것(알림 링크) */
+  headerExtra?: ReactNode;
 };
 
 /** 앱 공통 틀: 머리글(앱 이름, 메뉴, 계정)과 본문. 서버 컴포넌트다. */
-export function AppShell({ appName, nav = [], roles, children, width = "default" }: AppShellProps) {
+export function AppShell({
+  appName,
+  nav = [],
+  roles,
+  children,
+  width = "default",
+  headerExtra,
+}: AppShellProps) {
   const container = cn("mx-auto w-full px-4 sm:px-6", width === "wide" ? "max-w-6xl" : "max-w-3xl");
   return (
     <div className="flex min-h-dvh flex-col">
@@ -35,6 +44,7 @@ export function AppShell({ appName, nav = [], roles, children, width = "default"
               </a>
             ))}
           </nav>
+          {headerExtra}
           <AccountBar roles={roles} />
         </div>
       </header>

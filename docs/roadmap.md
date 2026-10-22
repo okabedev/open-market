@@ -206,7 +206,7 @@
 - [ ] 판매자 주문·배송·클레임 화면, 구매자 배송 조회·클레임 화면
   - [x] seller 발주 확인·발송·클레임 처리. order 판매자 목록의 진행 상태·클레임 상태 필터, 클레임 사진 BFF, 첫 시나리오 `m4-seller-fulfillment`
   - [x] shop 배송 조회·구매확정·클레임 신청·중재 요청, "바로 구매"(M3에서 넘어옴). 시나리오 `m4-buyer-fulfillment`, `m4-seller-fulfillment`의 클레임 신청을 화면으로
-  - [ ] admin 중재·환불 재시도, 세 앱의 인앱 알림
+  - [x] admin 중재·환불 재시도, 세 앱의 인앱 알림. 시나리오 `m4-admin-fulfillment`
 - [ ] `packages/bff` Redis Testcontainers 테스트의 간헐 실패(M2에서 넘어옴)
 - [ ] 마일스톤 E2E `infra/e2e/run.sh m4`. 서비스가 늘어난 뒤 메모리 확인(R6)
 - 관련 요구사항: FUL-1~3, CLM-1~3, PAY-2, NTF-1~2, ADM-2(클레임 중재), ACC-4(진행 중 클레임)
