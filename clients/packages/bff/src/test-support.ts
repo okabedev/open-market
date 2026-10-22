@@ -6,14 +6,39 @@ import { RefreshRejectedError } from "./oidc";
 /** compose.yaml의 Redis와 같은 이미지. */
 export const REDIS_IMAGE = "redis:8.10.2-alpine";
 
+const START_ATTEMPTS = 3;
+
+/**
+ * 테스트용 Redis 컨테이너와 클라이언트. 가끔 매핑된 포트에서 Redis가 아닌 서버가 답해 "Unknown RESP type 72"(HTTP 응답의 `H`)로
+ * 실패했다(M2~M4, 재현하지 못했다). 그래서
+ * - 클라이언트는 다시 연결하지 않는다. 컨테이너가 멈춘 뒤 재사용된 포트에 붙지 않는다.
+ * - 연결한 뒤 `PING`으로 Redis인지 확인하고, 아니면 새 컨테이너로 다시 띄운다. 끝내 안 되면 포트를 적어 실패한다.
+ */
 export async function startRedis(): Promise<{
   container: StartedRedisContainer;
   client: RedisClientType;
 }> {
-  const container = await new RedisContainer(REDIS_IMAGE).start();
-  const client = createClient({ url: container.getConnectionUrl() });
-  await client.connect();
-  return { container, client };
+  const failures: string[] = [];
+  for (let attempt = 1; attempt <= START_ATTEMPTS; attempt += 1) {
+    const container = await new RedisContainer(REDIS_IMAGE).start();
+    const url = container.getConnectionUrl();
+    const client: RedisClientType = createClient({ url, socket: { reconnectStrategy: false } });
+    client.on("error", () => {
+      // 연결 오류는 connect·명령의 거절로 드러난다. 리스너가 없으면 프로세스 오류가 된다.
+    });
+    try {
+      await client.connect();
+      if ((await client.ping()) === "PONG") {
+        return { container, client };
+      }
+      failures.push(`${url}: PING 응답이 PONG이 아니다`);
+    } catch (error) {
+      failures.push(`${url}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+    client.destroy();
+    await container.stop();
+  }
+  throw new Error(`Redis 컨테이너에 연결하지 못했다(${START_ATTEMPTS}번):\n${failures.join("\n")}`);
 }
 
 /** 페이로드만 보고 쓰는 테스트용 JWT. 서명은 검증하지 않는다(BFF도 토큰 응답의 클레임을 읽기만 한다). */

@@ -150,8 +150,9 @@ class ClaimImageIntegrationTest {
                                                                         + " = :id")
                                                         .param("id", fileId)
                                                         .query(String.class)
-                                                        .single())
-                                        .isEqualTo("ATTACHED/CLAIM"));
+                                                        // single()의 예외는 단언 실패가 아니라서 다시 시도되지 않는다.
+                                                        .list())
+                                        .containsExactly("ATTACHED/CLAIM"));
 
         expectImage(fileId, FileTokens.seller(seller));
         expectImage(fileId, FileTokens.buyer(buyer));
