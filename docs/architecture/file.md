@@ -4,14 +4,14 @@
 저장 위치는 `FileStoragePort` 뒤에 숨겨서, 나중에 S3 호환 저장소(예: 로컬 MinIO)로 바꿀 수 있게 한다. 이때 공개 제공을 맡는 조회 DAO(`FileContentQueryDao`)도 같이 바꾼다.
 
 ## 흐름
-1. 판매자 브라우저가 BFF Route Handler를 거쳐 `POST /api/file/v1/seller/files`(multipart `file`, `purpose=PRODUCT_IMAGE`)로 올린다. 경로 접두어로 gateway와 file 둘 다 `SELLER` 역할을 검사한다. 클레임 사진은 구매자가 `POST /api/file/v1/files`(`purpose=CLAIM_IMAGE`)로 올린다. 로그인한 회원이면 된다. 경로마다 받는 용도가 정해져 있고, 다른 용도면 400 `COMMON_INVALID_REQUEST`다(판매자 경로는 `PRODUCT_IMAGE`, 회원 경로는 `CLAIM_IMAGE`. 리뷰 사진 `REVIEW_IMAGE`는 M5에서 회원 경로에 더한다).
+1. 판매자 브라우저가 BFF Route Handler를 거쳐 `POST /api/file/v1/seller/files`(multipart `file`, `purpose=PRODUCT_IMAGE`)로 올린다. 경로 접두어로 gateway와 file 둘 다 `SELLER` 역할을 검사한다. 클레임 사진은 구매자가 `POST /api/file/v1/files`(`purpose=CLAIM_IMAGE`)로 올린다. 로그인한 회원이면 된다. 경로마다 받는 용도가 정해져 있고, 다른 용도면 400 `COMMON_INVALID_REQUEST`다(판매자 경로는 `PRODUCT_IMAGE`, 회원 경로는 `CLAIM_IMAGE`와 `REVIEW_IMAGE`. 리뷰 사진은 M5 review PR에서 더한다).
 2. file은 검사를 통과한 파일의 원본과 변형을 저장하고 `StoredFile`(`TEMP`)을 만든다. 응답은 `fileId`, 원본 크기, 변형 목록(이름, URL, 크기)이다. URL은 공개 파일이면 `/files/...`, 비공개 파일이면 `/api/file/v1/files/...`다(아래 "비공개 파일").
 3. 클라이언트는 상품, 리뷰, 클레임을 저장할 때 `fileId`를 넣는다.
 4. 소유 서비스가 발행한 이벤트에 든 `fileId`를 file이 받아 `ATTACHED`로 바꾸고 소유자를 기록한다. 소유자에서 빠진 파일은 `DETACHED`로 바꾼다(아래 "첨부").
 5. 정리 작업(`FileCleanupJob`, 10분마다, ShedLock)이 24시간 지난 `TEMP`와 분리된 지 7일 지난 `DETACHED` 파일을 지운다.
 
 ## 첨부
-상품 이미지(M2)와 클레임 사진(M4)을 붙인다. 리뷰 사진(`ReviewCreated`)은 M5에서 더한다.
+상품 이미지(M2)와 클레임 사진(M4)을 붙인다. 리뷰 사진은 M5에서 더한다. `review.review`의 `ReviewCreated`를 받아 `fileIds`를 리뷰(소유자 `REVIEW`, 리뷰 ID)에 붙인다. 업로더가 리뷰 작성자여야 하고 용도는 `REVIEW_IMAGE`(공개, 변형 `w300`, `w800`)만이다. 리뷰는 고치지 않으므로 처음 한 번만 붙인다.
 - `catalog.product`의 `ProductRegistered`, `ProductPublished`, `ProductChanged`(상품 스냅샷)를 받는다. 스냅샷의 `imageFileIds`가 그 상품에 붙어 있어야 할 파일 전체다.
   - 목록에 있는 파일은 `ATTACHED`로 바꾸고 소유자(상품 ID)를 적는다. `DETACHED`였던 파일도 다시 붙는다(판매자가 뺐던 이미지를 7일 안에 다시 넣은 경우).
   - 그 상품에 붙어 있던 파일 중 목록에 없는 것은 `DETACHED`로 바꾸고 분리 시각을 적는다.

@@ -135,12 +135,12 @@ sequenceDiagram
   O--)F: OrderPaid → 하위 주문별 Shipment 생성
 ```
 
-order는 `OrderPlaced`를 낸 뒤, 쿠폰이 있으면 `StockReserved`와 `CouponReserved` 두 개를 다 받아야 `AWAITING_PAYMENT`로 간다. 어느 쪽이 먼저 와도 된다.
+order는 `OrderPlaced`를 낸 뒤, 쿠폰이 있으면 `StockReserved`와 `CouponReserved` 두 개를 다 받아야 `AWAITING_PAYMENT`로 간다. 어느 쪽이 먼저 와도 된다. 받은 결과는 주문에 따로 기록하고, 둘째 결과를 받은 트랜잭션이 상태를 바꾼다([order.md](order.md) "예약 결과"). 할인 금액은 주문할 때 promotion에 동기로 조회해 고정하고, 예약은 쿠폰이 아직 쓸 수 있는지만 본다([promotion.md](promotion.md)).
 
 ### 실패와 보상
 | 상황 | 처리 |
 |---|---|
-| 재고 부족(`StockReservationFailed`) 또는 쿠폰 사용 불가(`CouponReservationFailed`) | order가 `CANCELLED`로 바꾸고 `OrderCancelled`를 낸다. catalog와 promotion은 받은 예약이 있으면 푼다. 예약이 없으면 아무것도 하지 않는다 |
+| 재고 부족(`StockReservationFailed`) 또는 쿠폰 사용 불가(`CouponReservationFailed`) | order가 `CANCELLED`(사유 `STOCK_UNAVAILABLE` 또는 `COUPON_UNAVAILABLE`)로 바꾸고 `OrderCancelled`를 낸다. 다른 쪽 결과를 기다리지 않는다. catalog와 promotion은 받은 예약이 있으면 푼다. 예약이 없으면 아무것도 하지 않는다. 두 서비스는 `OrderPlaced`를 `OrderCancelled`보다 먼저 받으므로(같은 키), 늦게 예약한 쪽도 이어서 푼다 |
 | 결제 기한(주문 후 15분) 초과 | order의 만료 작업이 결제 전 주문을 취소 사유 `PAYMENT_TIMEOUT`으로 취소하고 `OrderCancelled`를 낸다([order.md](order.md) "만료와 결제 전 취소") |
 | 결제 전 구매자 취소 | order가 취소 사유 `BUYER_CANCELLED`로 취소하고 `OrderCancelled`를 낸다. 이후 처리는 만료와 같다 |
 | `OrderCancelled` 수신 시 payment가 `READY` 또는 `FAILED` | 결제를 `CANCELLED`로 바꾼다. 이후 승인 요청은 거부된다(409 `PAYMENT_CANCELLED`) |
@@ -173,7 +173,7 @@ sequenceDiagram
 - 교환(`EXCHANGE`)은 환불하지 않는다. 회수 검수 후 새 `Shipment`를 만들고, 새 배송을 발송하면 `ClaimCompleted`다.
 - 환불 금액은 fulfillment가 계산해 `ClaimApproved`에 싣는다. 계산식은 [fulfillment.md](fulfillment.md) "환불 금액"에 있다(2026-10-21 확정).
 - `RefundFailed`면 클레임은 `APPROVED`로 남고, 관리자 알림이 간다. 관리자가 payment에서 재시도한다. 보상 취소를 토스가 거절한 결제(`cancel_failure_code`)도 같은 관리자 화면에서 재시도한다.
-- 쿠폰 복원: 결제 전 취소(`OrderCancelled`)는 promotion이 바로 복원한다. 결제 후 클레임으로 주문의 하위 주문이 모두 취소된 경우에도 복원할지는 M5에서 정해 이 문서와 PRM-3에 적는다.
+- 쿠폰 복원: 결제 전 취소(`OrderCancelled`)만 promotion이 복원한다. 결제 후 클레임은 하위 주문이 모두 취소·반품돼도 쿠폰을 돌려주지 않고, 하위 주문에 나눈 할인을 뺀 결제 금액을 환불한다(2026-10-22 결정, [promotion.md](promotion.md) "범위 결정").
 
 ## 시간 기반 작업
 | 작업 | 서비스 | 주기 |
@@ -184,7 +184,7 @@ sequenceDiagram
 | 배송 시뮬레이터(발송 → 배송 중 → 배송 완료) | fulfillment | 1분 |
 | 자동 구매확정(배송 완료 + 7일) | fulfillment | 1시간 |
 | 환불(토스 부분취소, `RefundJob`) | payment | 1분 |
-| 주간 정산 확정 | settlement | 매주 월요일 03:00 |
+| 주간 정산 확정(끝난 지 3시간 지난 정산 기간) | settlement | 매주 월요일 03:00 |
 | 미첨부 파일 삭제 | file | 1시간 |
 | 발행된 outbox 행(7일), `processed_event`(30일) 정리 | 각 서비스(`common-messaging`) | 매일 04:00 |
 | 멱등성 키 기록 정리(24시간) | 각 서비스(`common-web`) | 1시간 |

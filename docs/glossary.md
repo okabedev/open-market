@@ -27,7 +27,9 @@
 | 옵션 조합 | `Sku` | catalog | 주문과 재고의 단위. 가격을 가진다. 상품의 옵션 이름(최대 2개, 예: 색상·사이즈)마다 값 하나씩을 갖는다 |
 | 판매 중지 사유 | `StopReason` | catalog | `SELLER`(판매자가 멈춤, 판매자가 다시 연다), `SELLER_SUSPENDED`(판매자 정지로 멈춤, 정지가 풀리면 다시 열린다) |
 | 상품 리비전 | `revision` | catalog | 상품 이벤트를 낼 때마다 1씩 오르는 번호. 소비자가 오래된 이벤트를 거른다 |
-| 검색 상품 | `SearchProduct` | search | 상품 이벤트와 품절 전환 이벤트로 만든 검색용 문서. 상품 `revision`과 판매 가능 리비전을 따로 두고 각각 커질 때만 반영한다 |
+| 검색 상품 | `SearchProduct` | search | 상품 이벤트와 품절 전환 이벤트, 별점 요약, 판매량으로 만든 검색용 문서. 상품 `revision`, 판매 가능 리비전, 별점 리비전, 판매량 리비전을 따로 두고 각각 커질 때만 반영한다 |
+| 판매량 | `salesCount`, `product_sales` | search | 상품의 구매확정 수량 합. search가 Postgres에서 더하고 결과를 문서에 쓴다 |
+| 자동완성 | `Suggestion` | search | 검색어로 시작하는 단어가 든 판매 중 상품명 목록(SRC-2) |
 | 판매자 사본 | `Seller` | catalog | member의 판매자 이벤트로 만든 사본. 상호와 판매 상태만 갖는다 |
 | 재고 | `Stock` | catalog | SKU별 `onHand`(실재고)와 `reserved`(예약 수량). 판매 가능 수량 = `onHand - reserved` |
 | 재고 예약 | `StockReservation` | catalog | 주문 하나에 대한 예약 묶음. 상태: `RESERVED` → `COMMITTED` 또는 `RELEASED`. 재고가 모자라 예약하지 못한 주문은 `FAILED`로 남긴다 |
@@ -47,7 +49,7 @@
 | 하위 주문 | `SellerOrder` | order | 주문을 판매자별로 나눈 단위. 배송, 클레임, 정산의 기준이다 |
 | 하위 주문 진행 상태 | `SellerOrderProgress` | order | 결제된 하위 주문의 배송 진행. `PAID` → `ACCEPTED` → `SHIPPED` → `IN_TRANSIT` → `DELIVERED` → `CONFIRMED`, 발송 전 취소가 끝나면 `CANCELLED`, 반품이 끝나면 `RETURNED`. fulfillment 배송·클레임 이벤트로 바뀐다 |
 | 주문 항목 | `OrderLine` | order | SKU 하나와 수량, 주문 당시 가격 스냅샷 |
-| 취소 사유 | `CancelReason` | order | 결제 전 주문 취소의 이유. `STOCK_UNAVAILABLE`(재고 예약 실패), `PAYMENT_TIMEOUT`(주문 만료), `BUYER_CANCELLED`(구매자 취소) |
+| 취소 사유 | `CancelReason` | order | 결제 전 주문 취소의 이유. `STOCK_UNAVAILABLE`(재고 예약 실패), `COUPON_UNAVAILABLE`(쿠폰 예약 실패), `PAYMENT_TIMEOUT`(주문 만료), `BUYER_CANCELLED`(구매자 취소) |
 | 주문 만료 | `OrderExpiryJob` | order | 결제 기한(주문 후 15분) 안에 결제하지 않은 주문. 취소 사유 `PAYMENT_TIMEOUT`으로 `CANCELLED`가 된다 |
 | 결제 | `Payment` | payment | 주문 하나당 하나. 상태: `READY` → `IN_PROGRESS`(토스 승인 요청 중) → `APPROVED` → `PARTIALLY_CANCELLED` 또는 `CANCELLED`. 승인 실패 시 `FAILED`(주문 결제 기한 안에 다시 승인할 수 있다), 결제 전 주문 취소 시 `READY` → `CANCELLED` |
 | 결제 키 | `paymentKey` | payment | 토스페이먼츠가 발급한 결제 식별자 |
@@ -73,15 +75,20 @@
 ## 쿠폰·리뷰·정산·알림
 | 용어 | 코드 이름 | 담당 | 설명 |
 |---|---|---|---|
-| 쿠폰 정책 | `Coupon` | promotion | 할인 방식(`FIXED`, `RATE`), 조건, 발급 수량, 유효기간. 발행 주체는 관리자 또는 판매자 |
-| 발급 쿠폰 | `IssuedCoupon` | promotion | 회원이 내려받은 쿠폰 한 장. 상태: `AVAILABLE` → `RESERVED` → `USED`, 복원 시 `AVAILABLE` |
-| 선착순 발급 | `Coupon.issue()` + Redis 카운터 | promotion | 수량과 1인 1매를 Redis에서 원자적으로 확인한다 |
+| 쿠폰 정책 | `Coupon` | promotion | 할인 방식(`FIXED`, `RATE`), 최소 주문 금액, 최대 할인, 발급 수량, 발급 기간, 사용 기한(발급 후 일수). 발행 주체(`CouponIssuer`)는 `PLATFORM`(관리자) 또는 `SELLER`. 만든 뒤 바꾸지 않는다. 상태: `ISSUING` → `STOPPED`(발급 중지) |
+| 플랫폼 쿠폰 | `CouponIssuer.PLATFORM` | promotion | 관리자가 만들고 플랫폼이 부담하는 쿠폰. 주문에 한 장 |
+| 판매자 쿠폰 | `CouponIssuer.SELLER` | promotion | 판매자가 만들고 판매자가 부담하는 쿠폰. 그 판매자의 모든 상품에 쓰고, 하위 주문에 한 장. 정산에서 판매자 쿠폰 부담분으로 뺀다 |
+| 발급 쿠폰 | `IssuedCoupon` | promotion | 회원이 내려받은 쿠폰 한 장. 상태: `AVAILABLE` → `RESERVED` → `USED`, 결제 전 취소로 복원하면 `AVAILABLE`. 만료는 상태가 아니라 만료 시각으로 정한다 |
+| 선착순 발급 | `Coupon.issue()` + Redis Lua 스크립트 | promotion | 수량과 1인 1매를 Redis에서 원자적으로 확인한다. DB 유니크가 1인 1매의 마지막 방어선이다 |
+| 하위 주문 결제 금액 | `paymentAmount` | order | 하위 주문 상품 금액 − 판매자 쿠폰 할인 − 플랫폼 쿠폰 할인 몫. 환불의 기준이다 |
 | 리뷰 | `Review` | review | 주문 항목(`OrderLine`)당 하나. 상태: `VISIBLE` ↔ `HIDDEN` |
-| 리뷰 작성 자격 | `ReviewEligibility` | review | 구매확정 이벤트로 생긴다 |
-| 별점 요약 | `RatingSummary` | review | 상품별 평균 별점과 리뷰 수 |
-| 정산 대상 | `SettlementItem` | settlement | 구매확정된 하위 주문 하나. 판매가, 수수료, 판매자 쿠폰 부담분을 가진다 |
-| 정산 | `Settlement` | settlement | 판매자별 주 단위 묶음. 상태: `PENDING` → `CONFIRMED` → `PAID_OUT` |
-| 수수료율 | `CommissionRate` | settlement | 카테고리별 요율(정산이 소유) |
+| 리뷰 작성 자격 | `ReviewEligibility` | review | 구매확정 이벤트로 주문 항목마다 생긴다. 리뷰를 쓰면 리뷰 ID가 남는다 |
+| 답글 | `ReviewReply` | review | 판매자가 리뷰에 다는 글. 리뷰마다 하나이고 고칠 수 있다 |
+| 별점 요약 | `RatingSummary` | review | 상품별 보이는 리뷰 수, 별점 합, 리비전. 평균은 소수 첫째 자리로 반올림해 보인다 |
+| 정산 대상 | `SettlementItem` | settlement | 구매확정된 하위 주문 하나. 판매 금액, 수수료, 판매자 쿠폰 부담분, 정산 금액, 정산 기간을 가진다. 아직 확정되지 않은 대상이 정산 예정 내역이다 |
+| 정산 기간 | `SettlementPeriod` | settlement | 기준 시각(월요일 0시)에서 설정 길이(기본 7일)씩 나눈 `[시작, 끝)` 구간 |
+| 정산 | `Settlement` | settlement | 판매자·정산 기간마다 하나인 확정 묶음. 상태: `CONFIRMED`(배치 확정) → `PAID_OUT`(지급 완료 기록) |
+| 수수료율 | `CommissionRate` | settlement | 소분류 카테고리별 요율(bp). 없으면 기본 요율(10%) |
 | 알림 | `Notification` | notification | 채널: `EMAIL`, `IN_APP`. 상태: `PENDING` → `SENT`, 다섯 번 실패하면 `FAILED`, 받을 회원이 없거나 이메일을 인증하지 않았으면 `SKIPPED`. 원인 이벤트 ID로 중복을 막는다 |
 | 받는 쪽 | `NotificationAudience` | notification | 인앱 알림을 보이는 앱: `BUYER`(shop), `SELLER`(seller), `ADMIN`(admin, 관리자 전체가 함께 보는 역할 대상 알림) |
 | 알림 읽음 | `NotificationRead` | notification | 회원이 인앱 알림을 읽은 기록. 관리자 알림은 관리자마다 따로 남는다 |

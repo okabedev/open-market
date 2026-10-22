@@ -27,6 +27,7 @@ flowchart LR
   fulfillment --> catalog
   fulfillment --> review
   fulfillment --> settlement
+  fulfillment --> search
   fulfillment --> notification
   fulfillment --> file
   review --> search
@@ -37,7 +38,7 @@ flowchart LR
   payment --> notification
   review --> notification
   order -. 가격·판매 상태 조회 .-> catalog
-  order -. 쿠폰 적용 가능 여부 조회 .-> promotion
+  order -. 쿠폰 할인 계산 .-> promotion
   member -. 진행 중 주문 조회 .-> order
   notification -. 수신자 연락처 조회 .-> member
 ```
@@ -105,19 +106,22 @@ flowchart LR
 |---|---|---|---|
 | `OrderPlaced` | 주문 생성(`PENDING`) | orderId, buyerId, lines(skuId, quantity), issuedCouponIds | catalog(재고 예약), promotion(쿠폰 예약) |
 | `OrderAwaitingPayment` | 예약 모두 성공 | orderId, buyerId, amount(결제 금액), orderName(주문명) | payment(결제 준비) |
-| `OrderPaid` | 결제 승인 반영 | orderId, buyerId, amount, orderName, paidAt(토스 승인 시각), sellerOrders(sellerOrderId, sellerId, amount, lines(orderLineId, skuId, productId, productName, optionValues, categoryId, unitPrice, quantity, amount)), shippingAddress(배송지 스냅샷). 판매자 쿠폰 부담분은 M5에서 더한다 | catalog(예약 확정), promotion(쿠폰 사용 확정), fulfillment(배송 생성), notification |
+| `OrderPaid` | 결제 승인 반영 | orderId, buyerId, amount, orderName, paidAt(토스 승인 시각), sellerOrders(sellerOrderId, sellerId, amount, lines(orderLineId, skuId, productId, productName, optionValues, categoryId, unitPrice, quantity, amount)), shippingAddress(배송지 스냅샷). 하위 주문에 sellerCouponDiscount(판매자 쿠폰 할인), platformCouponDiscount(플랫폼 쿠폰 할인 몫), paymentAmount(하위 주문 결제 금액 = amount − 두 할인) | catalog(예약 확정), promotion(쿠폰 사용 확정), fulfillment(배송 생성), notification |
 | `OrderCancelled` | 결제 전 취소(예약 실패, 만료, 구매자 취소) | orderId, reason | catalog(예약 해제), promotion(쿠폰 복원), payment(결제 무효화·보상 취소) |
 
 - 키는 orderId다. 한 주문의 이벤트는 순서대로 온다.
 - JSON 예시는 `services/core/order/src/test/resources/events/`에 있다. catalog는 `OrderPaid`의 orderId만 읽는다.
 - `OrderPaid` 항목의 orderLineId, productName, optionValues는 M4에 더했다(2026-10-21). fulfillment가 구매확정(리뷰는 주문 항목 단위다)과 판매자·구매자 화면, 알림에 쓴다. 필드를 더하기만 해서 기존 소비자는 그대로다.
-- `OrderCancelled`의 reason은 `STOCK_UNAVAILABLE`, `PAYMENT_TIMEOUT`, `BUYER_CANCELLED`다([order.md](order.md) "취소 사유").
+- `OrderPaid`의 하위 주문 amount는 상품 금액(항목 금액의 합) 그대로이고, 주문 amount는 결제 금액(하위 주문 paymentAmount의 합)이다. 쿠폰 필드는 M5에 더했다(2026-10-22). 쿠폰이 없는 주문은 두 할인이 0이고 paymentAmount가 amount와 같다. 계산은 [promotion.md](promotion.md) "할인 계산".
+- `OrderCancelled`의 reason은 `STOCK_UNAVAILABLE`, `COUPON_UNAVAILABLE`(M5), `PAYMENT_TIMEOUT`, `BUYER_CANCELLED`다([order.md](order.md) "취소 사유").
 
 ### promotion.issued-coupon
 | 이벤트 | 시점 | 주요 필드 | 소비자 |
 |---|---|---|---|
-| `CouponReserved` | 주문 쿠폰 예약 성공 | orderId | order |
-| `CouponReservationFailed` | 사용 불가(만료, 이미 사용) | orderId, reason | order |
+| `CouponReserved` | 주문 쿠폰을 모두 묶었다 | orderId, issuedCouponIds | order |
+| `CouponReservationFailed` | 하나라도 쓸 수 없다(남의 쿠폰, 이미 묶임·사용됨, 만료). 아무것도 묶지 않는다 | orderId, reason(`COUPON_UNAVAILABLE`), issuedCouponIds(쓸 수 없는 쿠폰) | order |
+
+- 키는 orderId다(재고 예약 결과처럼 한 주문의 결과가 순서대로 가게). 처리 규칙은 [promotion.md](promotion.md) "주문 쿠폰 예약·사용·복원".
 
 ### payment.payment
 | 이벤트 | 시점 | 주요 필드 | 소비자 |
@@ -139,9 +143,10 @@ flowchart LR
 | `ShipmentShipped` | 발송 | shipmentId, orderId, sellerOrderId, sellerId, buyerId, carrier(택배사 코드), trackingNumber, shippedAt | order, notification |
 | `ShipmentInTransit` | 배송 중(시뮬레이터) | shipmentId, orderId, sellerOrderId, inTransitAt | order |
 | `ShipmentDelivered` | 배송 완료(시뮬레이터) | shipmentId, orderId, sellerOrderId, buyerId, deliveredAt | order, notification |
-| `PurchaseConfirmed` | 구매확정(구매자·자동) | orderId, sellerOrderId, sellerId, buyerId, mode(`BUYER`, `AUTO`), confirmedAt, lines(orderLineId, productId, categoryId, amount). 판매자 쿠폰 부담분은 M5에서 더한다 | order, review(작성 자격, M5), settlement(정산 대상, M5) |
+| `PurchaseConfirmed` | 구매확정(구매자·자동) | orderId, sellerOrderId, sellerId, buyerId, mode(`BUYER`, `AUTO`), confirmedAt, sellerCouponDiscount, lines(orderLineId, productId, productName, optionValues, categoryId, quantity, amount) | order, review(작성 자격), settlement(정산 대상), search(판매량) |
 
 - 키는 sellerOrderId다. 교환 재발송은 같은 하위 주문의 새 배송(새 shipmentId)이다.
+- `PurchaseConfirmed`의 sellerCouponDiscount와 항목의 productName, optionValues, quantity는 M5에 더했다(2026-10-22). review가 쓸 수 있는 리뷰 목록에, settlement가 판매자 쿠폰 부담분에, search가 판매량에 쓴다. fulfillment는 `OrderPaid`에서 받아 둔 값을 싣는다. 쿠폰 필드가 없는 M5 이전 `OrderPaid`로 만든 배송은 0이다.
 - JSON 예시는 `services/core/fulfillment/src/test/resources/events/`에 있다.
 - 처리 규칙은 [fulfillment.md](fulfillment.md).
 
@@ -164,14 +169,18 @@ flowchart LR
 ### review.review, review.rating-summary
 | 이벤트 | 토픽 | 시점 | 주요 필드 | 소비자 |
 |---|---|---|---|---|
-| `ReviewCreated` | review.review | 작성 | reviewId, productId, 첨부 fileId | file, notification(판매자) |
-| `RatingSummaryChanged` | review.rating-summary | 작성, 숨김 | productId, 평균 별점, 리뷰 수 | search |
+| `ReviewCreated` | review.review | 작성 | reviewId, orderLineId, productId, productName, sellerId, buyerId, rating, fileIds, createdAt | file(사진 첨부), notification(판매자) |
+| `RatingSummaryChanged` | review.rating-summary | 작성, 숨김, 다시 보임 | productId, ratingCount, ratingSum, ratingAverage(리뷰가 없으면 null), revision | search |
+
+- `review.review`의 키는 reviewId, `review.rating-summary`의 키는 productId다. 별점 요약은 바뀐 뒤의 값을 싣고, 소비자는 revision으로 오래된 것을 거른다. 처리 규칙은 [review.md](review.md).
 
 ### settlement.settlement
 | 이벤트 | 시점 | 주요 필드 | 소비자 |
 |---|---|---|---|
-| `SettlementConfirmed` | 주간 배치 확정 | settlementId, sellerId, 기간, 금액 | notification |
-| `SettlementPaidOut` | 지급 처리 | settlementId, sellerId | notification |
+| `SettlementConfirmed` | 배치 확정(판매자·기간마다) | settlementId, sellerId, periodStart, periodEnd, salesAmount, commission, sellerCouponDiscount, amount, confirmedAt | notification(판매자) |
+| `SettlementPaidOut` | 지급 처리 | settlementId, sellerId, amount, paidOutAt | notification(판매자) |
+
+- 키는 settlementId다. 처리 규칙은 [settlement.md](settlement.md).
 
 ## 이벤트에 넣지 않는 것
 - 비밀번호, 토큰, 결제 수단의 상세 정보

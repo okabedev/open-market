@@ -38,10 +38,10 @@ flowchart LR
 | order | 8103 | order | 장바구니, 주문과 하위 주문, 주문 만료([order.md](order.md)) | `Cart`, `Order` |
 | payment | 8104 | payment | 토스 결제 승인·취소·환불, 결제 원장([payment.md](payment.md)) | `Payment` |
 | fulfillment | 8105 | fulfillment | 배송, 구매확정, 클레임([fulfillment.md](fulfillment.md)) | `Shipment`, `Claim` |
-| promotion | 8106 | promotion | 쿠폰 정책, 발급, 예약·사용·복원 | `Coupon`, `IssuedCoupon` |
-| review | 8107 | review | 리뷰, 답글, 별점 요약 | `Review`, `RatingSummary` |
-| settlement | 8108 | settlement | 정산 대상, 주간 정산 배치, 지급 기록, 수수료율 | `SettlementItem`, `Settlement` |
-| search | 8109 | search(멱등 기록 등 공통 테이블만) | Elasticsearch 읽기 모델, 검색, 자동완성([search.md](search.md)) | `SearchProduct`(ES 인덱스 `products`) |
+| promotion | 8106 | promotion | 쿠폰 정책, 선착순 발급, 할인 계산, 예약·사용·복원([promotion.md](promotion.md)) | `Coupon`, `IssuedCoupon` |
+| review | 8107 | review | 리뷰, 답글, 숨김, 별점 요약([review.md](review.md)) | `Review`, `RatingSummary` |
+| settlement | 8108 | settlement | 정산 대상, 주간 정산 배치, 지급 기록, 수수료율([settlement.md](settlement.md)) | `SettlementItem`, `Settlement` |
+| search | 8109 | search(멱등 기록 등 공통 테이블, 판매량 집계) | Elasticsearch 읽기 모델, 검색, 자동완성([search.md](search.md)) | `SearchProduct`(ES 인덱스 `products`) |
 
 ### infra (`services/infra/<name>`)
 | 서비스 | 포트 | 스키마 | 책임 |
@@ -98,4 +98,4 @@ flowchart LR
 ## 관련 문서
 - [context-map.md](context-map.md): 컨텍스트 관계와 이벤트 목록
 - [conventions.md](conventions.md): 패키지 규약과 명명 규칙
-- [data.md](data.md), [messaging.md](messaging.md), [auth.md](auth.md), [member.md](member.md), [catalog.md](catalog.md), [order.md](order.md), [payment.md](payment.md), [fulfillment.md](fulfillment.md), [file.md](file.md), [notification.md](notification.md), [observability.md](observability.md), [risks.md](risks.md)
+- [data.md](data.md), [messaging.md](messaging.md), [auth.md](auth.md), [member.md](member.md), [catalog.md](catalog.md), [order.md](order.md), [payment.md](payment.md), [fulfillment.md](fulfillment.md), [promotion.md](promotion.md), [review.md](review.md), [settlement.md](settlement.md), [file.md](file.md), [notification.md](notification.md), [observability.md](observability.md), [risks.md](risks.md)

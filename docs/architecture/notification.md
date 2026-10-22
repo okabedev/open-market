@@ -79,6 +79,16 @@ API(조회 방식)
 - 중복 방지는 이메일과 같다. 이벤트 하나가 여러 알림을 만들 수 있어(`OrderPaid`) 유니크 제약은 `(원인 이벤트, 채널, 받는 쪽, 받는 사람)`이다.
 - `PaymentFailed`, `PaymentCancelled`는 아직 알리지 않는다. 구매자가 결제 화면에서 바로 결과를 보고, 이벤트에 구매자 ID가 없다.
 
+M5에서 더할 종류(2026-10-22 설계. notification PR에서 위 표에 합친다)
+| 종류 | 받는 쪽 | 원인 이벤트 | 이동 대상 | 이메일 |
+|---|---|---|---|---|
+| `REVIEW_CREATED` | `SELLER` | `ReviewCreated` | `REVIEW` | |
+| `SETTLEMENT_CONFIRMED` | `SELLER` | `SettlementConfirmed` | `SETTLEMENT` | 보냄(NTF-1 정산 확정) |
+| `SETTLEMENT_PAID_OUT` | `SELLER` | `SettlementPaidOut` | `SETTLEMENT` | 보냄 |
+- 새 리뷰는 판매자 클레임 신청처럼 자주 오고 판매자 화면에서 답하는 것이라 인앱만이다. 인앱 문구에 리뷰 본문은 넣지 않는다(상품명과 별점만).
+- `CLAIM_REQUESTED`의 이동 대상을 `CLAIM`(클레임 진행 중 탭)에서 `SELLER_ORDER`(하위 주문 상세)로 바꾼다. `ClaimRequested`에 이미 sellerOrderId가 있다(M4 회고에서 넘어옴).
+- 알림을 더하면 notification 메모리를 다시 잰다(M4 peak 564MB/640MB, [risks.md](risks.md) R6).
+
 화면(세 앱 같음, `packages/ui`의 `NotificationBell`, `NotificationList`). 조회 방식과 관리자 역할 대상 알림의 근거는 [ADR 0019](../adr/0019-in-app-notification-polling.md)
 - 머리글 "알림" 링크에 안 읽은 수를 보인다(10개부터 "9+"). 페이지를 새로 열면 서버(레이아웃)가 읽는다. 클라이언트 이동은 레이아웃을 다시 그리지 않으므로 경로가 바뀔 때, 그리고 머무는 동안 60초마다 앱의 BFF `GET /api/notifications/unread-count`로 다시 읽는다. 알림을 읽는 Server Action은 레이아웃을 재검증한다. notification에 닿지 못하면 0으로 보여 화면이 깨지지 않는다.
 - 알림함 `/notifications`는 최근 순 20개씩, "더 보기"가 다음 커서다. 알림을 열면(폼 POST) 읽음으로 하고 그 화면으로 간다. 갈 화면이 없는 알림은 "읽음"만 한다. "모두 읽음"이 있다.
