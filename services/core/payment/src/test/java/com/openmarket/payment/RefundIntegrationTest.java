@@ -46,7 +46,7 @@ import tools.jackson.databind.node.ObjectNode;
  * fulfillment가 낸 {@code ClaimApproved}(Debezium과 같은 형식) → 환불 요청 → 환불 작업 → 토스 부분취소(WireMock)
  * (docs/architecture/payment.md "환불"). 페이로드는 발행자(fulfillment)의 JSON 예시를 읽어 ID와 금액만 바꾼다.
  */
-@SpringBootTest(properties = "openmarket.payment.refund-interval=1h")
+@SpringBootTest
 @AutoConfigureMockMvc
 @Import({
     PostgresContainerConfiguration.class,

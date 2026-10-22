@@ -107,6 +107,7 @@ class LoginPageIntegrationTest {
     void limitsLoginAttemptsPerIp() throws Exception {
         String email = register();
         RequestPostProcessor ip = ip();
+        awayFromWindowEdge();
         for (int i = 0; i < 8; i++) {
             loginAs("nobody-" + i + email, "wrong-password-1", ip)
                     .andExpect(redirectedUrl("/login?error"));
@@ -118,6 +119,14 @@ class LoginPageIntegrationTest {
         loginAs(email, "password123", ip()).andExpect(redirectedUrl("/"));
         mockMvc.perform(get("/login").queryParam("limited", ""))
                 .andExpect(content().string(Matchers.containsString("잠시 뒤")));
+    }
+
+    /** 한도는 분 단위 고정 창이다. 9번의 요청이 창 경계에 걸치면 새 창에서 다시 세어 한도에 닿지 않으므로, 창이 끝나기 15초 안이면 다음 창까지 기다린다. */
+    private static void awayFromWindowEdge() throws InterruptedException {
+        long intoWindow = System.currentTimeMillis() % 60_000;
+        if (intoWindow > 45_000) {
+            Thread.sleep(60_000 - intoWindow + 100);
+        }
     }
 
     private ResultActions loginAs(String email, String password, RequestPostProcessor ip)

@@ -50,5 +50,9 @@ openmarket:
       secret-key: test_gsk_test
       connect-timeout: 2s
       read-timeout: 10s
-    reconcile-interval: 1m
+    # 예약 작업(재조회, 취소, 환불)은 테스트가 직접 부른다. 컨텍스트가 오래 살아 예약 실행이 테스트 도중 끼어들면 원장과 상태가
+    # 테스트의 기대와 어긋나므로(재조회 기준 0초인 테스트에서 승인 타임아웃 중 재조회) 주기를 길게 둔다.
+    reconcile-interval: 1h
     reconcile-after: 1m
+    cancel-interval: 1h
+    refund-interval: 1h
