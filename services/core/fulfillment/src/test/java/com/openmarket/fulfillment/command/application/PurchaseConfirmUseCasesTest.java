@@ -167,6 +167,26 @@ class PurchaseConfirmUseCasesTest {
     }
 
     @Test
+    @DisplayName("교환 재발송이 있으면 처음 배송은 기한이 지나도 자동 확정하지 않는다")
+    void autoConfirmsOnlyLatestShipment() {
+        deliver();
+        shipments.save(
+                Shipment.ready(
+                        shipment.orderId(),
+                        shipment.sellerOrderId(),
+                        shipment.sellerId(),
+                        shipment.buyerId(),
+                        19_900,
+                        shipment.lines(),
+                        NOW,
+                        NOW));
+
+        autoConfirm.execute(shipment.id());
+
+        assertThat(confirmations.confirmations).isEmpty();
+    }
+
+    @Test
     @DisplayName("확정 기한 전에는 자동 확정하지 않는다")
     void notDueYet() {
         shipment.accept(NOW);

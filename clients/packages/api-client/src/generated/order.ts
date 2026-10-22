@@ -180,7 +180,7 @@ export interface components {
             /** @enum {string} */
             type?: "CANCEL" | "RETURN" | "EXCHANGE";
             /** @enum {string} */
-            status?: "REQUESTED" | "APPROVED" | "COMPLETED";
+            status?: "REQUESTED" | "APPROVED" | "REJECTED" | "COMPLETED";
         };
         SellerOrderSummaryView: {
             /** Format: uuid */
@@ -190,7 +190,7 @@ export interface components {
             /** @enum {string} */
             status?: "PENDING" | "AWAITING_PAYMENT" | "PAID" | "CANCELLED";
             /** @enum {string} */
-            progress?: "PAID" | "ACCEPTED" | "SHIPPED" | "IN_TRANSIT" | "DELIVERED" | "CONFIRMED" | "CANCELLED";
+            progress?: "PAID" | "ACCEPTED" | "SHIPPED" | "IN_TRANSIT" | "DELIVERED" | "CONFIRMED" | "CANCELLED" | "RETURNED";
             claim?: components["schemas"]["SellerOrderClaimView"];
             /** Format: int64 */
             amount?: number;
@@ -234,7 +234,7 @@ export interface components {
             /** @enum {string} */
             status?: "PENDING" | "AWAITING_PAYMENT" | "PAID" | "CANCELLED";
             /** @enum {string} */
-            progress?: "PAID" | "ACCEPTED" | "SHIPPED" | "IN_TRANSIT" | "DELIVERED" | "CONFIRMED" | "CANCELLED";
+            progress?: "PAID" | "ACCEPTED" | "SHIPPED" | "IN_TRANSIT" | "DELIVERED" | "CONFIRMED" | "CANCELLED" | "RETURNED";
             claim?: components["schemas"]["SellerOrderClaimView"];
             /** Format: int64 */
             amount?: number;
@@ -290,7 +290,7 @@ export interface components {
             /** Format: int64 */
             amount?: number;
             /** @enum {string} */
-            progress?: "PAID" | "ACCEPTED" | "SHIPPED" | "IN_TRANSIT" | "DELIVERED" | "CONFIRMED" | "CANCELLED";
+            progress?: "PAID" | "ACCEPTED" | "SHIPPED" | "IN_TRANSIT" | "DELIVERED" | "CONFIRMED" | "CANCELLED" | "RETURNED";
             claim?: components["schemas"]["SellerOrderClaimView"];
             lines?: components["schemas"]["OrderLineView"][];
         };

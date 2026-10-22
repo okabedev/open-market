@@ -248,8 +248,8 @@ public class OrderQueryDao {
     }
 
     /**
-     * 구매자에게 진행 중인 주문이 있는지(ACC-4, docs/architecture/order.md "내부 API"). 결제 전 주문과, 끝나지 않은(구매확정·취소 완료가
-     * 아닌) 하위 주문이 하나라도 있는 결제 완료 주문이 진행 중이다.
+     * 구매자에게 진행 중인 주문이 있는지(ACC-4, docs/architecture/order.md "내부 API"). 결제 전 주문과, 끝나지 않은(구매확정·취소
+     * 완료·반품 완료가 아닌) 하위 주문이 하나라도 있는 결제 완료 주문이 진행 중이다.
      */
     public boolean hasOngoingOrders(UUID buyerId) {
         QSellerOrder open = new QSellerOrder("open");
@@ -283,6 +283,9 @@ public class OrderQueryDao {
                                                                                                                         .name(),
                                                                                                                 SellerOrderProgress
                                                                                                                         .CANCELLED
+                                                                                                                        .name(),
+                                                                                                                SellerOrderProgress
+                                                                                                                        .RETURNED
                                                                                                                         .name())))
                                                                         .exists())))
                         .fetchFirst()

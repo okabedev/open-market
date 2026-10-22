@@ -20,3 +20,8 @@ openmarket:
     purchase-confirm:
       interval: ${FULFILLMENT_CONFIRM_INTERVAL:1h}
       auto-confirm-after: ${FULFILLMENT_AUTO_CONFIRM_AFTER:7d}
+    # 구매자 귀책 반품의 환불에서 빼는 반품 배송비(원, 왕복). 플랫폼 고정값이다(docs/architecture/fulfillment.md "범위 결정").
+    return-shipping-fee: 6000
+    claim:
+      # 반품·교환이 거부된 뒤 구매자가 중재를 요청할 수 있는 기한. 거부하면 자동 구매확정 기한을 거부 시각 + 이 기한까지 늦춘다.
+      mediation-window: ${FULFILLMENT_MEDIATION_WINDOW:7d}

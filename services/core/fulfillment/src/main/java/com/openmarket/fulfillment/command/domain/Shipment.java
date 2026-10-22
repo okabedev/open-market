@@ -129,6 +129,22 @@ public class Shipment {
         return new Shipment(orderId, sellerOrderId, sellerId, buyerId, amount, lines, paidAt, now);
     }
 
+    /** 교환 재발송({@link Claim#reship}). 대상 배송과 같은 항목·금액의 새 배송이고 교환 클레임을 가리킨다. */
+    static Shipment reship(Shipment target, UUID claimId, Instant now) {
+        Shipment shipment =
+                new Shipment(
+                        target.orderId,
+                        target.sellerOrderId,
+                        target.sellerId,
+                        target.buyerId,
+                        target.amount,
+                        target.lines.stream().map(ShipmentLine::copy).toList(),
+                        target.paidAt,
+                        now);
+        shipment.claimId = claimId;
+        return shipment;
+    }
+
     /** 발주 확인(FUL-1). {@code READY}에서만 한다. 이미 {@code ACCEPTED}면 그대로다. */
     public Transition accept(Instant now) {
         if (status == ShipmentStatus.ACCEPTED) {
@@ -187,6 +203,13 @@ public class Shipment {
         return true;
     }
 
+    /** 자동 구매확정 기한을 {@code until}까지 늦춘다(반품·교환 거부 뒤 중재 요청 기한). 기한이 없거나 이미 더 늦으면 그대로다. */
+    public void extendConfirmDue(Instant until) {
+        if (confirmDueAt != null && confirmDueAt.isBefore(until)) {
+            confirmDueAt = until;
+        }
+    }
+
     /** 발송 전 취소({@link Claim#cancel}). {@code READY}, {@code ACCEPTED}에서만 한다. */
     void cancel(Instant now) {
         if (status != ShipmentStatus.READY && status != ShipmentStatus.ACCEPTED) {
@@ -214,6 +237,11 @@ public class Shipment {
 
     public UUID orderId() {
         return orderId;
+    }
+
+    /** 교환 재발송이면 그 교환 클레임. 결제로 만든 첫 배송은 비어 있다. */
+    public @Nullable UUID claimId() {
+        return claimId;
     }
 
     public UUID sellerOrderId() {

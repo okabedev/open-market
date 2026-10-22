@@ -26,10 +26,10 @@ public record ClaimCompleted(
 
     public static final String TYPE = "ClaimCompleted";
 
-    /** 끝난 클레임과 대상 배송으로 만든다. 발송 전 취소는 배송 항목 전부를 SKU별로 합쳐 재입고한다. */
+    /** 끝난 클레임과 대상 배송으로 만든다. 발송 전 취소와 재입고를 고른 반품은 배송 항목 전부를 SKU별로 합쳐 재입고한다. */
     public static ClaimCompleted of(Claim claim, Shipment shipment) {
         Map<UUID, Integer> quantities = new LinkedHashMap<>();
-        if (claim.type() == ClaimType.CANCEL) {
+        if (claim.type() == ClaimType.CANCEL || Boolean.TRUE.equals(claim.restock())) {
             shipment.lines()
                     .forEach(line -> quantities.merge(line.skuId(), line.quantity(), Integer::sum));
         }

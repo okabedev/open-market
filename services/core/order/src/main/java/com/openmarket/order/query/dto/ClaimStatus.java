@@ -4,5 +4,6 @@ package com.openmarket.order.query.dto;
 public enum ClaimStatus {
     REQUESTED,
     APPROVED,
+    REJECTED,
     COMPLETED
 }

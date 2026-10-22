@@ -107,9 +107,11 @@ order는 `payment.payment`에서 결제 결과를 받는다([payment.md](payment
 | `DELIVERED` | 배송 완료 | `ShipmentDelivered` |
 | `CONFIRMED` | 구매확정 | `PurchaseConfirmed` |
 | `CANCELLED` | 취소 완료 | 발송 전 취소 클레임의 `ClaimCompleted`(환불 완료) |
+| `RETURNED` | 반품 완료 | 반품 클레임의 `ClaimCompleted`(환불 완료) |
 
 - 결제 전 주문의 하위 주문은 진행 상태가 없다(`null`). 화면은 주문 상태를 보여 준다.
-- 앞으로만 간다. 지금보다 앞이거나 같은 단계의 이벤트(재처리, 늦게 온 이벤트)는 넘긴다. `CANCELLED`는 끝 상태라 그 뒤에 온 배송 이벤트도 넘긴다.
+- 앞으로만 간다. 지금보다 앞이거나 같은 단계의 이벤트(재처리, 늦게 온 이벤트)는 넘긴다. `CANCELLED`, `RETURNED`는 끝 상태라 그 뒤에 온 배송 이벤트도 넘긴다.
+- 교환 재발송의 배송 이벤트(발주 확인, 발송 등)는 이미 지난 단계라 진행 상태를 바꾸지 않는다. 진행 상태는 `DELIVERED`로 남고, 교환 진행은 하위 주문 클레임으로 보여 준다.
 - 하위 주문 하나가 취소돼도 주문 상태는 `PAID` 그대로다. 주문 상태는 결제까지의 상태다.
 - 리스너는 처리 기록으로 같은 이벤트를 한 번만 처리하고, 주문 행을 잠그고 바꾼다. 리스너 이름은 `order.shipment-<단계>`다(예: `order.shipment-accepted`). order가 모르는 주문·하위 주문이면 경고 로그만 남긴다.
 - 진행 상태를 바꿔도 이벤트를 내지 않는다.
@@ -120,10 +122,11 @@ order는 `payment.payment`에서 결제 결과를 받는다([payment.md](payment
 |---|---|---|
 | `REQUESTED` | 요청됨 | `ClaimRequested` |
 | `APPROVED` | 승인됨(환불·재발송 대기) | `ClaimApproved` |
+| `REJECTED` | 거부됨 | `ClaimRejected` |
 | `COMPLETED` | 완료 | `ClaimCompleted` |
 
 - 클레임 이벤트는 하위 주문 ID가 키라 한 하위 주문 안에서 순서대로 온다. 다른 클레임 ID의 이벤트가 오면 새 클레임으로 바꾼다. 같은 클레임에서 같은 상태이거나 이미 `COMPLETED`면 넘긴다.
-- 거부와 중재(`REJECTED`, `MEDIATING`)는 반품·교환 PR에서 더한다.
+- 중재(`MEDIATING`)는 중재 PR에서 더한다.
 - 리스너는 배송 이벤트와 같이 처리 기록으로 거르고 주문 행을 잠그고 바꾼다. 리스너 이름은 `order.claim-<상태>`다(예: `order.claim-approved`). 이벤트를 내지 않는다.
 
 ### 만료와 결제 전 취소
@@ -164,8 +167,8 @@ order는 `payment.payment`에서 결제 결과를 받는다([payment.md](payment
 |---|---|---|
 | GET | `/internal/v1/buyers/{buyerId}/ongoing-orders` | 구매자에게 진행 중인 주문이 있는지(`{hasOngoingOrders}`). member 탈퇴(ACC-4)가 부른다([member.md](member.md) "탈퇴") |
 
-- 진행 중인 주문은 결제 전(`PENDING`, `AWAITING_PAYMENT`) 주문과, 끝나지 않은 하위 주문이 하나라도 있는 결제 완료 주문이다. 하위 주문은 진행 상태가 `CONFIRMED`(구매확정)나 `CANCELLED`(취소 완료)면 끝난 것이다. 결제 전 주문은 결제가 진행 중일 수 있다. 취소된 주문과 하위 주문이 모두 끝난 주문은 끝난 주문이다(2026-10-22, M4).
-- 진행 중인 클레임이 있는 하위 주문은 진행 상태가 끝 상태가 아니므로 진행 중이다. 발송 전 취소는 환불이 끝나야(`ClaimCompleted`) `CANCELLED`가 된다.
+- 진행 중인 주문은 결제 전(`PENDING`, `AWAITING_PAYMENT`) 주문과, 끝나지 않은 하위 주문이 하나라도 있는 결제 완료 주문이다. 하위 주문은 진행 상태가 `CONFIRMED`(구매확정), `CANCELLED`(취소 완료), `RETURNED`(반품 완료)면 끝난 것이다. 결제 전 주문은 결제가 진행 중일 수 있다. 취소된 주문과 하위 주문이 모두 끝난 주문은 끝난 주문이다(2026-10-22, M4).
+- 진행 중인 클레임이 있는 하위 주문은 진행 상태가 끝 상태가 아니므로 진행 중이다. 발송 전 취소와 반품은 환불이 끝나야(`ClaimCompleted`) `CANCELLED`, `RETURNED`가 된다.
 
 ## catalog 조회
 order는 catalog 내부 API `GET /internal/v1/skus`로 SKU의 상품명, 판매 상태, 판매자, 가격, 판매 가능 수량을 읽는다([catalog.md](catalog.md) "내부 API"). 동기 호출은 조회에만 쓴다([overview.md](overview.md) "통신 규칙").

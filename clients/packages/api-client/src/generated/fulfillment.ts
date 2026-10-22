@@ -34,6 +34,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/seller/claims/{claimId}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["reject"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/seller/claims/{claimId}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["approve"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/seller-orders/{sellerOrderId}/confirm": {
         parameters: {
             query?: never;
@@ -44,6 +76,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["confirm"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/seller-orders/{sellerOrderId}/claims": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["requestClaim"];
         delete?: never;
         options?: never;
         head?: never;
@@ -106,6 +154,24 @@ export interface components {
             carrier: string;
             trackingNumber: string;
         };
+        RejectClaimRequest: {
+            reason: string;
+        };
+        ApproveClaimRequest: {
+            restock?: boolean;
+        };
+        RequestClaimRequest: {
+            /** @enum {string} */
+            type: "RETURN" | "EXCHANGE";
+            /** @enum {string} */
+            reason: "CHANGE_OF_MIND" | "DEFECTIVE" | "WRONG_ITEM" | "NOT_AS_DESCRIBED";
+            description: string;
+            fileIds?: string[];
+        };
+        RequestClaimResponse: {
+            /** Format: uuid */
+            claimId?: string;
+        };
         ClaimView: {
             /** Format: uuid */
             claimId?: string;
@@ -117,13 +183,19 @@ export interface components {
             reason?: "CHANGE_OF_MIND" | "DEFECTIVE" | "WRONG_ITEM" | "NOT_AS_DESCRIBED" | "BUYER_CANCEL";
             /** @enum {string} */
             fault?: "BUYER" | "SELLER";
+            description?: string;
+            fileIds?: string[];
+            restock?: boolean;
             /** Format: int64 */
             refundAmount?: number;
             refundFailureCode?: string;
+            rejectionReason?: string;
             /** Format: date-time */
             requestedAt?: string;
             /** Format: date-time */
             approvedAt?: string;
+            /** Format: date-time */
+            rejectedAt?: string;
             /** Format: date-time */
             completedAt?: string;
         };
@@ -227,6 +299,54 @@ export interface operations {
             };
         };
     };
+    reject: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                claimId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RejectClaimRequest"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    approve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                claimId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApproveClaimRequest"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     confirm: {
         parameters: {
             query?: never;
@@ -244,6 +364,32 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    requestClaim: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sellerOrderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RequestClaimRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RequestClaimResponse"];
+                };
             };
         };
     };

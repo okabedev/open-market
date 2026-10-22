@@ -24,6 +24,7 @@ class ClaimEventsListener {
             Map.of(
                     "ClaimRequested", ApplyClaimCommand.Status.REQUESTED,
                     "ClaimApproved", ApplyClaimCommand.Status.APPROVED,
+                    "ClaimRejected", ApplyClaimCommand.Status.REJECTED,
                     "ClaimCompleted", ApplyClaimCommand.Status.COMPLETED);
 
     private final IdempotentEventProcessor processor;

@@ -117,8 +117,11 @@ public class SellerOrder {
         this.claimType = type;
         this.claimStatus = status;
         this.claimUpdatedAt = now;
-        if (type == ClaimType.CANCEL && status == ClaimStatus.COMPLETED) {
+        if (status == ClaimStatus.COMPLETED && type == ClaimType.CANCEL) {
             advance(SellerOrderProgress.CANCELLED, now);
+        }
+        if (status == ClaimStatus.COMPLETED && type == ClaimType.RETURN) {
+            advance(SellerOrderProgress.RETURNED, now);
         }
         return true;
     }

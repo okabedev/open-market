@@ -17,6 +17,7 @@ public record ApplyClaimCommand(
     public enum Status {
         REQUESTED,
         APPROVED,
+        REJECTED,
         COMPLETED
     }
 }

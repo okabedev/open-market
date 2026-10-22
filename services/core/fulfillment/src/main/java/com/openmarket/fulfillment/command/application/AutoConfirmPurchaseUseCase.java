@@ -50,6 +50,15 @@ public class AutoConfirmPurchaseUseCase {
             return;
         }
         Shipment shipment = found.get();
+        // 교환 재발송이 있으면 처음 배송의 기한은 쓰지 않는다. 마지막 배송만 확정한다.
+        boolean latest =
+                shipments
+                        .findLatestForUpdateBySellerOrderId(shipment.sellerOrderId())
+                        .map(last -> last.id().equals(shipment.id()))
+                        .orElse(false);
+        if (!latest) {
+            return;
+        }
         Instant now = clock.instant();
         Instant due = shipment.confirmDueAt();
         if (shipment.status() != ShipmentStatus.DELIVERED

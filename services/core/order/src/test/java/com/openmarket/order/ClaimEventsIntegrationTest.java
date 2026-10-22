@@ -153,6 +153,52 @@ class ClaimEventsIntegrationTest {
                 .isZero();
     }
 
+    @Test
+    @DisplayName("반품 거부는 REJECTED이고 진행 중이다. 새 반품이 환불까지 끝나면 진행 상태가 RETURNED이고 끝난 주문이다")
+    void appliesReturnClaims() throws Exception {
+        Order order = paidOrder();
+        UUID sellerOrderId = order.sellerOrders().getFirst().id();
+        UUID rejected = UUID.randomUUID();
+        send(
+                CLAIM_TOPIC,
+                UUID.randomUUID(),
+                "ClaimRequested",
+                order,
+                sellerOrderId,
+                rejected,
+                "RETURN");
+        UUID rejectedEvent = UUID.randomUUID();
+        send(CLAIM_TOPIC, rejectedEvent, "ClaimRejected", order, sellerOrderId, rejected, "RETURN");
+        awaitProcessed(rejectedEvent);
+        assertThat(column(sellerOrderId, "claim_status")).isEqualTo("REJECTED");
+        assertThat(hasOngoingOrders(order)).isTrue();
+
+        UUID returned = UUID.randomUUID();
+        send(
+                CLAIM_TOPIC,
+                UUID.randomUUID(),
+                "ClaimRequested",
+                order,
+                sellerOrderId,
+                returned,
+                "RETURN");
+        send(
+                CLAIM_TOPIC,
+                UUID.randomUUID(),
+                "ClaimApproved",
+                order,
+                sellerOrderId,
+                returned,
+                "RETURN");
+        UUID completed = UUID.randomUUID();
+        send(CLAIM_TOPIC, completed, "ClaimCompleted", order, sellerOrderId, returned, "RETURN");
+        awaitProcessed(completed);
+
+        assertThat(column(sellerOrderId, "claim_id")).isEqualTo(returned.toString());
+        assertThat(column(sellerOrderId, "progress")).isEqualTo("RETURNED");
+        assertThat(hasOngoingOrders(order)).isFalse();
+    }
+
     private Order paidOrder() {
         Order order =
                 Order.place(
@@ -212,6 +258,18 @@ class ClaimEventsIntegrationTest {
     private void send(
             String topic, UUID eventId, String type, Order order, UUID sellerOrderId, UUID claimId)
             throws Exception {
+        send(topic, eventId, type, order, sellerOrderId, claimId, "CANCEL");
+    }
+
+    private void send(
+            String topic,
+            UUID eventId,
+            String type,
+            Order order,
+            UUID sellerOrderId,
+            UUID claimId,
+            String claimType)
+            throws Exception {
         ObjectNode payload =
                 (ObjectNode)
                         json.readTree(Files.readString(PUBLISHER_EXAMPLES.resolve(type + ".json")));
@@ -219,7 +277,7 @@ class ClaimEventsIntegrationTest {
         payload.put("sellerOrderId", sellerOrderId.toString());
         if (payload.has("claimId")) {
             payload.put("claimId", claimId.toString());
-            payload.put("type", "CANCEL");
+            payload.put("type", claimType);
         }
         ProducerRecord<String, String> record =
                 new ProducerRecord<>(
