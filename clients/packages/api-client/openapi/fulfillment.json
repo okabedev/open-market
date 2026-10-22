@@ -75,6 +75,26 @@
         }
       }
     },
+    "/v1/seller-orders/{sellerOrderId}/cancel" : {
+      "post" : {
+        "tags" : [ "buyer-fulfillment-controller" ],
+        "operationId" : "cancel",
+        "parameters" : [ {
+          "name" : "sellerOrderId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        }
+      }
+    },
     "/v1/seller/seller-orders/{sellerOrderId}" : {
       "get" : {
         "tags" : [ "seller-fulfillment-query-controller" ],
@@ -144,6 +164,50 @@
         },
         "required" : [ "carrier", "trackingNumber" ]
       },
+      "ClaimView" : {
+        "type" : "object",
+        "properties" : {
+          "claimId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "type" : {
+            "type" : "string",
+            "enum" : [ "CANCEL", "RETURN", "EXCHANGE" ]
+          },
+          "status" : {
+            "type" : "string",
+            "enum" : [ "REQUESTED", "APPROVED", "REJECTED", "MEDIATING", "COMPLETED" ]
+          },
+          "reason" : {
+            "type" : "string",
+            "enum" : [ "CHANGE_OF_MIND", "DEFECTIVE", "WRONG_ITEM", "NOT_AS_DESCRIBED", "BUYER_CANCEL" ]
+          },
+          "fault" : {
+            "type" : "string",
+            "enum" : [ "BUYER", "SELLER" ]
+          },
+          "refundAmount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "refundFailureCode" : {
+            "type" : "string"
+          },
+          "requestedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "approvedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "completedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
       "SellerFulfillmentView" : {
         "type" : "object",
         "properties" : {
@@ -163,6 +227,12 @@
             "type" : "array",
             "items" : {
               "$ref" : "#/components/schemas/ShipmentView"
+            }
+          },
+          "claims" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ClaimView"
             }
           }
         }
@@ -204,6 +274,10 @@
           "deliveredAt" : {
             "type" : "string",
             "format" : "date-time"
+          },
+          "cancelledAt" : {
+            "type" : "string",
+            "format" : "date-time"
           }
         }
       },
@@ -239,6 +313,12 @@
           "confirmMode" : {
             "type" : "string",
             "enum" : [ "BUYER", "AUTO" ]
+          },
+          "claims" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ClaimView"
+            }
           }
         }
       }

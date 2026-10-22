@@ -9,11 +9,14 @@ import com.openmarket.common.core.error.ErrorType;
 import com.openmarket.order.command.domain.QOrderLine;
 import com.openmarket.order.command.domain.QSellerOrder;
 import com.openmarket.order.query.dto.CancelReason;
+import com.openmarket.order.query.dto.ClaimStatus;
+import com.openmarket.order.query.dto.ClaimType;
 import com.openmarket.order.query.dto.CursorPageView;
 import com.openmarket.order.query.dto.OrderDetailView;
 import com.openmarket.order.query.dto.OrderStatus;
 import com.openmarket.order.query.dto.OrderSummaryView;
 import com.openmarket.order.query.dto.PageView;
+import com.openmarket.order.query.dto.SellerOrderClaimView;
 import com.openmarket.order.query.dto.SellerOrderDetailView;
 import com.openmarket.order.query.dto.SellerOrderProgress;
 import com.openmarket.order.query.dto.SellerOrderSummaryView;
@@ -43,6 +46,8 @@ import org.springframework.stereotype.Repository;
 public class OrderQueryDao {
 
     private static final StringExpression PROGRESS = sellerOrder.progress.stringValue();
+    private static final StringExpression CLAIM_TYPE = sellerOrder.claimType.stringValue();
+    private static final StringExpression CLAIM_STATUS = sellerOrder.claimStatus.stringValue();
 
     private final JPAQueryFactory query;
 
@@ -164,7 +169,9 @@ public class OrderQueryDao {
                                         .where(counted.sellerOrder.id.eq(sellerOrder.id)),
                                 order.placedAt,
                                 order.paidAt,
-                                PROGRESS)
+                                PROGRESS,
+                                CLAIM_TYPE,
+                                CLAIM_STATUS)
                         .from(sellerOrder)
                         .join(sellerOrder.order, order)
                         .where(where)
@@ -182,6 +189,7 @@ public class OrderQueryDao {
                                                         Objects.requireNonNull(
                                                                 t.get(2, String.class))),
                                                 progress(t),
+                                                claim(t),
                                                 Objects.requireNonNull(t.get(sellerOrder.amount)),
                                                 Objects.requireNonNull(t.get(4, String.class)),
                                                 Objects.requireNonNull(t.get(5, Long.class))
@@ -213,7 +221,9 @@ public class OrderQueryDao {
                                 order.shippingAddress.detailAddress,
                                 order.placedAt,
                                 order.paidAt,
-                                PROGRESS)
+                                PROGRESS,
+                                CLAIM_TYPE,
+                                CLAIM_STATUS)
                         .from(sellerOrder)
                         .join(sellerOrder.order, order)
                         .where(sellerOrder.id.eq(sellerOrderId), sellerVisible(sellerId, statuses))
@@ -227,6 +237,7 @@ public class OrderQueryDao {
                         Objects.requireNonNull(row.get(order.id)),
                         OrderStatus.valueOf(Objects.requireNonNull(row.get(1, String.class))),
                         progress(row),
+                        claim(row),
                         Objects.requireNonNull(row.get(sellerOrder.amount)),
                         shipping(row),
                         List.copyOf(
@@ -237,8 +248,8 @@ public class OrderQueryDao {
     }
 
     /**
-     * 구매자에게 진행 중인 주문이 있는지(ACC-4, docs/architecture/order.md "내부 API"). 결제 전 주문과, 구매확정되지 않은 하위 주문이
-     * 하나라도 있는 결제 완료 주문이 진행 중이다.
+     * 구매자에게 진행 중인 주문이 있는지(ACC-4, docs/architecture/order.md "내부 API"). 결제 전 주문과, 끝나지 않은(구매확정·취소 완료가
+     * 아닌) 하위 주문이 하나라도 있는 결제 완료 주문이 진행 중이다.
      */
     public boolean hasOngoingOrders(UUID buyerId) {
         QSellerOrder open = new QSellerOrder("open");
@@ -266,9 +277,12 @@ public class OrderQueryDao {
                                                                                         .or(
                                                                                                 open.progress
                                                                                                         .stringValue()
-                                                                                                        .ne(
+                                                                                                        .notIn(
                                                                                                                 SellerOrderProgress
                                                                                                                         .CONFIRMED
+                                                                                                                        .name(),
+                                                                                                                SellerOrderProgress
+                                                                                                                        .CANCELLED
                                                                                                                         .name())))
                                                                         .exists())))
                         .fetchFirst()
@@ -292,7 +306,9 @@ public class OrderQueryDao {
                                 sellerOrder.sellerId,
                                 sellerOrder.storeName,
                                 sellerOrder.amount,
-                                PROGRESS)
+                                PROGRESS,
+                                CLAIM_TYPE,
+                                CLAIM_STATUS)
                         .from(sellerOrder)
                         .where(sellerOrder.order.id.eq(orderId))
                         .orderBy(sellerOrder.position.asc())
@@ -309,6 +325,7 @@ public class OrderQueryDao {
                                     Objects.requireNonNull(r.get(sellerOrder.storeName)),
                                     Objects.requireNonNull(r.get(sellerOrder.amount)),
                                     progress(r),
+                                    claim(r),
                                     List.copyOf(lines.getOrDefault(id, List.of())));
                         })
                 .toList();
@@ -318,6 +335,15 @@ public class OrderQueryDao {
     private static @Nullable SellerOrderProgress progress(Tuple row) {
         String progress = row.get(PROGRESS);
         return progress == null ? null : SellerOrderProgress.valueOf(progress);
+    }
+
+    /** 하위 주문의 마지막 클레임. 없으면 비어 있다. */
+    private static @Nullable SellerOrderClaimView claim(Tuple row) {
+        String type = row.get(CLAIM_TYPE);
+        String status = row.get(CLAIM_STATUS);
+        return type == null || status == null
+                ? null
+                : new SellerOrderClaimView(ClaimType.valueOf(type), ClaimStatus.valueOf(status));
     }
 
     /** 항목을 하위 주문별로 묶는다. 하위 주문 안에서는 주문한 순서다. */

@@ -14,6 +14,7 @@ import org.jspecify.annotations.Nullable;
 public class StockAdjustment {
 
     static final int REASON_MAX = 100;
+    static final String RESTOCK_REASON = "클레임 재입고";
 
     @Id private UUID id;
 
@@ -31,18 +32,29 @@ public class StockAdjustment {
 
     private @Nullable String reason;
 
+    // 클레임 재입고면 그 클레임. 판매자 조정은 비어 있다.
+    @Column(name = "claim_id")
+    private @Nullable UUID claimId;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
     protected StockAdjustment() {}
 
-    private StockAdjustment(UUID id, Stock stock, int delta, @Nullable String reason, Instant now) {
+    private StockAdjustment(
+            UUID id,
+            Stock stock,
+            int delta,
+            @Nullable String reason,
+            @Nullable UUID claimId,
+            Instant now) {
         this.id = id;
         this.skuId = stock.skuId();
         this.productId = stock.productId();
         this.delta = delta;
         this.onHandAfter = stock.onHand();
         this.reason = reason;
+        this.claimId = claimId;
         this.createdAt = now;
     }
 
@@ -53,7 +65,13 @@ public class StockAdjustment {
      */
     public static StockAdjustment record(
             UUID id, Stock adjusted, int delta, @Nullable String reason, Instant now) {
-        return new StockAdjustment(id, adjusted, delta, normalizeReason(reason), now);
+        return new StockAdjustment(id, adjusted, delta, normalizeReason(reason), null, now);
+    }
+
+    /** 클레임 재입고 이력을 남긴다. 재입고한 뒤에 부른다. */
+    public static StockAdjustment restock(
+            UUID id, Stock restocked, int delta, UUID claimId, Instant now) {
+        return new StockAdjustment(id, restocked, delta, RESTOCK_REASON, claimId, now);
     }
 
     /** 사유를 검사한다. 조정 전에 불러 잘못된 입력이면 재고를 바꾸지 않는다. */
@@ -86,5 +104,9 @@ public class StockAdjustment {
 
     public @Nullable String reason() {
         return reason;
+    }
+
+    public @Nullable UUID claimId() {
+        return claimId;
     }
 }

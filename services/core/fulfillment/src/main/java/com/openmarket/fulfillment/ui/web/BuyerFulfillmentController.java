@@ -2,6 +2,8 @@ package com.openmarket.fulfillment.ui.web;
 
 import com.openmarket.fulfillment.command.application.ConfirmPurchaseCommand;
 import com.openmarket.fulfillment.command.application.ConfirmPurchaseUseCase;
+import com.openmarket.fulfillment.command.application.RequestCancelClaimCommand;
+import com.openmarket.fulfillment.command.application.RequestCancelClaimUseCase;
 import com.openmarket.fulfillment.query.application.FulfillmentQueryService;
 import com.openmarket.fulfillment.query.dto.BuyerFulfillmentView;
 import java.security.Principal;
@@ -15,8 +17,8 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 구매자 하위 주문의 배송 조회와 구매확정(FUL-2, FUL-3). 주체는 토큰의 {@code sub}(= buyerId)다. 구매확정은 다시 보내도 결과가 같아 {@code
- * Idempotency-Key}를 받지 않는다.
+ * 구매자 하위 주문의 배송 조회, 구매확정, 발송 전 취소(FUL-2, FUL-3, CLM-1). 주체는 토큰의 {@code sub}(= buyerId)다. 구매확정과 취소는
+ * 다시 보내도 결과가 같아 {@code Idempotency-Key}를 받지 않는다.
  */
 @RestController
 @RequestMapping("/v1/seller-orders/{sellerOrderId}")
@@ -24,11 +26,15 @@ public class BuyerFulfillmentController {
 
     private final FulfillmentQueryService fulfillments;
     private final ConfirmPurchaseUseCase confirm;
+    private final RequestCancelClaimUseCase cancel;
 
     public BuyerFulfillmentController(
-            FulfillmentQueryService fulfillments, ConfirmPurchaseUseCase confirm) {
+            FulfillmentQueryService fulfillments,
+            ConfirmPurchaseUseCase confirm,
+            RequestCancelClaimUseCase cancel) {
         this.fulfillments = fulfillments;
         this.confirm = confirm;
+        this.cancel = cancel;
     }
 
     /** 본인 하위 주문의 배송. 남의 것이거나 배송이 아직 없으면 404 {@code FULFILLMENT_NOT_FOUND}. */
@@ -42,6 +48,16 @@ public class BuyerFulfillmentController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void confirm(Principal principal, @PathVariable UUID sellerOrderId) {
         confirm.execute(new ConfirmPurchaseCommand(buyerId(principal), sellerOrderId));
+    }
+
+    /**
+     * 발송 전 취소(CLM-1). 이미 취소했으면 그대로 204, 발송 뒤면 409 {@code FULFILLMENT_INVALID_STATE}, 진행 중인 클레임이 있으면
+     * 409 {@code FULFILLMENT_CLAIM_IN_PROGRESS}.
+     */
+    @PostMapping("/cancel")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void cancel(Principal principal, @PathVariable UUID sellerOrderId) {
+        cancel.execute(new RequestCancelClaimCommand(buyerId(principal), sellerOrderId));
     }
 
     private static UUID buyerId(Principal principal) {

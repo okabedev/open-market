@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.openmarket.order.command.domain.CancelReason;
 import com.openmarket.order.command.domain.Cart;
 import com.openmarket.order.command.domain.CartItem;
+import com.openmarket.order.command.domain.ClaimStatus;
 import com.openmarket.order.command.domain.Order;
 import com.openmarket.order.command.domain.OrderAwaitingPayment;
 import com.openmarket.order.command.domain.OrderCancelled;
@@ -35,6 +36,7 @@ class OrderTransitionUseCasesTest {
     final FakeCartRepository carts = new FakeCartRepository();
     final PayOrderUseCase pay = new PayOrderUseCase(orders, carts, outbox, clock);
     final AdvanceSellerOrderUseCase advance = new AdvanceSellerOrderUseCase(orders, clock);
+    final ApplyClaimUseCase applyClaim = new ApplyClaimUseCase(orders, clock);
 
     final Order order =
             orders.save(
@@ -203,6 +205,37 @@ class OrderTransitionUseCasesTest {
 
         assertThat(order.sellerOrders().getFirst().progress())
                 .isEqualTo(SellerOrderProgress.IN_TRANSIT);
+        assertThat(outbox.types()).containsExactly(OrderAwaitingPayment.TYPE, OrderPaid.TYPE);
+    }
+
+    @Test
+    @DisplayName("클레임 이벤트로 하위 주문 클레임을 바꾸고, 발송 전 취소가 끝나면 진행 상태가 CANCELLED다. 이벤트는 내지 않고 모르는 주문은 넘긴다")
+    void appliesClaim() {
+        awaitPayment.execute(new AwaitPaymentCommand(order.id()));
+        pay.execute(new PayOrderCommand(order.id(), 59_700, NOW));
+        UUID sellerOrderId = order.sellerOrders().getFirst().id();
+        UUID claimId = UUID.randomUUID();
+
+        for (ApplyClaimCommand.Status status : ApplyClaimCommand.Status.values()) {
+            applyClaim.execute(
+                    new ApplyClaimCommand(
+                            order.id(),
+                            sellerOrderId,
+                            claimId,
+                            ApplyClaimCommand.Type.CANCEL,
+                            status));
+        }
+        applyClaim.execute(
+                new ApplyClaimCommand(
+                        UUID.randomUUID(),
+                        sellerOrderId,
+                        claimId,
+                        ApplyClaimCommand.Type.CANCEL,
+                        ApplyClaimCommand.Status.REQUESTED));
+
+        assertThat(order.sellerOrders().getFirst().claimStatus()).isEqualTo(ClaimStatus.COMPLETED);
+        assertThat(order.sellerOrders().getFirst().progress())
+                .isEqualTo(SellerOrderProgress.CANCELLED);
         assertThat(outbox.types()).containsExactly(OrderAwaitingPayment.TYPE, OrderPaid.TYPE);
     }
 }

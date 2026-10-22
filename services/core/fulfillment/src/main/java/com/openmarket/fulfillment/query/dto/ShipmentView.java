@@ -9,6 +9,7 @@ import org.jspecify.annotations.Nullable;
  *
  * @param carrier 택배사. 발송했을 때만
  * @param trackingNumber 송장 번호. 발송했을 때만
+ * @param cancelledAt 발송 전 취소 시각. 취소됐을 때만
  */
 public record ShipmentView(
         UUID shipmentId,
@@ -19,4 +20,5 @@ public record ShipmentView(
         @Nullable Instant acceptedAt,
         @Nullable Instant shippedAt,
         @Nullable Instant inTransitAt,
-        @Nullable Instant deliveredAt) {}
+        @Nullable Instant deliveredAt,
+        @Nullable Instant cancelledAt) {}

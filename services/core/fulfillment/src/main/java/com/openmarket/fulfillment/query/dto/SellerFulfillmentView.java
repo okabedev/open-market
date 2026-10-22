@@ -8,6 +8,11 @@ import java.util.UUID;
  *
  * @param status 마지막 배송의 상태
  * @param shipments 배송 목록. 만든 순서이고 교환 재발송이 있으면 둘 이상이다
+ * @param claims 클레임 목록. 신청 순서
  */
 public record SellerFulfillmentView(
-        UUID sellerOrderId, UUID orderId, ShipmentStatus status, List<ShipmentView> shipments) {}
+        UUID sellerOrderId,
+        UUID orderId,
+        ShipmentStatus status,
+        List<ShipmentView> shipments,
+        List<ClaimView> claims) {}

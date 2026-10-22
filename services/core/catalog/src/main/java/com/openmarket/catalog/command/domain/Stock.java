@@ -73,6 +73,24 @@ public class Stock {
         this.updatedAt = now;
     }
 
+    /**
+     * 클레임으로 돌아온 수량을 실재고에 더한다(docs/architecture/catalog.md "클레임 재입고"). 실물이 돌아왔으므로 거부하지 않고, 상한을 넘으면
+     * 상한까지만 더한다.
+     *
+     * @return 실제로 더한 수량
+     */
+    public int restock(int quantity, Instant now) {
+        if (quantity < 1) {
+            throw new IllegalArgumentException("재입고 수량은 1 이상이다: " + quantity);
+        }
+        int added = Math.min(quantity, MAX_ON_HAND - onHand);
+        if (added > 0) {
+            this.onHand += added;
+            this.updatedAt = now;
+        }
+        return added;
+    }
+
     /** 주문 수량을 예약한다. 판매 가능 수량은 부르는 쪽({@link StockReservation})이 먼저 확인한다. */
     void reserve(int quantity, Instant now) {
         if (quantity < 1 || quantity > available()) {

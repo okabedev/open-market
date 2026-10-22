@@ -381,6 +381,19 @@
           }
         }
       },
+      "SellerOrderClaimView" : {
+        "type" : "object",
+        "properties" : {
+          "type" : {
+            "type" : "string",
+            "enum" : [ "CANCEL", "RETURN", "EXCHANGE" ]
+          },
+          "status" : {
+            "type" : "string",
+            "enum" : [ "REQUESTED", "APPROVED", "COMPLETED" ]
+          }
+        }
+      },
       "SellerOrderSummaryView" : {
         "type" : "object",
         "properties" : {
@@ -398,7 +411,10 @@
           },
           "progress" : {
             "type" : "string",
-            "enum" : [ "PAID", "ACCEPTED", "SHIPPED", "IN_TRANSIT", "DELIVERED", "CONFIRMED" ]
+            "enum" : [ "PAID", "ACCEPTED", "SHIPPED", "IN_TRANSIT", "DELIVERED", "CONFIRMED", "CANCELLED" ]
+          },
+          "claim" : {
+            "$ref" : "#/components/schemas/SellerOrderClaimView"
           },
           "amount" : {
             "type" : "integer",
@@ -502,7 +518,10 @@
           },
           "progress" : {
             "type" : "string",
-            "enum" : [ "PAID", "ACCEPTED", "SHIPPED", "IN_TRANSIT", "DELIVERED", "CONFIRMED" ]
+            "enum" : [ "PAID", "ACCEPTED", "SHIPPED", "IN_TRANSIT", "DELIVERED", "CONFIRMED", "CANCELLED" ]
+          },
+          "claim" : {
+            "$ref" : "#/components/schemas/SellerOrderClaimView"
           },
           "amount" : {
             "type" : "integer",
@@ -634,7 +653,10 @@
           },
           "progress" : {
             "type" : "string",
-            "enum" : [ "PAID", "ACCEPTED", "SHIPPED", "IN_TRANSIT", "DELIVERED", "CONFIRMED" ]
+            "enum" : [ "PAID", "ACCEPTED", "SHIPPED", "IN_TRANSIT", "DELIVERED", "CONFIRMED", "CANCELLED" ]
+          },
+          "claim" : {
+            "$ref" : "#/components/schemas/SellerOrderClaimView"
           },
           "lines" : {
             "type" : "array",

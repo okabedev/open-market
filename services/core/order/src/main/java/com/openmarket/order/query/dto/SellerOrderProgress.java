@@ -7,5 +7,6 @@ public enum SellerOrderProgress {
     SHIPPED,
     IN_TRANSIT,
     DELIVERED,
-    CONFIRMED
+    CONFIRMED,
+    CANCELLED
 }

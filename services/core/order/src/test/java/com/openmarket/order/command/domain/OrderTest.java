@@ -182,6 +182,75 @@ class OrderTest {
                 .isEqualTo(Order.Transition.INVALID);
     }
 
+    @Test
+    @DisplayName("하위 주문 클레임은 이벤트마다 상태가 바뀌고, 발송 전 취소가 끝나면 진행 상태가 CANCELLED가 된다. 그 뒤 배송 이벤트는 넘긴다")
+    void appliesClaim() {
+        Order order = twoSellers();
+        order.awaitPayment(NOW);
+        order.pay(order.amount(), NOW, NOW);
+        order.advanceSellerOrder(
+                order.sellerOrders().get(0).id(), SellerOrderProgress.ACCEPTED, NOW);
+        UUID first = order.sellerOrders().get(0).id();
+        UUID claimId = UUID.randomUUID();
+
+        assertThat(order.applyClaim(first, claimId, ClaimType.CANCEL, ClaimStatus.REQUESTED, NOW))
+                .isEqualTo(Order.Transition.APPLIED);
+        assertThat(order.applyClaim(first, claimId, ClaimType.CANCEL, ClaimStatus.APPROVED, NOW))
+                .isEqualTo(Order.Transition.APPLIED);
+        assertThat(order.applyClaim(first, claimId, ClaimType.CANCEL, ClaimStatus.APPROVED, NOW))
+                .isEqualTo(Order.Transition.ALREADY);
+        assertThat(order.sellerOrders().get(0).progress()).isEqualTo(SellerOrderProgress.ACCEPTED);
+        assertThat(order.applyClaim(first, claimId, ClaimType.CANCEL, ClaimStatus.COMPLETED, NOW))
+                .isEqualTo(Order.Transition.APPLIED);
+        assertThat(order.applyClaim(first, claimId, ClaimType.CANCEL, ClaimStatus.APPROVED, NOW))
+                .isEqualTo(Order.Transition.ALREADY);
+
+        SellerOrder cancelled = order.sellerOrders().get(0);
+        assertThat(cancelled.claimId()).isEqualTo(claimId);
+        assertThat(cancelled.claimType()).isEqualTo(ClaimType.CANCEL);
+        assertThat(cancelled.claimStatus()).isEqualTo(ClaimStatus.COMPLETED);
+        assertThat(cancelled.progress()).isEqualTo(SellerOrderProgress.CANCELLED);
+        assertThat(order.advanceSellerOrder(first, SellerOrderProgress.SHIPPED, NOW))
+                .isEqualTo(Order.Transition.ALREADY);
+        assertThat(order.sellerOrders().get(1).claimStatus()).isNull();
+        assertThat(order.status()).isEqualTo(OrderStatus.PAID);
+    }
+
+    @Test
+    @DisplayName("다른 클레임 ID의 이벤트는 새 클레임으로 바꾼다. 결제 전 주문이나 없는 하위 주문은 INVALID다")
+    void newClaimAndInvalid() {
+        Order order = twoSellers();
+        UUID first = order.sellerOrders().get(0).id();
+        assertThat(
+                        order.applyClaim(
+                                first,
+                                UUID.randomUUID(),
+                                ClaimType.CANCEL,
+                                ClaimStatus.REQUESTED,
+                                NOW))
+                .isEqualTo(Order.Transition.INVALID);
+        order.awaitPayment(NOW);
+        order.pay(order.amount(), NOW, NOW);
+        assertThat(
+                        order.applyClaim(
+                                UUID.randomUUID(),
+                                UUID.randomUUID(),
+                                ClaimType.CANCEL,
+                                ClaimStatus.REQUESTED,
+                                NOW))
+                .isEqualTo(Order.Transition.INVALID);
+
+        UUID older = UUID.randomUUID();
+        UUID newer = UUID.randomUUID();
+        order.applyClaim(first, older, ClaimType.RETURN, ClaimStatus.REQUESTED, NOW);
+        assertThat(order.applyClaim(first, newer, ClaimType.EXCHANGE, ClaimStatus.REQUESTED, NOW))
+                .isEqualTo(Order.Transition.APPLIED);
+
+        assertThat(order.sellerOrders().get(0).claimId()).isEqualTo(newer);
+        assertThat(order.sellerOrders().get(0).claimType()).isEqualTo(ClaimType.EXCHANGE);
+        assertThat(order.sellerOrders().get(0).progress()).isEqualTo(SellerOrderProgress.PAID);
+    }
+
     private Order twoSellers() {
         return Order.place(
                 buyerId,

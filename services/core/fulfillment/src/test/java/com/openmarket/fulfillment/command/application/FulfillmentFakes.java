@@ -1,6 +1,8 @@
 package com.openmarket.fulfillment.command.application;
 
 import com.openmarket.common.messaging.outbox.Outbox;
+import com.openmarket.fulfillment.command.domain.Claim;
+import com.openmarket.fulfillment.command.domain.ClaimRepository;
 import com.openmarket.fulfillment.command.domain.PurchaseConfirmation;
 import com.openmarket.fulfillment.command.domain.PurchaseConfirmationRepository;
 import com.openmarket.fulfillment.command.domain.Shipment;
@@ -36,8 +38,13 @@ final class FulfillmentFakes {
         }
 
         @Override
-        public Optional<Shipment> findForUpdateById(UUID id) {
+        public Optional<Shipment> findById(UUID id) {
             return shipments.stream().filter(s -> s.id().equals(id)).findFirst();
+        }
+
+        @Override
+        public Optional<Shipment> findForUpdateById(UUID id) {
+            return findById(id);
         }
 
         @Override
@@ -74,6 +81,32 @@ final class FulfillmentFakes {
                     .limit(limit)
                     .map(Shipment::id)
                     .toList();
+        }
+    }
+
+    static final class FakeClaimRepository implements ClaimRepository {
+        final List<Claim> claims = new ArrayList<>();
+
+        @Override
+        public Claim save(Claim claim) {
+            if (!claims.contains(claim)) {
+                if (claim.isOngoing() && existsOngoingBySellerOrderId(claim.sellerOrderId())) {
+                    throw new IllegalStateException("진행 중인 클레임은 하위 주문마다 하나다(유일 인덱스)");
+                }
+                claims.add(claim);
+            }
+            return claim;
+        }
+
+        @Override
+        public Optional<Claim> findForUpdateById(UUID id) {
+            return claims.stream().filter(c -> c.id().equals(id)).findFirst();
+        }
+
+        @Override
+        public boolean existsOngoingBySellerOrderId(UUID sellerOrderId) {
+            return claims.stream()
+                    .anyMatch(c -> c.sellerOrderId().equals(sellerOrderId) && c.isOngoing());
         }
     }
 

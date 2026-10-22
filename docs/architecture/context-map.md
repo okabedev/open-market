@@ -156,7 +156,8 @@ flowchart LR
 
 - 키는 sellerOrderId다. 배송 토픽과 사이 순서는 보장하지 않는다. order는 두 토픽을 함께 보고 하위 주문 진행 상태를 정한다.
 - type은 `CANCEL`, `RETURN`, `EXCHANGE`, reason은 [fulfillment.md](fulfillment.md) "사유와 귀책"의 코드다.
-- `CANCEL`은 `ClaimRequested`와 `ClaimApproved`를 한 트랜잭션에서 함께 낸다.
+- `CANCEL`은 `ClaimRequested`와 `ClaimApproved`를 한 트랜잭션에서 함께 낸다. 사유는 `BUYER_CANCEL`, fileIds는 빈 목록이다.
+- JSON 예시는 `services/core/fulfillment/src/test/resources/events/`에 있다.
 - 관리자 중재 승인은 `ClaimApproved`, 거부 확정은 `ClaimRejected`(final=true)다.
 
 ### review.review, review.rating-summary

@@ -187,6 +187,27 @@ public class Order {
         return Transition.INVALID;
     }
 
+    /**
+     * 하위 주문 클레임을 반영한다(fulfillment 클레임 이벤트). 같은 클레임의 같은 상태이거나 이미 끝난 클레임이면 {@code ALREADY}, 결제 전
+     * 주문이거나 이 주문의 하위 주문이 아니면 {@code INVALID}다.
+     */
+    public Transition applyClaim(
+            UUID sellerOrderId, UUID claimId, ClaimType type, ClaimStatus status, Instant now) {
+        if (this.status != OrderStatus.PAID) {
+            return Transition.INVALID;
+        }
+        for (SellerOrder sellerOrder : sellerOrders) {
+            if (sellerOrder.id().equals(sellerOrderId)) {
+                if (!sellerOrder.applyClaim(claimId, type, status, now)) {
+                    return Transition.ALREADY;
+                }
+                updatedAt = now;
+                return Transition.APPLIED;
+            }
+        }
+        return Transition.INVALID;
+    }
+
     /** 결제 전에 취소한다. {@code PENDING}, {@code AWAITING_PAYMENT}에서만 바뀐다. 이미 취소됐으면 처음 사유가 남는다. */
     public Transition cancel(CancelReason reason, Instant now) {
         if (status == OrderStatus.CANCELLED) {

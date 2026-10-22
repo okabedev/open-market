@@ -46,7 +46,9 @@ public interface JpaShipmentRepository extends Repository<Shipment, UUID>, Shipm
             value =
                     "SELECT s.id FROM shipment s WHERE s.status = 'DELIVERED' AND s.confirm_due_at"
                             + " <= :now AND NOT EXISTS (SELECT 1 FROM purchase_confirmation c WHERE"
-                            + " c.seller_order_id = s.seller_order_id) ORDER BY s.confirm_due_at"
+                            + " c.seller_order_id = s.seller_order_id) AND NOT EXISTS (SELECT 1 FROM"
+                            + " claim m WHERE m.seller_order_id = s.seller_order_id AND m.status IN"
+                            + " ('REQUESTED', 'APPROVED', 'MEDIATING')) ORDER BY s.confirm_due_at"
                             + " LIMIT :limit",
             nativeQuery = true)
     List<UUID> findConfirmDueIds(Instant now, int limit);

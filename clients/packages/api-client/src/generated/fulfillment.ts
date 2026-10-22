@@ -50,6 +50,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/seller-orders/{sellerOrderId}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["cancel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/seller/seller-orders/{sellerOrderId}": {
         parameters: {
             query?: never;
@@ -90,6 +106,27 @@ export interface components {
             carrier: string;
             trackingNumber: string;
         };
+        ClaimView: {
+            /** Format: uuid */
+            claimId?: string;
+            /** @enum {string} */
+            type?: "CANCEL" | "RETURN" | "EXCHANGE";
+            /** @enum {string} */
+            status?: "REQUESTED" | "APPROVED" | "REJECTED" | "MEDIATING" | "COMPLETED";
+            /** @enum {string} */
+            reason?: "CHANGE_OF_MIND" | "DEFECTIVE" | "WRONG_ITEM" | "NOT_AS_DESCRIBED" | "BUYER_CANCEL";
+            /** @enum {string} */
+            fault?: "BUYER" | "SELLER";
+            /** Format: int64 */
+            refundAmount?: number;
+            refundFailureCode?: string;
+            /** Format: date-time */
+            requestedAt?: string;
+            /** Format: date-time */
+            approvedAt?: string;
+            /** Format: date-time */
+            completedAt?: string;
+        };
         SellerFulfillmentView: {
             /** Format: uuid */
             sellerOrderId?: string;
@@ -98,6 +135,7 @@ export interface components {
             /** @enum {string} */
             status?: "READY" | "ACCEPTED" | "SHIPPED" | "IN_TRANSIT" | "DELIVERED" | "CANCELLED";
             shipments?: components["schemas"]["ShipmentView"][];
+            claims?: components["schemas"]["ClaimView"][];
         };
         ShipmentView: {
             /** Format: uuid */
@@ -117,6 +155,8 @@ export interface components {
             inTransitAt?: string;
             /** Format: date-time */
             deliveredAt?: string;
+            /** Format: date-time */
+            cancelledAt?: string;
         };
         BuyerFulfillmentView: {
             /** Format: uuid */
@@ -132,6 +172,7 @@ export interface components {
             confirmedAt?: string;
             /** @enum {string} */
             confirmMode?: "BUYER" | "AUTO";
+            claims?: components["schemas"]["ClaimView"][];
         };
     };
     responses: never;
@@ -187,6 +228,26 @@ export interface operations {
         };
     };
     confirm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sellerOrderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    cancel: {
         parameters: {
             query?: never;
             header?: never;

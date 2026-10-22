@@ -109,6 +109,11 @@ final class CatalogFakes {
             rows.add(adjustment);
             return adjustment;
         }
+
+        @Override
+        public boolean existsByClaimId(UUID claimId) {
+            return rows.stream().anyMatch(row -> claimId.equals(row.claimId()));
+        }
     }
 
     /** 시드와 같은 패션의류 > 여성의류만 둔다. */
