@@ -104,7 +104,7 @@ PK는 `(principal, idempotency_key)`다. 처리 중에 같은 키가 또 오면 
 ## 캐시와 기타 저장소
 | 저장소 | 용도 |
 |---|---|
-| Redis | Gateway 레이트 리밋, BFF 세션, 선착순 쿠폰 카운터, 상품 상세 캐시 |
+| Redis | Gateway 레이트 리밋, BFF 세션, 선착순 쿠폰 발급 수·발급 회원 집합([promotion.md](promotion.md) "선착순 발급"), 상품 상세 캐시 |
 | Elasticsearch | search의 `products` 인덱스(별칭 사용, 재색인은 새 인덱스 생성 후 별칭 전환) |
 | 로컬 볼륨 | file의 원본과 썸네일. 컨테이너는 볼륨 `file-data`, IDE는 `infra/compose/data/file`([file.md](file.md)) |
 

@@ -55,7 +55,7 @@ M4 시작(2026-10-21)에 정한 규칙에 M4 동안 만든 API와 화면을 더�
 - 확정 기한은 배송 완료 시각 + `openmarket.fulfillment.purchase-confirm.auto-confirm-after`(기본 7일)다. 시뮬레이터가 배송 완료로 바꿀 때 정한다. E2E는 `FULFILLMENT_CONFIRM_INTERVAL`, `FULFILLMENT_AUTO_CONFIRM_AFTER`로 줄인다. 반품·교환이 거부되면 거부 시각 + 중재 요청 기한(`openmarket.fulfillment.claim.mediation-window`, 기본 7일)과 비교해 늦은 쪽으로 미룬다. 구매자가 중재를 요청할 시간을 남기기 위해서다.
 - 자동 확정은 하위 주문의 마지막 배송만 본다. 교환 재발송이 있으면 처음 배송의 기한은 쓰지 않는다.
 - 확정은 하위 주문 ID 유니크 제약으로 한 번만 생긴다. 확정한 뒤에는 클레임을 신청할 수 없다.
-- 확정하면 `PurchaseConfirmed`(확정 방식 `BUYER`, `AUTO`)를 낸다. 리뷰 작성 자격과 정산 대상(M5)이 이것으로 생긴다.
+- 확정하면 `PurchaseConfirmed`(확정 방식 `BUYER`, `AUTO`)를 낸다. 리뷰 작성 자격([review.md](review.md)), 정산 대상([settlement.md](settlement.md)), 검색 판매량([search.md](search.md))이 이것으로 생긴다.
 - 클레임 신청과 확정도 하위 주문의 마지막 배송 행을 잠그고 하므로, 겹치면 먼저 잠근 쪽만 된다.
 
 ## 클레임(`Claim`, CLM-1~3)
@@ -150,9 +150,9 @@ M4 시작(2026-10-21)에 정한 규칙에 M4 동안 만든 API와 화면을 더�
 - 귀책은 사유로 정한다. 판매자가 귀책에 동의하지 않으면 거부하고, 구매자가 중재를 요청하면 관리자가 귀책을 고른다.
 
 ### 환불 금액
-하위 주문 금액 − 반품 배송비. 반품 배송비는 `RETURN`이고 귀책이 `BUYER`일 때만 뺀다. 결과가 0보다 작으면 0이다.
-- `CANCEL`은 발송 전이라 배송비가 없다. 하위 주문 금액 전액이다.
-- 쿠폰 할인(M5)은 주문 항목 금액 비율로 하위 주문에 나눠 뺀다. 계산식은 M5에서 이 절에 더한다.
+하위 주문 결제 금액 − 반품 배송비. 반품 배송비는 `RETURN`이고 귀책이 `BUYER`일 때만 뺀다. 결과가 0보다 작으면 0이다.
+- 하위 주문 결제 금액은 `OrderPaid`의 하위 주문 paymentAmount(상품 금액 − 판매자 쿠폰 할인 − 플랫폼 쿠폰 할인 몫)다. 나누는 방법은 [promotion.md](promotion.md) "할인 계산". 쿠폰은 돌려주지 않는다(2026-10-22 결정). M5 이전 배송은 상품 금액과 같다.
+- `CANCEL`은 발송 전이라 배송비가 없다. 하위 주문 결제 금액 전액이다.
 - 환불 금액이 0이면 payment는 토스를 부르지 않고 바로 `RefundCompleted`를 낸다.
 
 ## 이벤트

@@ -45,7 +45,7 @@ gateway 경로는 `/api/member` + 아래 경로다. 모두 사용자 토큰이 �
 
 ## 탈퇴 (ACC-4)
 `POST /v1/members/me/withdraw`(204). 이미 탈퇴했어도 204다.
-1. 판매자면 422 `MEMBER_SELLER_CANNOT_WITHDRAW`다(2026-10-18 결정). 판매자 정리(폐점·미정산 처리)는 정산이 생기는 M5에서 정한다.
+1. 판매자면 422 `MEMBER_SELLER_CANNOT_WITHDRAW`다(2026-10-18 결정). M5에서도 그대로 막는다. PRD에 폐점 요구사항이 없고, 미정산 금액이 남은 판매자를 정리하는 규칙이 필요해서다(2026-10-22 결정, [settlement.md](settlement.md) "범위 결정").
 2. 진행 중인 주문·클레임이 있으면 422 `MEMBER_ONGOING_ORDERS`다. member가 order 내부 API로 확인한다([order.md](order.md) "내부 API"). 어떤 주문이 진행 중인지는 order가 정한다.
    - 호출 방식(OpenFeign, `client_credentials` 클라이언트 ID `member`, 타임아웃, 연결 실패만 한 번 재시도, 서킷 브레이커)은 order의 catalog 조회와 같다([order.md](order.md) "catalog 조회"). 값은 config-repo `member.yml`에 있다.
    - order를 부를 수 없으면(타임아웃, 5xx, 서킷 열림) 탈퇴하지 않고 503 `MEMBER_ORDER_UNAVAILABLE`이다. 확인하지 못한 채 탈퇴시키면 되돌릴 수 없기 때문이다.

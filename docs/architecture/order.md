@@ -72,12 +72,23 @@ gateway 경로는 `/api/order` + 아래 경로다.
    - 하위 주문은 판매자가 처음 나온 순서, 항목은 요청 순서다.
 - 장바구니는 주문할 때 바꾸지 않는다. 주문한 SKU는 결제가 끝나(`PAID`) 장바구니에서 뺀다(2026-10-20 결정, 아래 "결제 결과"). 재고 부족·만료·취소로 끝난 주문은 장바구니에 영향이 없다.
 
+### 쿠폰 적용(M5 설계, 2026-10-22)
+주문 생성 본문에 쓸 발급 쿠폰(`issuedCouponIds`, 0~1장의 플랫폼 쿠폰과 판매자마다 0~1장)을 더한다. 규칙과 계산은 [promotion.md](promotion.md) "할인 계산"이고, API 형식은 order 쿠폰 PR에서 이 절에 더한다.
+- 위 확인(가격, 재고)을 지나면 promotion 내부 API로 할인을 계산한다(동기 조회, 호출 방식은 아래 "catalog 조회"와 같다). 쓸 수 없는 쿠폰이 있으면 422 `ORDER_COUPON_NOT_APPLICABLE`(쿠폰마다 이유)이다. promotion을 부를 수 없으면 503 `ORDER_PROMOTION_UNAVAILABLE`이다. 쿠폰이 없는 주문은 promotion을 부르지 않는다.
+- 하위 주문마다 판매자 쿠폰 할인, 플랫폼 쿠폰 할인 몫, 결제 금액을 스냅샷으로 저장한다. 주문 금액(결제 금액)은 하위 주문 결제 금액의 합이다. 화면이 보여 준 결제 금액(`expectedAmount`)과 다르면 409 `ORDER_AMOUNT_CHANGED`다(가격 확인과 같은 뜻).
+- `OrderPlaced`의 issuedCouponIds에 쓴 쿠폰을 싣는다. 예약은 promotion이 한다(아래 "예약 결과").
+
 ### 예약 결과
-order는 `catalog.stock`에서 예약 결과를 받는다([messaging.md](messaging.md) "주문·결제 Saga"). M3는 쿠폰이 없어 재고 예약 결과 하나로 정한다.
+order는 `catalog.stock`에서 재고 예약 결과를, 쿠폰이 있으면 `promotion.issued-coupon`에서 쿠폰 예약 결과를 받는다([messaging.md](messaging.md) "주문·결제 Saga").
 | 받는 이벤트 | 주문 | 내는 이벤트 |
 |---|---|---|
-| `StockReserved` | `PENDING` → `AWAITING_PAYMENT` | `OrderAwaitingPayment`(orderId, buyerId, amount, orderName) |
+| `StockReserved` | 결과를 기록한다. 쿠폰이 없거나 쿠폰 예약도 성공했으면 `PENDING` → `AWAITING_PAYMENT` | `OrderAwaitingPayment`(orderId, buyerId, amount, orderName) |
+| `CouponReserved` | 결과를 기록한다. 재고 예약도 성공했으면 `PENDING` → `AWAITING_PAYMENT` | `OrderAwaitingPayment` |
 | `StockReservationFailed` | `PENDING` → `CANCELLED`(사유 `STOCK_UNAVAILABLE`) | `OrderCancelled` |
+| `CouponReservationFailed` | `PENDING` → `CANCELLED`(사유 `COUPON_UNAVAILABLE`) | `OrderCancelled` |
+
+- 두 결과는 다른 토픽이라 어느 쪽이 먼저 와도 된다. 주문 행을 잠그고 결과를 기록하므로, 둘째 결과를 받은 쪽만 상태를 바꾼다. 실패가 오면 다른 쪽을 기다리지 않고 취소한다. 받은 예약은 catalog와 promotion이 `OrderCancelled`로 푼다.
+- 쿠폰 예약 결과 기록과 합류는 M5 order 쿠폰 PR에서 더한다. M3의 주문(쿠폰 없음)은 재고 결과 하나로 정해 그대로다.
 
 - 리스너는 처리 기록(`processed_event`)으로 같은 이벤트를 한 번만 처리한다. 주문 행을 잠그고 상태를 바꾼다.
 - `PENDING`이 아닌 주문에 결과가 오면(이미 같은 상태면 조용히, 다른 상태면 경고 로그) 넘긴다. order가 모르는 주문이면 경고 로그를 남기고 넘긴다.
@@ -141,6 +152,7 @@ order는 `payment.payment`에서 결제 결과를 받는다([payment.md](payment
 | 사유 | 언제 |
 |---|---|
 | `STOCK_UNAVAILABLE` | 재고 예약 실패 |
+| `COUPON_UNAVAILABLE` | 쿠폰 예약 실패(M5). 할인을 계산한 뒤 그사이 쿠폰을 다른 주문에 썼거나 만료됐다 |
 | `PAYMENT_TIMEOUT` | 결제 기한(주문 후 15분) 초과 |
 | `BUYER_CANCELLED` | 결제 전 구매자 취소 |
 
