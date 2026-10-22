@@ -45,6 +45,45 @@ export function checkoutLines(
   );
 }
 
+type BuyNowProduct = {
+  status?: string;
+  name?: string;
+  storeName?: string;
+  skus?: readonly { skuId?: string; optionValues?: string[]; price?: number; inStock?: boolean }[];
+};
+
+/**
+ * "바로 구매" 주문서의 한 줄. 장바구니를 거치지 않고 상품 상세(공개 API)의 지금 가격으로 만든다. 판매 중이 아니거나, 품절이거나, 수량이
+ * 1~99가 아니면 줄이 없다. 가격·재고는 order가 주문할 때 다시 확인한다.
+ */
+export function buyNowLine(
+  product: BuyNowProduct,
+  skuId: string,
+  quantity: string | undefined,
+): CheckoutLine | null {
+  const count = Number(quantity);
+  const sku = product.skus?.find((candidate) => candidate.skuId === skuId);
+  if (
+    product.status !== "ON_SALE" ||
+    !sku?.inStock ||
+    !Number.isInteger(count) ||
+    count < 1 ||
+    count > 99
+  ) {
+    return null;
+  }
+  const price = sku.price ?? 0;
+  return {
+    skuId,
+    storeName: product.storeName ?? "",
+    productName: product.name ?? "",
+    options: (sku.optionValues ?? []).join(" / "),
+    expectedPrice: price,
+    quantity: count,
+    amount: price * count,
+  };
+}
+
 /**
  * 결제 승인의 `Idempotency-Key`. 토스가 돌려준 결제 키로 만들어, 승인 주소를 새로 고치거나 다시 열어도 한 번만 승인한다. 결제 키는
  * 200자까지라 해시로 줄인다(키는 100자까지, docs/architecture/data.md).

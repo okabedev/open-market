@@ -19,7 +19,7 @@ import { cancelOrder } from "../actions";
 
 /**
  * 본인 주문 상세(ORD-3). 결제 대기 주문은 결제 화면으로 가거나 취소할 수 있고, 재고 확인 중인 주문도 취소할 수 있다(order.md "구매자
- * 취소"). 결제된 주문의 취소·반품은 M4 클레임에서 한다.
+ * 취소"). 결제된 주문은 판매자(하위 주문)마다 배송 조회로 가서 발송 전 취소, 구매확정, 반품·교환을 한다.
  */
 export default async function OrderPage({ params }: PageProps<"/orders/[orderId]">) {
   const { orderId } = await params;
@@ -86,7 +86,11 @@ export default async function OrderPage({ params }: PageProps<"/orders/[orderId]
             ) : null}
           </CardContent>
         </Card>
-        <OrderItemsCard sellerOrders={data.sellerOrders} amount={data.amount} />
+        <OrderItemsCard
+          sellerOrders={data.sellerOrders}
+          amount={data.amount}
+          {...(data.status === "PAID" ? { orderId } : {})}
+        />
         <ShippingCard shipping={data.shipping} />
       </div>
     </>

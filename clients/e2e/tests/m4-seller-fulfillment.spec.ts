@@ -3,8 +3,8 @@ import { env, uniqueTag } from "../support/env";
 import { approvedSeller, signUpVerifyAndLogin } from "../support/flows";
 import {
   accept,
-  BuyerApi,
   paidOrder,
+  requestClaim,
   sellerOrderIds,
   ship,
   waitForSellerOrder,
@@ -15,7 +15,7 @@ import { publish, registerProduct, stockOf } from "../support/products";
 /**
  * M4(docs/roadmap.md) 판매자 화면: 판매자가 결제된 하위 주문을 발주 확인하고 송장을 넣어 발송하면 배송 시뮬레이터가 배송 완료로 바꾼다
  * (FUL-1, FUL-2). 반품은 회수품을 보고 재입고를 골라 승인하면 환불(반품 배송비 차감)되고 재입고된다. 교환은 거부하면 사유가 남고,
- * 다시 신청한 것을 승인하면 교환 재발송을 발주 확인·발송한다(CLM-2, CLM-3). 구매자 클레임 신청은 shop 화면이 생길 때까지 API로 한다.
+ * 다시 신청한 것을 승인하면 교환 재발송을 발주 확인·발송한다(CLM-2, CLM-3). 구매자 클레임은 shop 화면으로 신청한다.
  *
  * run.sh가 자동 구매확정을 배송 완료 30초 뒤로 줄이므로 클레임은 배송 완료를 본 즉시 신청한다.
  */
@@ -34,12 +34,14 @@ test("M4: 판매자가 발주 확인·발송하고, 반품을 승인하면 환�
   const buyer = await (await browser.newContext()).newPage();
   const email = `e2e-buyer-${uniqueTag()}@example.com`;
   const password = "e2e-buyer-1234";
+  const orders: string[] = [];
   await test.step("구매자: 가입하고 1개씩 두 번 주문해 결제한다", async () => {
     await signUpVerifyAndLogin(buyer, email, password);
     await addAddress(buyer);
-    await paidOrder(buyer, productId, 1);
-    await paidOrder(buyer, productId, 1);
+    orders.push(await paidOrder(buyer, productId, 1));
+    orders.push(await paidOrder(buyer, productId, 1));
   });
+  const [returningOrder = "", exchangingOrder = ""] = orders;
 
   // 최근 결제 순이라 나중에 결제한 주문이 앞에 온다. 먼저 결제한 것을 반품, 나중 것을 교환에 쓴다.
   let returning = "";
@@ -83,25 +85,22 @@ test("M4: 판매자가 발주 확인·발송하고, 반품을 승인하면 환�
     await ship(seller, exchanging, "2234567890");
   });
 
-  const api = await BuyerApi.login(email, password);
-  let photo = "";
   await test.step("배송 시뮬레이터가 배송 완료로 바꾸면 구매자가 곧바로 반품(단순 변심, 사진)과 교환(상품 불량)을 신청한다", async () => {
-    photo = await api.uploadClaimImage();
     await waitForSellerOrder(seller, returning, (page) =>
       page.getByRole("cell", { name: "배송 완료", exact: true }),
     );
-    await api.requestClaim(returning, {
-      type: "RETURN",
-      reason: "CHANGE_OF_MIND",
+    await requestClaim(buyer, returningOrder, {
+      type: "반품",
+      reason: "단순 변심",
       description: "사이즈가 맞지 않아요",
-      fileIds: [photo],
+      photo: true,
     });
     await waitForSellerOrder(seller, exchanging, (page) =>
       page.getByRole("cell", { name: "배송 완료", exact: true }),
     );
-    await api.requestClaim(exchanging, {
-      type: "EXCHANGE",
-      reason: "DEFECTIVE",
+    await requestClaim(buyer, exchangingOrder, {
+      type: "교환",
+      reason: "상품 불량",
       description: "단추가 떨어져 왔어요",
     });
   });
@@ -125,8 +124,9 @@ test("M4: 판매자가 발주 확인·발송하고, 반품을 승인하면 환�
       .poll(() => image.evaluate((element: HTMLImageElement) => element.naturalWidth))
       .toBeGreaterThan(0);
 
+    const src = (await image.getAttribute("src")) ?? "";
     const anonymous = await browser.newContext();
-    const response = await anonymous.request.get(`${env.seller}/api/claim-images/${photo}/w300`);
+    const response = await anonymous.request.get(`${env.seller}${src}`);
     expect(response.status()).toBe(404);
     await anonymous.close();
   });
@@ -164,10 +164,10 @@ test("M4: 판매자가 발주 확인·발송하고, 반품을 승인하면 환�
   });
 
   await test.step("구매자가 다시 신청한 교환을 승인하면 교환 재발송을 발주 확인하고 발송한다", async () => {
-    await api.requestClaim(exchanging, {
-      type: "EXCHANGE",
-      reason: "DEFECTIVE",
-      description: "다시 봐 주세요. 사진의 단추가 떨어져 있어요",
+    await requestClaim(buyer, exchangingOrder, {
+      type: "교환",
+      reason: "상품 불량",
+      description: "다시 봐 주세요. 단추가 떨어져 있어요",
     });
     await waitForSellerOrder(seller, exchanging, (page) => page.getByText("교환 신청"));
     await seller.getByRole("button", { name: "승인", exact: true }).click();
@@ -181,6 +181,4 @@ test("M4: 판매자가 발주 확인·발송하고, 반품을 승인하면 환�
       "CJ대한통운 3234567890",
     );
   });
-
-  await api.dispose();
 });

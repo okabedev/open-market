@@ -14,13 +14,15 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { randomUUID } from "node:crypto";
 import { addToCart } from "@/app/cart/actions";
+import { buyNow } from "@/app/checkout/actions";
 import { QuantityForm } from "@/components/quantity-form";
 import { bff } from "@/lib/bff";
 import { currentSession } from "@/lib/session";
 
 /**
  * 구매자 상품 상세. 판매 중·판매 중지 상품만 보이고(제재·등록 중은 404), 남은 수량 대신 옵션별 품절 여부를 보여 준다. 로그인하면 판매
- * 중인 상품의 품절 아닌 옵션을 장바구니에 담는다(재고는 주문할 때 예약으로 정한다). 담으면 `?added=<SKU ID>`로 돌아와 안내한다.
+ * 중인 상품의 품절 아닌 옵션을 장바구니에 담거나 바로 구매한다(재고는 주문할 때 예약으로 정한다). 담으면 `?added=<SKU ID>`로 돌아와
+ * 안내하고, 바로 구매는 그 SKU 하나로 주문서를 연다.
  */
 export default async function ProductPage({
   params,
@@ -109,9 +111,7 @@ export default async function ProductPage({
                 <TableHead>{optionNames.length > 0 ? optionNames.join(" / ") : "옵션"}</TableHead>
                 <TableHead className="text-right">가격</TableHead>
                 <TableHead className="text-right">재고</TableHead>
-                {session && !stopped ? (
-                  <TableHead className="text-right">장바구니</TableHead>
-                ) : null}
+                {session && !stopped ? <TableHead className="text-right">구매</TableHead> : null}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -143,6 +143,7 @@ export default async function ProductPage({
                           label={`${(sku.optionValues ?? []).join(" / ") || "기본"} 수량`}
                           defaultQuantity={1}
                           submitText="담기"
+                          secondary={{ action: buyNow, text: "바로 구매" }}
                         />
                       ) : (
                         <span className="text-sm text-muted-foreground">-</span>
@@ -161,7 +162,7 @@ export default async function ProductPage({
               >
                 로그인
               </Link>
-              하면 장바구니에 담을 수 있습니다.
+              하면 장바구니에 담거나 바로 구매할 수 있습니다.
             </p>
           )}
         </div>
