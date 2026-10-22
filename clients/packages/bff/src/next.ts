@@ -10,6 +10,7 @@ import { loadConfig, type AppName } from "./config";
 import { sessionCookieName } from "./cookies";
 import { clientAddress } from "./forwarded";
 import { createOidcClient } from "./oidc";
+import { fetchPrivateFile, privateFilePath, type PrivateFileScope } from "./private-file";
 import type { SessionView } from "./session";
 import { RedisSessionStore } from "./store";
 
@@ -81,6 +82,11 @@ export type NextBff = {
   serviceClient<S extends ServiceName>(service: S): Promise<ServiceClient<S>>;
   /** 토큰 없는 서비스 클라이언트. 가입처럼 로그인 전에 부르는 공개 경로용 */
   publicClient<S extends ServiceName>(service: S): Promise<ServiceClient<S>>;
+  /**
+   * 비공개 파일(클레임 사진) 변형을 사용자 토큰으로 받아 넘긴다. 이미지 Route Handler가 그대로 돌려준다. 잘못된 값, 로그인 전, 볼 수
+   * 없는 파일은 404다
+   */
+  privateFile(scope: PrivateFileScope, fileId: string, variant: string): Promise<Response>;
 };
 
 /** 두 클라이언트 모두 브라우저 주소를 `X-Forwarded-For`로 넘긴다. gateway가 IP별 레이트 리밋을 그 값으로 센다. */
@@ -110,6 +116,16 @@ export function createNextBff(app: AppName): NextBff {
     },
     async publicClient(service) {
       return createServiceClient(service, await forwardedFor());
+    },
+    async privateFile(scope, fileId, variant) {
+      const path = privateFilePath(scope, fileId, variant);
+      if (!path) {
+        return new Response(null, { status: 404 });
+      }
+      return fetchPrivateFile(path, {
+        accessToken: await getAccessToken(),
+        ...(await forwardedFor()),
+      });
     },
   };
 }

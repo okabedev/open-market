@@ -145,11 +145,23 @@ public class OrderQueryDao {
 
     /**
      * 판매자 본인 하위 주문 목록. 주문 상태가 {@code statuses} 중 하나인 것만. 최근 결제 순(같으면 하위 주문 ID 역순), 쪽 번호. {@code
-     * statuses}는 결제된 상태만 준다.
+     * statuses}는 결제된 상태만 준다. {@code progress}, {@code claimStatuses}가 비어 있지 않으면 진행 상태, 클레임 상태가 그중
+     * 하나인 것만 준다.
      */
     public PageView<SellerOrderSummaryView> findSellerOrders(
-            UUID sellerId, Collection<OrderStatus> statuses, int page, int size) {
-        Predicate where = sellerVisible(sellerId, statuses);
+            UUID sellerId,
+            Collection<OrderStatus> statuses,
+            Collection<SellerOrderProgress> progress,
+            Collection<ClaimStatus> claimStatuses,
+            int page,
+            int size) {
+        BooleanBuilder where = new BooleanBuilder(sellerVisible(sellerId, statuses));
+        if (!progress.isEmpty()) {
+            where.and(PROGRESS.in(progress.stream().map(SellerOrderProgress::name).toList()));
+        }
+        if (!claimStatuses.isEmpty()) {
+            where.and(CLAIM_STATUS.in(claimStatuses.stream().map(ClaimStatus::name).toList()));
+        }
         QOrderLine first = new QOrderLine("first");
         QOrderLine counted = new QOrderLine("counted");
         List<SellerOrderSummaryView> items =

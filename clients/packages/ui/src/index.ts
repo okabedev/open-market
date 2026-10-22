@@ -29,6 +29,18 @@ export {
   ORDER_STATUS_LABELS,
   type OrderStatus,
 } from "./order-status-badge";
+export {
+  CARRIER_LABELS,
+  CLAIM_REASON_LABELS,
+  carrierLabel,
+  ClaimBadge,
+  claimLabel,
+  claimReasonLabel,
+  faultLabel,
+  ProgressBadge,
+  progressLabel,
+  shipmentStatusLabel,
+} from "./fulfillment-badges";
 export { ShippingCard, type ShippingAddress } from "./shipping-card";
 export { AccountBar, loginErrorMessage } from "./account-bar";
 export { AppShell, PageHeader, type NavItem } from "./app-shell";
