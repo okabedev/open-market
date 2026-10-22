@@ -1,8 +1,8 @@
 package com.openmarket.notification.ui.event;
 
 import com.openmarket.common.messaging.consumer.IdempotentEventProcessor;
-import com.openmarket.notification.command.application.NotifyInAppCommand;
-import com.openmarket.notification.command.application.NotifyInAppUseCase;
+import com.openmarket.notification.command.application.NotifyCommand;
+import com.openmarket.notification.command.application.NotifyUseCase;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -23,11 +23,11 @@ class OrderEventsListener {
     static final String LISTENER = "notification.order-paid";
 
     private final IdempotentEventProcessor processor;
-    private final NotifyInAppUseCase notifyInApp;
+    private final NotifyUseCase notify;
 
-    OrderEventsListener(IdempotentEventProcessor processor, NotifyInAppUseCase notifyInApp) {
+    OrderEventsListener(IdempotentEventProcessor processor, NotifyUseCase notify) {
         this.processor = processor;
-        this.notifyInApp = notifyInApp;
+        this.notify = notify;
     }
 
     @KafkaListener(topics = "order.order", groupId = "notification")
@@ -39,24 +39,24 @@ class OrderEventsListener {
                 LISTENER,
                 record,
                 OrderPaidMessage.class,
-                event -> notifyInApp.execute(notices(event.id(), event.payload())));
+                event -> notify.execute(notices(event.id(), event.payload())));
     }
 
-    private static NotifyInAppCommand notices(UUID eventId, OrderPaidMessage order) {
-        List<NotifyInAppCommand.Notice> notices = new ArrayList<>();
+    private static NotifyCommand notices(UUID eventId, OrderPaidMessage order) {
+        List<NotifyCommand.Notice> notices = new ArrayList<>();
         notices.add(
-                new NotifyInAppCommand.Notice(
-                        NotifyInAppCommand.Kind.ORDER_PAID,
-                        NotifyInAppCommand.Audience.BUYER,
+                new NotifyCommand.Notice(
+                        NotifyCommand.Kind.ORDER_PAID,
+                        NotifyCommand.Audience.BUYER,
                         order.buyerId(),
                         Map.of("orderName", order.orderName(), "amount", order.amount() + ""),
-                        NotifyInAppCommand.Target.ORDER,
+                        NotifyCommand.Target.ORDER,
                         order.orderId()));
         for (OrderPaidMessage.SellerOrder sellerOrder : order.sellerOrders()) {
             notices.add(
-                    new NotifyInAppCommand.Notice(
-                            NotifyInAppCommand.Kind.SELLER_ORDER_RECEIVED,
-                            NotifyInAppCommand.Audience.SELLER,
+                    new NotifyCommand.Notice(
+                            NotifyCommand.Kind.SELLER_ORDER_RECEIVED,
+                            NotifyCommand.Audience.SELLER,
                             sellerOrder.sellerId(),
                             Map.of(
                                     "productName",
@@ -65,10 +65,10 @@ class OrderEventsListener {
                                     sellerOrder.lines().size() + "",
                                     "amount",
                                     sellerOrder.amount() + ""),
-                            NotifyInAppCommand.Target.SELLER_ORDER,
+                            NotifyCommand.Target.SELLER_ORDER,
                             sellerOrder.sellerOrderId()));
         }
-        return new NotifyInAppCommand(eventId, notices);
+        return new NotifyCommand(eventId, notices);
     }
 
     /** 소비 쪽 페이로드. 알림에 쓰는 필드만 둔다. 배송지는 받지 않는다. */

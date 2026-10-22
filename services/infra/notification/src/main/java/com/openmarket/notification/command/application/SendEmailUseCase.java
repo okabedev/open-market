@@ -4,6 +4,7 @@ import com.openmarket.notification.command.domain.Notification;
 import com.openmarket.notification.command.domain.NotificationRepository;
 import java.time.Clock;
 import java.util.Objects;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -11,6 +12,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 이메일 알림 하나를 보낸다. 보낼 차례가 아니면(이미 보냄, 재시도 대기) 아무것도 하지 않는다. SMTP가 실패하면 예외를 던지지 않고 다음 시도로 미룬다.
+ *
+ * <p>받는 주소가 저장되지 않은 알림(회원에게 보내는 알림 종류)은 보낼 때 member에서 인증한 주소를 조회한다. 회원이 없거나 탈퇴했거나 인증하지 않았으면 {@code
+ * SKIPPED}로 끝내고, member를 부를 수 없으면 SMTP 실패처럼 다음 시도로 미룬다. 조회한 주소는 저장하지 않는다.
  *
  * <p>SMTP가 받은 뒤 상태를 저장하기 전에 프로세스가 죽으면 다음 실행에서 한 번 더 보낸다(최소 한 번). 그 사이가 짧아 드물다.
  */
@@ -22,16 +26,19 @@ public class SendEmailUseCase {
     private final NotificationRepository notifications;
     private final EmailRendererPort renderer;
     private final MailSenderPort mailSender;
+    private final MemberContactPort contacts;
     private final Clock clock;
 
     public SendEmailUseCase(
             NotificationRepository notifications,
             EmailRendererPort renderer,
             MailSenderPort mailSender,
+            MemberContactPort contacts,
             Clock clock) {
         this.notifications = notifications;
         this.renderer = renderer;
         this.mailSender = mailSender;
+        this.contacts = contacts;
         this.clock = clock;
     }
 
@@ -41,15 +48,38 @@ public class SendEmailUseCase {
         if (notification == null || !notification.isDue(clock.instant())) {
             return;
         }
+        String to = notification.recipientEmail();
+        if (to == null) {
+            Optional<String> email;
+            try {
+                email =
+                        contacts.verifiedEmail(
+                                Objects.requireNonNull(notification.recipientAccountId()));
+            } catch (MemberContactPort.ContactUnavailableException e) {
+                notification.markFailed(clock.instant());
+                log.warn(
+                        "받는 주소를 조회하지 못했다: {} {} ({})",
+                        notification.kind(),
+                        notification.id(),
+                        notification.status());
+                return;
+            }
+            if (email.isEmpty()) {
+                notification.markSkipped();
+                log.info(
+                        "받을 회원이 없거나 이메일을 인증하지 않아 보내지 않는다: {} {}",
+                        notification.kind(),
+                        notification.id());
+                return;
+            }
+            to = email.get();
+        }
         EmailRendererPort.RenderedEmail email =
                 renderer.render(notification.kind(), notification.params());
         try {
             mailSender.send(
                     new MailSenderPort.OutgoingEmail(
-                            Objects.requireNonNull(notification.recipientEmail()),
-                            email.subject(),
-                            email.html(),
-                            email.text()));
+                            to, email.subject(), email.html(), email.text()));
             notification.markSent(clock.instant());
         } catch (MailSenderPort.MailDeliveryException e) {
             notification.markFailed(clock.instant());

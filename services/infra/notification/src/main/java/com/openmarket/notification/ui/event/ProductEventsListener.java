@@ -1,8 +1,8 @@
 package com.openmarket.notification.ui.event;
 
 import com.openmarket.common.messaging.consumer.IdempotentEventProcessor;
-import com.openmarket.notification.command.application.NotifyInAppCommand;
-import com.openmarket.notification.command.application.NotifyInAppUseCase;
+import com.openmarket.notification.command.application.NotifyCommand;
+import com.openmarket.notification.command.application.NotifyUseCase;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
@@ -21,11 +21,11 @@ class ProductEventsListener {
     static final String LISTENER = "notification.product-banned";
 
     private final IdempotentEventProcessor processor;
-    private final NotifyInAppUseCase notifyInApp;
+    private final NotifyUseCase notify;
 
-    ProductEventsListener(IdempotentEventProcessor processor, NotifyInAppUseCase notifyInApp) {
+    ProductEventsListener(IdempotentEventProcessor processor, NotifyUseCase notify) {
         this.processor = processor;
-        this.notifyInApp = notifyInApp;
+        this.notify = notify;
     }
 
     @KafkaListener(topics = "catalog.product", groupId = "notification")
@@ -38,16 +38,16 @@ class ProductEventsListener {
                 record,
                 ProductBannedMessage.class,
                 event ->
-                        notifyInApp.execute(
-                                new NotifyInAppCommand(
+                        notify.execute(
+                                new NotifyCommand(
                                         event.id(),
                                         List.of(
-                                                new NotifyInAppCommand.Notice(
-                                                        NotifyInAppCommand.Kind.PRODUCT_BANNED,
-                                                        NotifyInAppCommand.Audience.SELLER,
+                                                new NotifyCommand.Notice(
+                                                        NotifyCommand.Kind.PRODUCT_BANNED,
+                                                        NotifyCommand.Audience.SELLER,
                                                         event.payload().sellerId(),
                                                         Map.of("reason", event.payload().reason()),
-                                                        NotifyInAppCommand.Target.PRODUCT,
+                                                        NotifyCommand.Target.PRODUCT,
                                                         event.payload().productId())))));
     }
 

@@ -210,6 +210,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/internal/v1/members/{memberId}/contact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["contact"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -358,6 +374,10 @@ export interface components {
             submittedAt?: string;
             /** Format: date-time */
             reviewedAt?: string;
+        };
+        MemberContactView: {
+            email?: string;
+            emailVerified?: boolean;
         };
     };
     responses: never;
@@ -732,6 +752,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PageViewSellerApplicationReviewView"];
+                };
+            };
+        };
+    };
+    contact: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                memberId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemberContactView"];
                 };
             };
         };

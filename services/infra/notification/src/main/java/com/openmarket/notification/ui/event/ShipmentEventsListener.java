@@ -1,8 +1,8 @@
 package com.openmarket.notification.ui.event;
 
 import com.openmarket.common.messaging.consumer.IdempotentEventProcessor;
-import com.openmarket.notification.command.application.NotifyInAppCommand;
-import com.openmarket.notification.command.application.NotifyInAppUseCase;
+import com.openmarket.notification.command.application.NotifyCommand;
+import com.openmarket.notification.command.application.NotifyUseCase;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
@@ -23,11 +23,11 @@ class ShipmentEventsListener {
     static final String DELIVERED_LISTENER = "notification.shipment-delivered";
 
     private final IdempotentEventProcessor processor;
-    private final NotifyInAppUseCase notifyInApp;
+    private final NotifyUseCase notify;
 
-    ShipmentEventsListener(IdempotentEventProcessor processor, NotifyInAppUseCase notifyInApp) {
+    ShipmentEventsListener(IdempotentEventProcessor processor, NotifyUseCase notify) {
         this.processor = processor;
-        this.notifyInApp = notifyInApp;
+        this.notify = notify;
     }
 
     @KafkaListener(topics = "fulfillment.shipment", groupId = "notification")
@@ -39,10 +39,10 @@ class ShipmentEventsListener {
                             record,
                             ShipmentShippedMessage.class,
                             event ->
-                                    notifyInApp.execute(
+                                    notify.execute(
                                             buyer(
                                                     event.id(),
-                                                    NotifyInAppCommand.Kind.SHIPMENT_SHIPPED,
+                                                    NotifyCommand.Kind.SHIPMENT_SHIPPED,
                                                     event.payload().buyerId(),
                                                     event.payload().orderId(),
                                                     Map.of(
@@ -54,10 +54,10 @@ class ShipmentEventsListener {
                             record,
                             ShipmentDeliveredMessage.class,
                             event ->
-                                    notifyInApp.execute(
+                                    notify.execute(
                                             buyer(
                                                     event.id(),
-                                                    NotifyInAppCommand.Kind.SHIPMENT_DELIVERED,
+                                                    NotifyCommand.Kind.SHIPMENT_DELIVERED,
                                                     event.payload().buyerId(),
                                                     event.payload().orderId(),
                                                     Map.of())));
@@ -65,21 +65,21 @@ class ShipmentEventsListener {
         }
     }
 
-    private static NotifyInAppCommand buyer(
+    private static NotifyCommand buyer(
             UUID eventId,
-            NotifyInAppCommand.Kind kind,
+            NotifyCommand.Kind kind,
             UUID buyerId,
             UUID orderId,
             Map<String, String> params) {
-        return new NotifyInAppCommand(
+        return new NotifyCommand(
                 eventId,
                 List.of(
-                        new NotifyInAppCommand.Notice(
+                        new NotifyCommand.Notice(
                                 kind,
-                                NotifyInAppCommand.Audience.BUYER,
+                                NotifyCommand.Audience.BUYER,
                                 buyerId,
                                 params,
-                                NotifyInAppCommand.Target.ORDER,
+                                NotifyCommand.Target.ORDER,
                                 orderId)));
     }
 

@@ -10,7 +10,7 @@ import org.jspecify.annotations.Nullable;
  *
  * @param sourceEventId 원인 이벤트 ID. 중복 방지 키다
  */
-public record NotifyInAppCommand(UUID sourceEventId, List<Notice> notices) {
+public record NotifyCommand(UUID sourceEventId, List<Notice> notices) {
 
     /**
      * 알림 하나.
@@ -57,6 +57,7 @@ public record NotifyInAppCommand(UUID sourceEventId, List<Notice> notices) {
         SELLER_ORDER,
         CLAIM,
         REFUND,
-        PRODUCT
+        PRODUCT,
+        SELLER_APPLICATION
     }
 }

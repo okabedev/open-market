@@ -14,38 +14,38 @@ import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-class NotifyInAppUseCaseTest {
+class NotifyUseCaseTest {
 
     final Fakes.Notifications notifications = new Fakes.Notifications();
-    final NotifyInAppUseCase useCase = new NotifyInAppUseCase(notifications, Fakes.clock());
+    final NotifyUseCase useCase = new NotifyUseCase(notifications, Fakes.LINKS, Fakes.clock());
 
     final UUID buyerId = UUID.randomUUID();
     final UUID sellerA = UUID.randomUUID();
     final UUID sellerB = UUID.randomUUID();
     final UUID orderId = UUID.randomUUID();
 
-    private NotifyInAppCommand orderPaid(UUID eventId) {
-        return new NotifyInAppCommand(
+    private NotifyCommand orderPaid(UUID eventId) {
+        return new NotifyCommand(
                 eventId,
                 List.of(
-                        new NotifyInAppCommand.Notice(
-                                NotifyInAppCommand.Kind.ORDER_PAID,
-                                NotifyInAppCommand.Audience.BUYER,
+                        new NotifyCommand.Notice(
+                                NotifyCommand.Kind.ORDER_PAID,
+                                NotifyCommand.Audience.BUYER,
                                 buyerId,
                                 Map.of("orderName", "반팔 티셔츠 외 1건", "amount", "59700"),
-                                NotifyInAppCommand.Target.ORDER,
+                                NotifyCommand.Target.ORDER,
                                 orderId),
                         sellerNotice(sellerA),
                         sellerNotice(sellerB)));
     }
 
-    private NotifyInAppCommand.Notice sellerNotice(UUID sellerId) {
-        return new NotifyInAppCommand.Notice(
-                NotifyInAppCommand.Kind.SELLER_ORDER_RECEIVED,
-                NotifyInAppCommand.Audience.SELLER,
+    private NotifyCommand.Notice sellerNotice(UUID sellerId) {
+        return new NotifyCommand.Notice(
+                NotifyCommand.Kind.SELLER_ORDER_RECEIVED,
+                NotifyCommand.Audience.SELLER,
                 sellerId,
                 Map.of("productName", "반팔 티셔츠", "lineCount", "1", "amount", "19900"),
-                NotifyInAppCommand.Target.SELLER_ORDER,
+                NotifyCommand.Target.SELLER_ORDER,
                 UUID.randomUUID());
     }
 
@@ -54,7 +54,9 @@ class NotifyInAppUseCaseTest {
     void createsNoticePerRecipient() {
         useCase.execute(orderPaid(UUID.randomUUID()));
 
-        assertThat(notifications.rows.values())
+        assertThat(
+                        notifications.rows.values().stream()
+                                .filter(n -> n.channel() == NotificationChannel.IN_APP))
                 .extracting(Notification::kind)
                 .containsExactly(
                         NotificationKind.ORDER_PAID,
@@ -78,6 +80,29 @@ class NotifyInAppUseCaseTest {
     }
 
     @Test
+    @DisplayName("이메일 종류는 같은 문구와 앱 링크로 회원 이메일 알림(PENDING, 주소 없음)도 만든다. 판매자 새 주문은 인앱만이다")
+    void createsMemberEmail() {
+        useCase.execute(orderPaid(UUID.randomUUID()));
+
+        List<Notification> emails =
+                notifications.rows.values().stream()
+                        .filter(n -> n.channel() == NotificationChannel.EMAIL)
+                        .toList();
+        assertThat(emails)
+                .singleElement()
+                .satisfies(
+                        email -> {
+                            assertThat(email.kind()).isEqualTo(NotificationKind.ORDER_PAID);
+                            assertThat(email.status()).isEqualTo(NotificationStatus.PENDING);
+                            assertThat(email.recipientAccountId()).isEqualTo(buyerId);
+                            assertThat(email.recipientEmail()).isNull();
+                            assertThat(email.params())
+                                    .containsEntry("message", "주문이 완료됐습니다. 반팔 티셔츠 외 1건, 59,700원")
+                                    .containsEntry("link", "http://BUYER/ORDER/" + orderId);
+                        });
+    }
+
+    @Test
     @DisplayName("같은 원인 이벤트를 다시 받으면 아무것도 만들지 않는다(NTF-2)")
     void idempotent() {
         UUID eventId = UUID.randomUUID();
@@ -85,22 +110,22 @@ class NotifyInAppUseCaseTest {
         useCase.execute(orderPaid(eventId));
         useCase.execute(orderPaid(eventId));
 
-        assertThat(notifications.rows).hasSize(3);
+        assertThat(notifications.rows).hasSize(4);
     }
 
     @Test
     @DisplayName("관리자 알림은 받는 사람 없이 한 건이다")
     void adminNotice() {
         useCase.execute(
-                new NotifyInAppCommand(
+                new NotifyCommand(
                         UUID.randomUUID(),
                         List.of(
-                                new NotifyInAppCommand.Notice(
-                                        NotifyInAppCommand.Kind.REFUND_FAILED,
-                                        NotifyInAppCommand.Audience.ADMIN,
+                                new NotifyCommand.Notice(
+                                        NotifyCommand.Kind.REFUND_FAILED,
+                                        NotifyCommand.Audience.ADMIN,
                                         null,
                                         Map.of("code", "NOT_CANCELABLE_AMOUNT"),
-                                        NotifyInAppCommand.Target.REFUND,
+                                        NotifyCommand.Target.REFUND,
                                         UUID.randomUUID()))));
 
         Notification notification = notifications.rows.values().iterator().next();

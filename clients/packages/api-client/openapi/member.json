@@ -429,6 +429,33 @@
           }
         }
       }
+    },
+    "/internal/v1/members/{memberId}/contact" : {
+      "get" : {
+        "tags" : [ "internal-member-query-controller" ],
+        "operationId" : "contact",
+        "parameters" : [ {
+          "name" : "memberId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MemberContactView"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components" : {
@@ -807,6 +834,17 @@
           "reviewedAt" : {
             "type" : "string",
             "format" : "date-time"
+          }
+        }
+      },
+      "MemberContactView" : {
+        "type" : "object",
+        "properties" : {
+          "email" : {
+            "type" : "string"
+          },
+          "emailVerified" : {
+            "type" : "boolean"
           }
         }
       }

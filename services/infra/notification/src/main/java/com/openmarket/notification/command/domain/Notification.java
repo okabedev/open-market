@@ -30,6 +30,9 @@ import org.jspecify.annotations.Nullable;
  *
  * <p>인앱 알림은 받는 쪽({@link NotificationAudience})의 알림함에 들어가고 만들 때 바로 {@code SENT}다. 문구는 만들 때 정해 저장한다.
  * 관리자 알림은 받는 사람 없이 역할에 한 건이다(docs/architecture/notification.md "인앱 알림").
+ *
+ * <p>회원에게 보내는 이메일({@link #memberEmail})은 받는 주소를 저장하지 않는다. 보낼 때 member에서 조회하고, 회원이 없거나 탈퇴했거나 이메일을
+ * 인증하지 않았으면 {@code SKIPPED}로 끝낸다.
  */
 @Entity
 @Table(name = "notification")
@@ -138,6 +141,33 @@ public class Notification {
     }
 
     /**
+     * 회원에게 보내는 이메일 알림. 받는 주소는 보낼 때 member에서 조회한다(저장하지 않는다).
+     *
+     * @param params 템플릿에 넣을 값. 문구({@code message})와 앱 링크({@code link})
+     */
+    public static Notification memberEmail(
+            UUID id,
+            UUID sourceEventId,
+            NotificationKind kind,
+            NotificationAudience audience,
+            UUID recipientAccountId,
+            Map<String, String> params,
+            Instant now) {
+        Notification notification =
+                new Notification(
+                        id,
+                        sourceEventId,
+                        NotificationChannel.EMAIL,
+                        kind,
+                        recipientAccountId,
+                        null,
+                        params,
+                        now);
+        notification.audience = audience;
+        return notification;
+    }
+
+    /**
      * 인앱 알림. 관리자 알림({@code ADMIN})은 받는 사람이 없고, 나머지는 있어야 한다.
      *
      * @param message 앱에 보일 문구. 개인정보를 넣지 않는다
@@ -191,6 +221,12 @@ public class Notification {
     public void markSent(Instant now) {
         status = NotificationStatus.SENT;
         sentAt = now;
+        params.clear();
+    }
+
+    /** 보내지 않기로 했다(받는 회원이 없거나 탈퇴했거나 이메일을 인증하지 않았다). 다시 시도하지 않는다. */
+    public void markSkipped() {
+        status = NotificationStatus.SKIPPED;
         params.clear();
     }
 

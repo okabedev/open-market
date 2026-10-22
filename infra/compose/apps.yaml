@@ -198,6 +198,7 @@ services:
     environment:
       <<: *spring-env
       NOTIFICATION_DB_PASSWORD: ${NOTIFICATION_DB_PASSWORD:?}
+      NOTIFICATION_CLIENT_SECRET: ${NOTIFICATION_CLIENT_SECRET:?}
       MAIL_HOST: mailpit
     healthcheck:
       test: ["CMD", "curl", "-fs", "http://localhost:8202/actuator/health"]

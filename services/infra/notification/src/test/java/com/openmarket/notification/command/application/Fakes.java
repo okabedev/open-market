@@ -93,6 +93,24 @@ final class Fakes {
         }
     }
 
+    /** member 연락처 조회. 회원 ID → 인증한 주소. 없으면 빈 값, {@code unavailable}이면 조회 실패. */
+    static final class Contacts implements MemberContactPort {
+        final Map<UUID, String> verified = new LinkedHashMap<>();
+        boolean unavailable;
+
+        @Override
+        public Optional<String> verifiedEmail(UUID memberId) {
+            if (unavailable) {
+                throw new MemberContactPort.ContactUnavailableException(
+                        "member 연결 실패", new RuntimeException());
+            }
+            return Optional.ofNullable(verified.get(memberId));
+        }
+    }
+
+    static final AppLinkPort LINKS =
+            (audience, target, targetId) -> "http://" + audience + "/" + target + "/" + targetId;
+
     static final EmailRendererPort RENDERER =
             (NotificationKind kind, Map<String, String> params) ->
                     new EmailRendererPort.RenderedEmail(

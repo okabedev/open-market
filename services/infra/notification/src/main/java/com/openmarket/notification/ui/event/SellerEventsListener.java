@@ -1,14 +1,15 @@
 package com.openmarket.notification.ui.event;
 
 import com.openmarket.common.messaging.consumer.IdempotentEventProcessor;
-import com.openmarket.notification.command.application.NotifyInAppCommand;
-import com.openmarket.notification.command.application.NotifyInAppUseCase;
+import com.openmarket.notification.command.application.NotifyCommand;
+import com.openmarket.notification.command.application.NotifyUseCase;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.header.Header;
+import org.jspecify.annotations.Nullable;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
@@ -20,11 +21,11 @@ import org.springframework.stereotype.Component;
 class SellerEventsListener {
 
     private final IdempotentEventProcessor processor;
-    private final NotifyInAppUseCase notifyInApp;
+    private final NotifyUseCase notify;
 
-    SellerEventsListener(IdempotentEventProcessor processor, NotifyInAppUseCase notifyInApp) {
+    SellerEventsListener(IdempotentEventProcessor processor, NotifyUseCase notify) {
         this.processor = processor;
-        this.notifyInApp = notifyInApp;
+        this.notify = notify;
     }
 
     @KafkaListener(topics = "member.seller", groupId = "notification")
@@ -36,50 +37,56 @@ class SellerEventsListener {
                             record,
                             SellerApprovedMessage.class,
                             event ->
-                                    notifyInApp.execute(
+                                    notify.execute(
                                             one(
                                                     event.id(),
-                                                    NotifyInAppCommand.Kind.SELLER_APPROVED,
-                                                    NotifyInAppCommand.Audience.SELLER,
+                                                    NotifyCommand.Kind.SELLER_APPROVED,
+                                                    NotifyCommand.Audience.SELLER,
                                                     event.payload().sellerId(),
                                                     Map.of(
                                                             "storeName",
-                                                            event.payload().storeName()))));
+                                                            event.payload().storeName()),
+                                                    null,
+                                                    null)));
             case "SellerRejected" ->
                     processor.process(
                             "notification.seller-rejected",
                             record,
                             SellerRejectedMessage.class,
                             event ->
-                                    notifyInApp.execute(
+                                    notify.execute(
                                             one(
                                                     event.id(),
-                                                    NotifyInAppCommand.Kind.SELLER_REJECTED,
-                                                    NotifyInAppCommand.Audience.BUYER,
+                                                    NotifyCommand.Kind.SELLER_REJECTED,
+                                                    NotifyCommand.Audience.BUYER,
                                                     event.payload().memberId(),
-                                                    Map.of("reason", event.payload().reason()))));
+                                                    Map.of("reason", event.payload().reason()),
+                                                    NotifyCommand.Target.SELLER_APPLICATION,
+                                                    event.payload().applicationId())));
             default -> {}
         }
     }
 
-    private static NotifyInAppCommand one(
+    private static NotifyCommand one(
             UUID eventId,
-            NotifyInAppCommand.Kind kind,
-            NotifyInAppCommand.Audience audience,
+            NotifyCommand.Kind kind,
+            NotifyCommand.Audience audience,
             UUID recipientId,
-            Map<String, String> params) {
-        return new NotifyInAppCommand(
+            Map<String, String> params,
+            NotifyCommand.@Nullable Target target,
+            @Nullable UUID targetId) {
+        return new NotifyCommand(
                 eventId,
                 List.of(
-                        new NotifyInAppCommand.Notice(
-                                kind, audience, recipientId, params, null, null)));
+                        new NotifyCommand.Notice(
+                                kind, audience, recipientId, params, target, targetId)));
     }
 
     /** 소비 쪽 페이로드. */
     record SellerApprovedMessage(UUID sellerId, String storeName) {}
 
     /** 소비 쪽 페이로드. */
-    record SellerRejectedMessage(UUID memberId, String reason) {}
+    record SellerRejectedMessage(UUID memberId, UUID applicationId, String reason) {}
 
     private static String type(ConsumerRecord<String, String> record) {
         Header type = record.headers().lastHeader("type");

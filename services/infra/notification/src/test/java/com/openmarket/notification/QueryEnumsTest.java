@@ -2,7 +2,7 @@ package com.openmarket.notification;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.openmarket.notification.command.application.NotifyInAppCommand;
+import com.openmarket.notification.command.application.NotifyCommand;
 import com.openmarket.notification.command.application.ReadNotificationCommand;
 import java.util.Arrays;
 import org.junit.jupiter.api.DisplayName;
@@ -34,7 +34,7 @@ class QueryEnumsTest {
     @Test
     @DisplayName("커맨드의 인앱 종류·받는 쪽·이동 대상은 도메인에 있는 상수다(인앱 종류는 이메일 종류를 뺀 전부)")
     void sameCommandConstants() {
-        assertThat(names(NotifyInAppCommand.Kind.values()))
+        assertThat(names(NotifyCommand.Kind.values()))
                 .containsExactly(
                         Arrays.stream(
                                         com.openmarket.notification.command.domain.NotificationKind
@@ -42,7 +42,7 @@ class QueryEnumsTest {
                                 .map(Enum::name)
                                 .filter(name -> !name.equals("EMAIL_VERIFICATION"))
                                 .toArray(String[]::new));
-        assertThat(names(NotifyInAppCommand.Audience.values()))
+        assertThat(names(NotifyCommand.Audience.values()))
                 .containsExactly(
                         names(
                                 com.openmarket.notification.command.domain.NotificationAudience
@@ -52,7 +52,7 @@ class QueryEnumsTest {
                         names(
                                 com.openmarket.notification.command.domain.NotificationAudience
                                         .values()));
-        assertThat(names(NotifyInAppCommand.Target.values()))
+        assertThat(names(NotifyCommand.Target.values()))
                 .containsExactly(
                         names(
                                 com.openmarket.notification.command.domain.NotificationTarget
