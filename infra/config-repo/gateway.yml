@@ -85,6 +85,12 @@ spring:
                 - Path=/api/fulfillment/**
               filters:
                 - StripPrefix=2
+            - id: notification
+              uri: lb://notification
+              predicates:
+                - Path=/api/notification/**
+              filters:
+                - StripPrefix=2
             - id: search
               uri: lb://search
               predicates:

@@ -17,6 +17,16 @@ spring:
     properties:
       hibernate:
         default_schema: notification
+  # 이메일 발송 테스트는 Mailpit 컨테이너 주소로 덮는다. 다른 테스트는 메일을 보내지 않는다.
+  mail:
+    host: localhost
+    port: 1025
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # 테스트는 spring-security-test의 jwt()로 인증을 넣어 디코더를 쓰지 않는다. 토큰 검증 자체는 common-security가 테스트한다.
+          jwk-set-uri: http://localhost:1/oauth2/jwks
   # 아래 Kafka 값은 infra/config-repo/application.yml과 같게 둔다. 브로커 주소는 KafkaContainerConfiguration이 넣는다.
   kafka:
     consumer:
@@ -33,3 +43,5 @@ openmarket:
   notification:
     mail-from: "오픈 마켓 <no-reply@openmarket.local>"
     dispatch-interval: 200ms
+    retention: 90d
+    purge-interval: 1h

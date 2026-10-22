@@ -50,6 +50,7 @@ public class ThymeleafEmailRenderer implements EmailRendererPort {
     private static String subject(NotificationKind kind) {
         return switch (kind) {
             case EMAIL_VERIFICATION -> "[오픈 마켓] 이메일 인증을 완료해 주세요";
+            default -> throw new IllegalArgumentException("메일 템플릿이 없는 알림 종류: " + kind);
         };
     }
 }

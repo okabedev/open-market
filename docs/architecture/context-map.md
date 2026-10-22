@@ -69,8 +69,8 @@ flowchart LR
 ### member.seller
 | 이벤트 | 시점 | 주요 필드 | 소비자 |
 |---|---|---|---|
-| `SellerApproved` | 입점 승인 | sellerId(=memberId), storeName | auth(`SELLER` 역할 추가), catalog(판매자 사본: 상호), notification(M4) |
-| `SellerRejected` | 입점 반려 | memberId, applicationId, reason | notification(M4) |
+| `SellerApproved` | 입점 승인 | sellerId(=memberId), storeName | auth(`SELLER` 역할 추가), catalog(판매자 사본: 상호), notification |
+| `SellerRejected` | 입점 반려 | memberId, applicationId, reason | notification |
 | `SellerSuspended` | 판매자 정지 | sellerId, reason | catalog(판매 중인 상품 모두 판매 중지), auth(`SELLER` 역할 회수) |
 | `SellerReinstated` | 정지 해제 | sellerId | catalog(정지로 멈춘 상품만 판매 재개), auth(`SELLER` 역할 복구) |
 
@@ -82,7 +82,7 @@ flowchart LR
 | `ProductChanged` | 상품 수정(상태와 상관없이) | 상품 스냅샷 | search, file(첨부 확정·분리) |
 | `ProductStopped` | 판매 중지(판매자, 판매자 정지) | productId, revision, reason(`SELLER`, `SELLER_SUSPENDED`) | search |
 | `ProductResumed` | 판매 재개(판매자, 판매자 정지 해제) | productId, revision | search |
-| `ProductBanned` | 관리자 제재 | productId, revision, sellerId, reason(관리자가 쓴 사유) | search, notification(M4, 판매자에게 알림) |
+| `ProductBanned` | 관리자 제재 | productId, revision, sellerId, reason(관리자가 쓴 사유) | search, notification(판매자에게 알림) |
 
 - 상품 스냅샷: productId, revision, status, sellerId, storeName, categoryId, categoryPath(대분류부터 상품 카테고리까지의 ID), name, description, imageFileIds(순서대로), optionNames, skus(skuId, optionValues, price, inStock), minPrice, inStock(판매 가능한 SKU가 하나라도 있는가), availabilityRevision(`inStock`의 판매 가능 리비전, 아래 "catalog.stock"), publishedAt(판매를 시작한 적이 없으면 null).
 - `revision`은 상품마다 이벤트를 낼 때 1씩 올린다. 소비자는 받은 것보다 작거나 같은 revision을 무시한다. 같은 키(productId)라 순서대로 오지만, 재처리·스냅샷으로 오래된 이벤트가 다시 올 수 있다.

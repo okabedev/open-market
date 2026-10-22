@@ -1,5 +1,6 @@
 package com.openmarket.notification.command.application;
 
+import com.openmarket.notification.command.domain.Inbox;
 import com.openmarket.notification.command.domain.Notification;
 import com.openmarket.notification.command.domain.NotificationChannel;
 import com.openmarket.notification.command.domain.NotificationKind;
@@ -9,9 +10,11 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 /** 유스케이스 테스트용 가짜 포트. */
@@ -27,6 +30,9 @@ final class Fakes {
 
     static final class Notifications implements NotificationRepository {
         final Map<UUID, Notification> rows = new LinkedHashMap<>();
+
+        /** 읽음 기록. {@code <알림 ID>:<회원 ID>} */
+        final Set<String> reads = new LinkedHashSet<>();
 
         @Override
         public Notification save(Notification notification) {
@@ -54,6 +60,23 @@ final class Fakes {
                     .map(Notification::id)
                     .limit(limit)
                     .toList();
+        }
+
+        @Override
+        public void markRead(UUID notificationId, UUID accountId, Instant now) {
+            reads.add(notificationId + ":" + accountId);
+        }
+
+        @Override
+        public void markAllRead(Inbox inbox, Instant now) {
+            rows.values().stream()
+                    .filter(n -> n.isIn(inbox))
+                    .forEach(n -> reads.add(n.id() + ":" + inbox.accountId()));
+        }
+
+        @Override
+        public int deleteCreatedBefore(Instant before, int limit) {
+            throw new UnsupportedOperationException();
         }
     }
 

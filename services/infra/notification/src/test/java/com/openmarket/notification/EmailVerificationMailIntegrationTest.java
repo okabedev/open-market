@@ -16,7 +16,6 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Map;
 import java.util.UUID;
-import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -27,11 +26,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
-import org.springframework.kafka.config.TopicBuilder;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.GenericContainer;
@@ -47,7 +43,7 @@ import tools.jackson.databind.json.JsonMapper;
 @Import({
     PostgresContainerConfiguration.class,
     KafkaContainerConfiguration.class,
-    EmailVerificationMailIntegrationTest.Topics.class
+    NotificationTopics.class
 })
 class EmailVerificationMailIntegrationTest {
 
@@ -66,19 +62,6 @@ class EmailVerificationMailIntegrationTest {
     static void mail(DynamicPropertyRegistry registry) {
         registry.add("spring.mail.host", MAILPIT::getHost);
         registry.add("spring.mail.port", () -> MAILPIT.getMappedPort(1025));
-    }
-
-    @TestConfiguration(proxyBeanMethods = false)
-    static class Topics {
-        @Bean
-        NewTopic authAccount() {
-            return TopicBuilder.name(TOPIC).partitions(1).build();
-        }
-
-        @Bean
-        NewTopic authAccountDlt() {
-            return TopicBuilder.name(TOPIC + ".DLT").partitions(1).build();
-        }
     }
 
     @Autowired JdbcClient jdbc;
