@@ -4,9 +4,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.openmarket.common.core.error.NotFoundException;
+import com.openmarket.fulfillment.command.application.FulfillmentFakes.FakeClaimRepository;
 import com.openmarket.fulfillment.command.application.FulfillmentFakes.FakePurchaseConfirmations;
 import com.openmarket.fulfillment.command.application.FulfillmentFakes.FakeShipmentRepository;
 import com.openmarket.fulfillment.command.application.FulfillmentFakes.RecordingOutbox;
+import com.openmarket.fulfillment.command.domain.Claim;
+import com.openmarket.fulfillment.command.domain.ClaimInProgressException;
 import com.openmarket.fulfillment.command.domain.PurchaseConfirmed;
 import com.openmarket.fulfillment.command.domain.Shipment;
 import com.openmarket.fulfillment.command.domain.ShipmentInvalidStateException;
@@ -28,13 +31,14 @@ class PurchaseConfirmUseCasesTest {
 
     final FakeShipmentRepository shipments = new FakeShipmentRepository();
     final FakePurchaseConfirmations confirmations = new FakePurchaseConfirmations();
+    final FakeClaimRepository claims = new FakeClaimRepository();
     final RecordingOutbox outbox = new RecordingOutbox();
     final Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
 
     final ConfirmPurchaseUseCase confirm =
-            new ConfirmPurchaseUseCase(shipments, confirmations, outbox, clock);
+            new ConfirmPurchaseUseCase(shipments, confirmations, claims, outbox, clock);
     final AutoConfirmPurchaseUseCase autoConfirm =
-            new AutoConfirmPurchaseUseCase(shipments, confirmations, outbox, clock);
+            new AutoConfirmPurchaseUseCase(shipments, confirmations, claims, outbox, clock);
 
     final UUID orderLineId = UUID.randomUUID();
     final Shipment shipment = shipments.save(shipment());
@@ -131,6 +135,35 @@ class PurchaseConfirmUseCasesTest {
         assertThat(outbox.types()).containsExactly(PurchaseConfirmed.TYPE);
         assertThat(((PurchaseConfirmed) outbox.events.getFirst().payload()).mode())
                 .isEqualTo("AUTO");
+    }
+
+    @Test
+    @DisplayName("진행 중인 클레임이 있으면 구매자 확정은 409이고 자동 확정은 넘긴다")
+    void claimInProgress() {
+        deliver();
+        claims.save(
+                Claim.cancel(
+                        Shipment.ready(
+                                shipment.orderId(),
+                                shipment.sellerOrderId(),
+                                shipment.sellerId(),
+                                shipment.buyerId(),
+                                19_900,
+                                shipment.lines(),
+                                NOW,
+                                NOW),
+                        NOW));
+
+        assertThatThrownBy(
+                        () ->
+                                confirm.execute(
+                                        new ConfirmPurchaseCommand(
+                                                shipment.buyerId(), shipment.sellerOrderId())))
+                .isInstanceOf(ClaimInProgressException.class);
+        autoConfirm.execute(shipment.id());
+
+        assertThat(confirmations.confirmations).isEmpty();
+        assertThat(outbox.events).isEmpty();
     }
 
     @Test

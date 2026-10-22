@@ -10,6 +10,7 @@ import org.jspecify.annotations.Nullable;
  *
  * @param status 주문 상태
  * @param progress 하위 주문 진행 상태(docs/architecture/order.md "하위 주문 진행 상태")
+ * @param claim 마지막 클레임. 없으면 비어 있다
  * @param amount 하위 주문 금액(원)
  * @param paidAt 결제 시각
  */
@@ -18,6 +19,7 @@ public record SellerOrderDetailView(
         UUID orderId,
         OrderStatus status,
         @Nullable SellerOrderProgress progress,
+        @Nullable SellerOrderClaimView claim,
         long amount,
         OrderDetailView.Shipping shipping,
         List<OrderDetailView.Line> lines,

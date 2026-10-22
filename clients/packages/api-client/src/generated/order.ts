@@ -176,6 +176,12 @@ export interface components {
             /** Format: int32 */
             size?: number;
         };
+        SellerOrderClaimView: {
+            /** @enum {string} */
+            type?: "CANCEL" | "RETURN" | "EXCHANGE";
+            /** @enum {string} */
+            status?: "REQUESTED" | "APPROVED" | "COMPLETED";
+        };
         SellerOrderSummaryView: {
             /** Format: uuid */
             sellerOrderId?: string;
@@ -184,7 +190,8 @@ export interface components {
             /** @enum {string} */
             status?: "PENDING" | "AWAITING_PAYMENT" | "PAID" | "CANCELLED";
             /** @enum {string} */
-            progress?: "PAID" | "ACCEPTED" | "SHIPPED" | "IN_TRANSIT" | "DELIVERED" | "CONFIRMED";
+            progress?: "PAID" | "ACCEPTED" | "SHIPPED" | "IN_TRANSIT" | "DELIVERED" | "CONFIRMED" | "CANCELLED";
+            claim?: components["schemas"]["SellerOrderClaimView"];
             /** Format: int64 */
             amount?: number;
             firstProductName?: string;
@@ -227,7 +234,8 @@ export interface components {
             /** @enum {string} */
             status?: "PENDING" | "AWAITING_PAYMENT" | "PAID" | "CANCELLED";
             /** @enum {string} */
-            progress?: "PAID" | "ACCEPTED" | "SHIPPED" | "IN_TRANSIT" | "DELIVERED" | "CONFIRMED";
+            progress?: "PAID" | "ACCEPTED" | "SHIPPED" | "IN_TRANSIT" | "DELIVERED" | "CONFIRMED" | "CANCELLED";
+            claim?: components["schemas"]["SellerOrderClaimView"];
             /** Format: int64 */
             amount?: number;
             shipping?: components["schemas"]["OrderShippingView"];
@@ -282,7 +290,8 @@ export interface components {
             /** Format: int64 */
             amount?: number;
             /** @enum {string} */
-            progress?: "PAID" | "ACCEPTED" | "SHIPPED" | "IN_TRANSIT" | "DELIVERED" | "CONFIRMED";
+            progress?: "PAID" | "ACCEPTED" | "SHIPPED" | "IN_TRANSIT" | "DELIVERED" | "CONFIRMED" | "CANCELLED";
+            claim?: components["schemas"]["SellerOrderClaimView"];
             lines?: components["schemas"]["OrderLineView"][];
         };
         CartItemView: {

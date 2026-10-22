@@ -22,6 +22,22 @@ class QueryEnumsTest {
                         names(com.openmarket.fulfillment.command.domain.ConfirmMode.values()));
     }
 
+    @Test
+    @DisplayName("클레임 유형·상태·사유·귀책의 조회용 상수는 도메인과 같다")
+    void sameClaimConstants() {
+        assertThat(names(com.openmarket.fulfillment.query.dto.ClaimType.values()))
+                .containsExactly(
+                        names(com.openmarket.fulfillment.command.domain.ClaimType.values()));
+        assertThat(names(com.openmarket.fulfillment.query.dto.ClaimStatus.values()))
+                .containsExactly(
+                        names(com.openmarket.fulfillment.command.domain.ClaimStatus.values()));
+        assertThat(names(com.openmarket.fulfillment.query.dto.ClaimReason.values()))
+                .containsExactly(
+                        names(com.openmarket.fulfillment.command.domain.ClaimReason.values()));
+        assertThat(names(com.openmarket.fulfillment.query.dto.Fault.values()))
+                .containsExactly(names(com.openmarket.fulfillment.command.domain.Fault.values()));
+    }
+
     private static String[] names(Enum<?>[] values) {
         return Arrays.stream(values).map(Enum::name).toArray(String[]::new);
     }

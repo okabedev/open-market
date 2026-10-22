@@ -37,6 +37,7 @@ public record OrderDetailView(
      * 하위 주문.
      *
      * @param progress 진행 상태(docs/architecture/order.md "하위 주문 진행 상태"). 결제 전이면 비어 있다
+     * @param claim 마지막 클레임. 없으면 비어 있다
      */
     @Schema(name = "OrderSellerOrderView")
     public record SellerOrder(
@@ -45,6 +46,7 @@ public record OrderDetailView(
             String storeName,
             long amount,
             @Nullable SellerOrderProgress progress,
+            @Nullable SellerOrderClaimView claim,
             List<Line> lines) {}
 
     /**

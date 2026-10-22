@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 class QueryEnumsTest {
 
     @Test
-    @DisplayName("주문 상태, 취소 사유, 하위 주문 진행 상태의 조회용·입력용 상수는 도메인과 같다")
+    @DisplayName("주문 상태, 취소 사유, 하위 주문 진행 상태·클레임의 조회용·입력용 상수는 도메인과 같다")
     void sameConstants() {
         assertThat(names(com.openmarket.order.query.dto.OrderStatus.values()))
                 .containsExactly(names(com.openmarket.order.command.domain.OrderStatus.values()));
@@ -30,6 +30,17 @@ class QueryEnumsTest {
                                 com.openmarket.order.command.application.AdvanceSellerOrderCommand
                                         .Stage.values()))
                 .containsExactly("ACCEPTED", "SHIPPED", "IN_TRANSIT", "DELIVERED", "CONFIRMED");
+        assertThat(names(com.openmarket.order.query.dto.ClaimType.values()))
+                .containsExactly(names(com.openmarket.order.command.domain.ClaimType.values()));
+        assertThat(names(com.openmarket.order.command.application.ApplyClaimCommand.Type.values()))
+                .containsExactly(names(com.openmarket.order.command.domain.ClaimType.values()));
+        assertThat(names(com.openmarket.order.query.dto.ClaimStatus.values()))
+                .containsExactly(names(com.openmarket.order.command.domain.ClaimStatus.values()));
+        assertThat(
+                        names(
+                                com.openmarket.order.command.application.ApplyClaimCommand.Status
+                                        .values()))
+                .containsExactly(names(com.openmarket.order.command.domain.ClaimStatus.values()));
     }
 
     private static String[] names(Enum<?>[] values) {

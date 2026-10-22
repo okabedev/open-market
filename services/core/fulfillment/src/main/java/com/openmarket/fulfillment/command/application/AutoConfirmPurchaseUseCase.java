@@ -1,6 +1,7 @@
 package com.openmarket.fulfillment.command.application;
 
 import com.openmarket.common.messaging.outbox.Outbox;
+import com.openmarket.fulfillment.command.domain.ClaimRepository;
 import com.openmarket.fulfillment.command.domain.ConfirmMode;
 import com.openmarket.fulfillment.command.domain.PurchaseConfirmation;
 import com.openmarket.fulfillment.command.domain.PurchaseConfirmationRepository;
@@ -17,23 +18,27 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 자동 구매확정: 확정 기한이 지난 배송 완료 배송을 {@code AUTO}로 확정하고 {@code PurchaseConfirmed}를 낸다
- * (docs/architecture/fulfillment.md "구매확정"). 배송 행을 잠그고 다시 확인해, 그사이 구매자가 확정했거나 상태·기한이 맞지 않으면 넘긴다.
+ * (docs/architecture/fulfillment.md "구매확정"). 배송 행을 잠그고 다시 확인해, 그사이 구매자가 확정했거나 클레임을 신청했거나 상태·기한이 맞지
+ * 않으면 넘긴다.
  */
 @Service
 public class AutoConfirmPurchaseUseCase {
 
     private final ShipmentRepository shipments;
     private final PurchaseConfirmationRepository confirmations;
+    private final ClaimRepository claims;
     private final Outbox outbox;
     private final Clock clock;
 
     public AutoConfirmPurchaseUseCase(
             ShipmentRepository shipments,
             PurchaseConfirmationRepository confirmations,
+            ClaimRepository claims,
             Outbox outbox,
             Clock clock) {
         this.shipments = shipments;
         this.confirmations = confirmations;
+        this.claims = claims;
         this.outbox = outbox;
         this.clock = clock;
     }
@@ -50,7 +55,8 @@ public class AutoConfirmPurchaseUseCase {
         if (shipment.status() != ShipmentStatus.DELIVERED
                 || due == null
                 || due.isAfter(now)
-                || confirmations.existsBySellerOrderId(shipment.sellerOrderId())) {
+                || confirmations.existsBySellerOrderId(shipment.sellerOrderId())
+                || claims.existsOngoingBySellerOrderId(shipment.sellerOrderId())) {
             return;
         }
         PurchaseConfirmation confirmation =

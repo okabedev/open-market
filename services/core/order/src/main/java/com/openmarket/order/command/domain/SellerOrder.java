@@ -53,6 +53,21 @@ public class SellerOrder {
     @Column(name = "progress_updated_at")
     private @Nullable Instant progressUpdatedAt;
 
+    // 마지막 클레임(fulfillment 클레임 이벤트). 클레임이 없으면 비어 있다.
+    @Column(name = "claim_id")
+    private @Nullable UUID claimId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "claim_type")
+    private @Nullable ClaimType claimType;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "claim_status")
+    private @Nullable ClaimStatus claimStatus;
+
+    @Column(name = "claim_updated_at")
+    private @Nullable Instant claimUpdatedAt;
+
     @OneToMany(mappedBy = "sellerOrder", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("position ASC")
     private List<OrderLine> lines = new ArrayList<>();
@@ -89,6 +104,25 @@ public class SellerOrder {
         return true;
     }
 
+    /**
+     * 클레임 이벤트를 반영한다. 다른 클레임 ID면 새 클레임으로 바꾸고, 같은 클레임에서 같은 상태이거나 이미 끝났으면 아무것도 하지 않고 {@code false}. 발송
+     * 전 취소가 끝나면 진행 상태를 {@code CANCELLED}로 바꾼다.
+     */
+    boolean applyClaim(UUID claimId, ClaimType type, ClaimStatus status, Instant now) {
+        if (claimId.equals(this.claimId)
+                && (status == claimStatus || claimStatus == ClaimStatus.COMPLETED)) {
+            return false;
+        }
+        this.claimId = claimId;
+        this.claimType = type;
+        this.claimStatus = status;
+        this.claimUpdatedAt = now;
+        if (type == ClaimType.CANCEL && status == ClaimStatus.COMPLETED) {
+            advance(SellerOrderProgress.CANCELLED, now);
+        }
+        return true;
+    }
+
     public UUID id() {
         return id;
     }
@@ -103,6 +137,18 @@ public class SellerOrder {
 
     public @Nullable SellerOrderProgress progress() {
         return progress;
+    }
+
+    public @Nullable UUID claimId() {
+        return claimId;
+    }
+
+    public @Nullable ClaimType claimType() {
+        return claimType;
+    }
+
+    public @Nullable ClaimStatus claimStatus() {
+        return claimStatus;
     }
 
     public List<OrderLine> lines() {

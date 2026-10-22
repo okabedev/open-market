@@ -78,6 +78,9 @@ public class Shipment {
     @Column(name = "confirm_due_at")
     private @Nullable Instant confirmDueAt;
 
+    @Column(name = "cancelled_at")
+    private @Nullable Instant cancelledAt;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -184,6 +187,17 @@ public class Shipment {
         return true;
     }
 
+    /** 발송 전 취소({@link Claim#cancel}). {@code READY}, {@code ACCEPTED}에서만 한다. */
+    void cancel(Instant now) {
+        if (status != ShipmentStatus.READY && status != ShipmentStatus.ACCEPTED) {
+            throw new ShipmentInvalidStateException(
+                    status, "발송한 뒤에는 취소할 수 없습니다. 배송이 끝나면 반품을 신청하세요.");
+        }
+        status = ShipmentStatus.CANCELLED;
+        cancelledAt = now;
+        updatedAt = now;
+    }
+
     /** 이 배송을 받는 구매자인가. */
     public boolean isReceivedBy(UUID buyerId) {
         return this.buyerId.equals(buyerId);
@@ -252,6 +266,10 @@ public class Shipment {
 
     public @Nullable Instant confirmDueAt() {
         return confirmDueAt;
+    }
+
+    public @Nullable Instant cancelledAt() {
+        return cancelledAt;
     }
 
     /** 판매자 동작의 결과. 같은 동작을 다시 하면 {@code UNCHANGED}이고 이벤트를 내지 않는다. */

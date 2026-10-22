@@ -57,7 +57,7 @@ class InternalOrderApiIntegrationTest {
     }
 
     @Test
-    @DisplayName("결제 전 주문과 구매확정되지 않은 하위 주문이 있는 결제 완료 주문은 진행 중이다. 취소됐거나 모두 구매확정됐으면 아니다")
+    @DisplayName("결제 전 주문과 끝나지 않은 하위 주문이 있는 결제 완료 주문은 진행 중이다. 취소됐거나 하위 주문이 모두 구매확정·취소 완료면 아니다")
     void ongoingOrders() throws Exception {
         expectOngoing(false);
 
@@ -72,6 +72,8 @@ class InternalOrderApiIntegrationTest {
             expectOngoing(true);
         }
         markProgress(orderId, "CONFIRMED");
+        expectOngoing(false);
+        markProgress(orderId, "CANCELLED");
         expectOngoing(false);
 
         markStatus(orderId, "CANCELLED");

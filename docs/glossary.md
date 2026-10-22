@@ -31,7 +31,8 @@
 | 판매자 사본 | `Seller` | catalog | member의 판매자 이벤트로 만든 사본. 상호와 판매 상태만 갖는다 |
 | 재고 | `Stock` | catalog | SKU별 `onHand`(실재고)와 `reserved`(예약 수량). 판매 가능 수량 = `onHand - reserved` |
 | 재고 예약 | `StockReservation` | catalog | 주문 하나에 대한 예약 묶음. 상태: `RESERVED` → `COMMITTED` 또는 `RELEASED`. 재고가 모자라 예약하지 못한 주문은 `FAILED`로 남긴다 |
-| 재고 조정 | `StockAdjustment` | catalog | 판매자의 입고·차감 이력. 증감 수량과 조정 뒤 실재고를 남긴다 |
+| 재고 조정 | `StockAdjustment` | catalog | 판매자의 입고·차감 이력. 증감 수량과 조정 뒤 실재고를 남긴다. 클레임 재입고도 클레임 ID와 함께 남는다 |
+| 재입고 | `RestockClaimUseCase` | catalog | 클레임이 끝나 돌아온 수량(`ClaimCompleted`의 `restockLines`)을 실재고에 더하는 것 |
 | 판매 가능 여부 | `ProductAvailability` | catalog | 상품 단위로 판매 가능한 SKU가 하나라도 있는가(`inStock`). 바뀔 때마다 판매 가능 리비전(`availabilityRevision`)이 1씩 오른다 |
 | 파일 | `StoredFile` | file | 업로드 파일 메타데이터. 상태: `TEMP` → `ATTACHED` → `DETACHED`(소유자에서 빠짐). 24시간 지난 `TEMP`와 7일 지난 `DETACHED`는 삭제 |
 | 파일 소유자 | `FileOwner` | file | 파일이 붙는 대상(M2는 상품, 리뷰·클레임은 M5·M4). 소유자마다 마지막으로 반영한 이벤트 리비전을 둔다 |
@@ -44,7 +45,7 @@
 | 장바구니 | `Cart`, `CartItem` | order | 회원당 하나 |
 | 주문 | `Order` | order | 구매자의 결제 단위. 상태: `PENDING`(예약 중) → `AWAITING_PAYMENT` → `PAID`, 또는 `CANCELLED`. 화면 이름은 재고 확인 중, 결제 대기, 결제 완료, 취소됨이다(하위 주문도 같다) |
 | 하위 주문 | `SellerOrder` | order | 주문을 판매자별로 나눈 단위. 배송, 클레임, 정산의 기준이다 |
-| 하위 주문 진행 상태 | `SellerOrderProgress` | order | 결제된 하위 주문의 배송 진행. `PAID` → `ACCEPTED` → `SHIPPED` → `IN_TRANSIT` → `DELIVERED` → `CONFIRMED`. fulfillment 배송 이벤트로 바뀐다 |
+| 하위 주문 진행 상태 | `SellerOrderProgress` | order | 결제된 하위 주문의 배송 진행. `PAID` → `ACCEPTED` → `SHIPPED` → `IN_TRANSIT` → `DELIVERED` → `CONFIRMED`, 발송 전 취소가 끝나면 `CANCELLED`. fulfillment 배송·클레임 이벤트로 바뀐다 |
 | 주문 항목 | `OrderLine` | order | SKU 하나와 수량, 주문 당시 가격 스냅샷 |
 | 취소 사유 | `CancelReason` | order | 결제 전 주문 취소의 이유. `STOCK_UNAVAILABLE`(재고 예약 실패), `PAYMENT_TIMEOUT`(주문 만료), `BUYER_CANCELLED`(구매자 취소) |
 | 주문 만료 | `OrderExpiryJob` | order | 결제 기한(주문 후 15분) 안에 결제하지 않은 주문. 취소 사유 `PAYMENT_TIMEOUT`으로 `CANCELLED`가 된다 |

@@ -14,6 +14,7 @@ import org.jspecify.annotations.Nullable;
  * @param confirmDueAt 자동 구매확정 기한. 배송 완료 뒤에만
  * @param confirmedAt 구매확정 시각. 확정했을 때만
  * @param confirmMode 구매확정 방식. 확정했을 때만
+ * @param claims 클레임 목록. 신청 순서
  */
 public record BuyerFulfillmentView(
         UUID sellerOrderId,
@@ -22,4 +23,5 @@ public record BuyerFulfillmentView(
         List<ShipmentView> shipments,
         @Nullable Instant confirmDueAt,
         @Nullable Instant confirmedAt,
-        @Nullable ConfirmMode confirmMode) {}
+        @Nullable ConfirmMode confirmMode,
+        List<ClaimView> claims) {}

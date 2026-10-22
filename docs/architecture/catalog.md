@@ -98,6 +98,15 @@ SKU마다 `Stock`(실재고 `onHand`, 예약 `reserved`)이 있다. 판매 가�
   - 상태가 맞지 않는 이벤트(예: `RELEASED` 예약에 `OrderPaid`, 예약이 없는 주문에 `OrderPaid`)는 경고 로그를 남기고 무시한다. 같은 상태로 가는 이벤트(이미 `COMMITTED`인데 `OrderPaid`)는 조용히 넘긴다.
 - 재고 조정은 실재고를 예약 수량보다 작게 만들 수 없다(위 "재고 조정"). 그래서 예약한 수량은 확정하거나 풀 때까지 남아 있다.
 
+## 클레임 재입고
+결제 후 클레임(발송 전 취소, 재입고를 고른 반품)이 끝나면 돌아온 수량을 실재고에 더한다. `fulfillment.claim`의 `ClaimCompleted`를 받는다([fulfillment.md](fulfillment.md) "클레임").
+- 재입고 항목(`restockLines`: skuId, quantity)이 비어 있으면 아무것도 하지 않는다(교환, 재입고하지 않는 반품).
+- SKU 재고 행을 skuId 순서로 잠그고 실재고를 늘린다. 재고 조정 이력(`StockAdjustment`)에 클레임 ID와 사유 "클레임 재입고"로 남는다. 판매자가 재고 조정 이력에서 본다.
+- 클레임과 SKU마다 이력이 하나다(부분 유일 인덱스 `stock_adjustment_claim_idx`). 이미 재입고한 클레임이 다른 이벤트 ID로 다시 와도 두 번 더하지 않는다.
+- 실재고 상한(999,999)을 넘으면 상한까지만 더한다. 없는 SKU(삭제된 상품)는 경고 로그를 남기고 넘긴다. 제재된 상품도 재입고한다. 실물이 돌아왔기 때문이다.
+- 판매 가능 수량이 바뀌므로 판매 가능 여부를 다시 계산하고, 바뀌었으면 `StockAvailabilityChanged`를 낸다(위 "판매 가능 여부와 품절 전환 이벤트"). 잠그는 순서는 재고 → 판매 가능 여부다.
+- 리스너 이름은 `catalog.claim-completed`다.
+
 ## API
 gateway 경로는 `/api/catalog` + 아래 경로다. 판매자 API의 주체는 토큰의 `sub`(= sellerId)다.
 
