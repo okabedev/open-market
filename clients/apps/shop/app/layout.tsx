@@ -1,6 +1,7 @@
-import { AppShell, type NavItem } from "@openmarket/ui";
+import { AppShell, NotificationBell, type NavItem } from "@openmarket/ui";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { unreadCount } from "@/lib/notification-count";
 import { currentSession } from "@/lib/session";
 import "./globals.css";
 
@@ -24,10 +25,19 @@ export const dynamic = "force-dynamic";
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
   const session = await currentSession();
+  // 화면을 옮길 때마다 서버가 안 읽은 수를 그린다. 머문 동안은 NotificationBell이 주기적으로 다시 읽는다.
+  const bell = session ? (
+    <NotificationBell
+      href="/notifications"
+      count={await unreadCount()}
+      countUrl="/api/notifications/unread-count"
+    />
+  ) : null;
   return (
     <html lang="ko">
       <body>
         <AppShell
+          headerExtra={bell}
           appName="오픈 마켓"
           width="wide"
           nav={session ? NAV : PUBLIC_NAV}

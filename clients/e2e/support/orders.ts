@@ -74,6 +74,8 @@ export async function configureFakePg(
   settings: {
     confirmDelayMs?: number;
     confirmError?: { status: number; code: string; message: string };
+    /** 취소(보상 취소, 클레임 환불) 거절. 빈 설정을 다시 보내면 풀린다 */
+    cancelError?: { status: number; code: string; message: string };
   },
 ): Promise<void> {
   const response = await fetch(`${env.fakePg}/control/orders/${orderId}`, {

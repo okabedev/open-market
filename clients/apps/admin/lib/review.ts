@@ -13,6 +13,10 @@ export const NOTICES = {
   suspended: "정지했습니다.",
   reinstated: "정지를 풀었습니다.",
   banned: "상품을 제재했습니다. 구매자 검색에서 몇 초 안에 빠집니다.",
+  "mediation-approved": "중재로 승인했습니다. 반품은 환불되고, 교환은 판매자가 다시 보냅니다.",
+  "mediation-rejected": "거부를 확정했습니다. 구매자에게 사유가 보입니다.",
+  "refund-retried": "환불을 다시 시도합니다. 몇 초 안에 결과가 반영됩니다.",
+  "cancel-retried": "결제 취소를 다시 시도합니다. 다음 취소 작업 주기에 반영됩니다.",
 } as const;
 
 export type Notice = keyof typeof NOTICES;

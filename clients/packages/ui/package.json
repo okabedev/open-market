@@ -13,7 +13,8 @@
     "test": "vitest run"
   },
   "peerDependencies": {
-    "react": "catalog:"
+    "react": "catalog:",
+    "next": "catalog:"
   },
   "devDependencies": {
     "@openmarket/config": "workspace:*",
@@ -25,6 +26,7 @@
     "@types/react-dom": "catalog:",
     "eslint": "catalog:",
     "jsdom": "catalog:",
+    "next": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
     "typescript": "catalog:",

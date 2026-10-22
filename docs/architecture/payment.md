@@ -150,6 +150,7 @@ order가 결제 전에 주문을 취소하면(`OrderCancelled`: 재고 부족, �
 - 보상 취소 재시도: 결제를 잠그고 취소 실패 코드가 있으면 지우고 시도 번호를 올린다. 취소 작업이 다음 주기에 새 `Idempotency-Key`로 부른다.
 - 이미 재시도 중이면(환불 `REQUESTED`, 실패 코드 없는 취소 대기) 204다. 끝난 환불(`COMPLETED`)이나 취소할 것이 없는 결제는 409 `PAYMENT_NOT_RETRYABLE`이다. 없으면 404 `PAYMENT_REFUND_NOT_FOUND`, `PAYMENT_NOT_FOUND`다.
 - 재시도는 감사 로그(`REFUND_RETRIED`, `PAYMENT_CANCEL_RETRIED`, 관리자 ID, 대상 ID, 이전 실패 코드)를 남긴다(NFR-8). 재시도가 다시 거절되면 이벤트(`RefundFailed`)와 ERROR 로그가 다시 나간다.
+- 화면은 admin "결제 실패"(`/payment-failures`)다. 탭 둘(환불 실패, 결제 취소 거절)이 위 목록을 보이고, 행마다 확인 뒤 다시 시도한다. 환불 실패는 관리자 인앱 알림(`REFUND_FAILED`)으로도 알린다([notification.md](notification.md) "인앱 알림").
 
 ## 토스 연동(`TossPaymentGatewayAdapter`)
 - 토스 API 형식은 `infra` 어댑터 밖으로 내보내지 않는다(ACL). `command.application`의 `PaymentGatewayPort`는 승인·조회 결과로 승인됨, 거절됨, 미정, 알 수 없음을, 취소 결과로 취소됨, 취소 거절, 알 수 없음을 안다.

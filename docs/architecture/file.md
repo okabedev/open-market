@@ -60,7 +60,7 @@
 
 - 볼 수 없는 사람에게는 파일이 있는지 알리지 않도록 404 `FILE_NOT_FOUND`로 답한다.
 - `Cache-Control: private, max-age=86400`이다. 공유 캐시에 남기지 않는다.
-- 브라우저는 토큰이 없으므로 앱의 BFF가 세션의 토큰으로 이 경로를 불러 이미지를 넘긴다. 앱의 Route Handler `/api/claim-images/{fileId}/{variant}`가 `bff.privateFile`(`packages/bff`)을 부른다. 파일 ID와 변형 이름(`w300`, `w800`)이 아니면 부르지 않고, 로그인 전이거나 file이 이미지가 아닌 응답을 주면 모두 404다. 넘기는 헤더는 `Content-Type`과 `Cache-Control`뿐이다. 이미지 응답이라 OpenAPI 문서에서 뺀다.
+- 브라우저는 토큰이 없으므로 앱의 BFF가 세션의 토큰으로 이 경로를 불러 이미지를 넘긴다. shop·seller는 Route Handler `/api/claim-images/{fileId}/{variant}`, admin은 `/api/admin/claim-images/{fileId}/{variant}`(관리자 경로)가 `bff.privateFile`(`packages/bff`)을 부른다. 파일 ID와 변형 이름(`w300`, `w800`)이 아니면 부르지 않고, 로그인 전이거나 file이 이미지가 아닌 응답을 주면 모두 404다. 넘기는 헤더는 `Content-Type`과 `Cache-Control`뿐이다. 이미지 응답이라 OpenAPI 문서에서 뺀다.
 
 ## 저장소
 - 컨테이너는 볼륨 `file-data`를 `/data`에 붙인다(`FILE_STORAGE_ROOT=/data`). `bootRun`은 레포의 `infra/compose/data/file`(커밋하지 않는다)을 쓴다.
