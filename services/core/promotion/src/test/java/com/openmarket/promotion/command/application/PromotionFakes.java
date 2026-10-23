@@ -2,6 +2,7 @@ package com.openmarket.promotion.command.application;
 
 import com.openmarket.common.core.audit.AuditEntry;
 import com.openmarket.common.core.audit.AuditLog;
+import com.openmarket.common.messaging.outbox.Outbox;
 import com.openmarket.promotion.command.domain.Coupon;
 import com.openmarket.promotion.command.domain.CouponRepository;
 import com.openmarket.promotion.command.domain.CouponStatus;
@@ -10,6 +11,7 @@ import com.openmarket.promotion.command.domain.IssuedCouponRepository;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -41,6 +43,11 @@ final class PromotionFakes {
         }
 
         @Override
+        public List<Coupon> findAllByIdIn(Collection<UUID> ids) {
+            return ids.stream().map(rows::get).filter(java.util.Objects::nonNull).toList();
+        }
+
+        @Override
         public Optional<Coupon> findForUpdateById(UUID id) {
             return Optional.ofNullable(rows.get(id));
         }
@@ -69,6 +76,32 @@ final class PromotionFakes {
     static final class IssuedCoupons implements IssuedCouponRepository {
         final Map<UUID, IssuedCoupon> rows = new LinkedHashMap<>();
         @Nullable RuntimeException insertFailure;
+
+        @Override
+        public IssuedCoupon save(IssuedCoupon issued) {
+            rows.put(issued.id(), issued);
+            return issued;
+        }
+
+        @Override
+        public List<IssuedCoupon> findAllByIdIn(Collection<UUID> ids) {
+            return ids.stream().map(rows::get).filter(java.util.Objects::nonNull).toList();
+        }
+
+        @Override
+        public List<IssuedCoupon> findForUpdateByIdInOrderById(Collection<UUID> ids) {
+            return findAllByIdIn(ids).stream()
+                    .sorted(Comparator.comparing(IssuedCoupon::id))
+                    .toList();
+        }
+
+        @Override
+        public List<IssuedCoupon> findForUpdateByOrderIdOrderById(UUID orderId) {
+            return rows.values().stream()
+                    .filter(i -> i.isBoundTo(orderId))
+                    .sorted(Comparator.comparing(IssuedCoupon::id))
+                    .toList();
+        }
 
         @Override
         public boolean insertIfAbsent(IssuedCoupon issued) {
@@ -172,6 +205,27 @@ final class PromotionFakes {
                 throw CouponIssueGatePort.unavailable(new IllegalStateException("redis down"));
             }
         }
+    }
+
+    static final class RecordingOutbox implements Outbox {
+        final List<Appended> events = new ArrayList<>();
+
+        @Override
+        public UUID append(
+                String aggregateType,
+                String aggregateId,
+                String type,
+                int schemaVersion,
+                Object payload) {
+            events.add(new Appended(aggregateType, aggregateId, type, payload));
+            return UUID.randomUUID();
+        }
+
+        List<String> types() {
+            return events.stream().map(Appended::type).toList();
+        }
+
+        record Appended(String aggregateType, String aggregateId, String type, Object payload) {}
     }
 
     static final class RecordingAuditLog implements AuditLog {

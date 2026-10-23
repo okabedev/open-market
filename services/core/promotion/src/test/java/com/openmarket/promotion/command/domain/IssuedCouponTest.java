@@ -45,4 +45,71 @@ class IssuedCouponTest {
         assertThatThrownBy(() -> IssuedCoupon.issue(coupon, UUID.randomUUID(), DURING))
                 .isInstanceOf(CouponNotIssuingException.class);
     }
+
+    @Test
+    @DisplayName("쓸 수 없는 이유: 남의 쿠폰, 묶였거나 쓰인 쿠폰, 만료(만료 시각 포함)")
+    void unavailableReason() {
+        UUID memberId = UUID.randomUUID();
+        IssuedCoupon issued = IssuedCoupon.issue(coupon(), memberId, DURING);
+
+        assertThat(issued.unavailableReason(memberId, DURING)).isNull();
+        assertThat(issued.unavailableReason(UUID.randomUUID(), DURING))
+                .isEqualTo(CouponUnavailableReason.NOT_OWNED);
+        assertThat(issued.unavailableReason(memberId, issued.expiresAt()))
+                .isEqualTo(CouponUnavailableReason.EXPIRED);
+        issued.reserve(UUID.randomUUID(), DURING);
+        assertThat(issued.unavailableReason(memberId, DURING))
+                .isEqualTo(CouponUnavailableReason.NOT_AVAILABLE);
+    }
+
+    @Test
+    @DisplayName("묶기 → 사용. 같은 주문으로 다시 사용하면 아무것도 바꾸지 않는다")
+    void reserveAndUse() {
+        IssuedCoupon issued = IssuedCoupon.issue(coupon(), UUID.randomUUID(), DURING);
+        UUID orderId = UUID.randomUUID();
+
+        issued.reserve(orderId, DURING);
+        assertThat(issued.status()).isEqualTo(IssuedCouponStatus.RESERVED);
+        assertThat(issued.isBoundTo(orderId)).isTrue();
+        assertThat(issued.isBoundTo(UUID.randomUUID())).isFalse();
+
+        assertThat(issued.use(orderId, DURING)).isTrue();
+        assertThat(issued.status()).isEqualTo(IssuedCouponStatus.USED);
+        assertThat(issued.use(orderId, DURING)).isFalse();
+        assertThat(issued.isBoundTo(orderId)).isTrue();
+    }
+
+    @Test
+    @DisplayName("결제 전 취소로 복원하면 다시 쓸 수 있다. 쓰인 쿠폰은 복원하지 않는다")
+    void restore() {
+        UUID memberId = UUID.randomUUID();
+        IssuedCoupon issued = IssuedCoupon.issue(coupon(), memberId, DURING);
+        UUID orderId = UUID.randomUUID();
+        issued.reserve(orderId, DURING);
+
+        assertThat(issued.restore(orderId, DURING)).isTrue();
+        assertThat(issued.status()).isEqualTo(IssuedCouponStatus.AVAILABLE);
+        assertThat(issued.orderId()).isNull();
+        assertThat(issued.unavailableReason(memberId, DURING)).isNull();
+        assertThat(issued.restore(orderId, DURING)).isFalse();
+
+        issued.reserve(orderId, DURING);
+        issued.use(orderId, DURING);
+        assertThat(issued.restore(orderId, DURING)).isFalse();
+        assertThat(issued.status()).isEqualTo(IssuedCouponStatus.USED);
+    }
+
+    @Test
+    @DisplayName("쓸 수 있는 쿠폰만 묶는다")
+    void reserveRequiresAvailable() {
+        IssuedCoupon issued = IssuedCoupon.issue(coupon(), UUID.randomUUID(), DURING);
+        issued.reserve(UUID.randomUUID(), DURING);
+
+        assertThatThrownBy(() -> issued.reserve(UUID.randomUUID(), DURING))
+                .isInstanceOf(IllegalStateException.class);
+    }
+
+    private static Coupon coupon() {
+        return Coupon.platform(CouponTest.fixed(3_000), NOW);
+    }
 }

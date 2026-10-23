@@ -68,6 +68,62 @@ public class IssuedCoupon {
         return new IssuedCoupon(coupon.id(), memberId, now, coupon.terms().validDays());
     }
 
+    /** 이 구매자가 지금 주문에 쓸 수 없는 이유. 쓸 수 있으면 null. 만료 시각부터 만료다. */
+    public @Nullable CouponUnavailableReason unavailableReason(UUID buyerId, Instant now) {
+        if (!memberId.equals(buyerId)) {
+            return CouponUnavailableReason.NOT_OWNED;
+        }
+        if (status != IssuedCouponStatus.AVAILABLE) {
+            return CouponUnavailableReason.NOT_AVAILABLE;
+        }
+        if (!now.isBefore(expiresAt)) {
+            return CouponUnavailableReason.EXPIRED;
+        }
+        return null;
+    }
+
+    /** 이 주문에 묶였거나 쓰였는가. */
+    public boolean isBoundTo(UUID orderId) {
+        return orderId.equals(this.orderId);
+    }
+
+    /**
+     * 결제 전 주문에 묶는다({@code OrderPlaced}). 쓸 수 있는 쿠폰만 묶는다. 쓸 수 있는지는 {@link #unavailableReason}로 먼저
+     * 본다.
+     */
+    public void reserve(UUID orderId, Instant now) {
+        if (status != IssuedCouponStatus.AVAILABLE) {
+            throw new IllegalStateException("쓸 수 있는 쿠폰만 묶는다: status=" + status);
+        }
+        status = IssuedCouponStatus.RESERVED;
+        this.orderId = orderId;
+        updatedAt = now;
+    }
+
+    /** 묶인 주문이 결제됐다({@code OrderPaid}). 이미 썼으면 아무것도 바꾸지 않고 {@code false}. */
+    public boolean use(UUID orderId, Instant now) {
+        if (!isBoundTo(orderId) || status != IssuedCouponStatus.RESERVED) {
+            return false;
+        }
+        status = IssuedCouponStatus.USED;
+        updatedAt = now;
+        return true;
+    }
+
+    /**
+     * 묶인 주문이 결제 전에 취소됐다({@code OrderCancelled}). 다시 쓸 수 있게 되돌린다. 만료 시각은 그대로라 지났으면 만료다. 이미 되돌렸거나 쓰인
+     * 쿠폰이면 아무것도 바꾸지 않고 {@code false}.
+     */
+    public boolean restore(UUID orderId, Instant now) {
+        if (!isBoundTo(orderId) || status != IssuedCouponStatus.RESERVED) {
+            return false;
+        }
+        status = IssuedCouponStatus.AVAILABLE;
+        this.orderId = null;
+        updatedAt = now;
+        return true;
+    }
+
     public UUID id() {
         return id;
     }
