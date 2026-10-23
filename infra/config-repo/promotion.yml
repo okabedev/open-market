@@ -7,6 +7,14 @@ spring:
   kafka:
     consumer:
       group-id: promotion
+  data:
+    redis:
+      # 선착순 발급 게이트(docs/architecture/promotion.md "선착순 발급"). Redis가 죽으면 발급은 503이다(fail-closed).
+      # 명령 타임아웃이 길면 Redis가 멈춘 동안 발급 요청이 그만큼 잡혀 있으므로 짧게 둔다.
+      host: ${REDIS_HOST:localhost}
+      port: 6379
+      timeout: 500ms
+      connect-timeout: 500ms
 
 openmarket:
   # 토큰 없이 여는 서비스 경로(common-security). gateway.yml의 public-paths에도 gateway 기준 경로로 적는다.

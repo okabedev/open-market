@@ -34,6 +34,7 @@ M5 시작(2026-10-22)에 정한 규칙이다. API와 화면은 각 PR에서 이 
 | POST | `/v1/admin/coupons` | 플랫폼 쿠폰 생성. `Idempotency-Key` 필수. 201 `{couponId}` |
 | POST | `/v1/admin/coupons/{couponId}/stop` | 쿠폰(플랫폼·판매자) 발급 중지. 204 |
 | GET | `/v1/admin/coupons?issuer=&sellerId=&status=&page=&size=` | 관리자 목록. 쪽 번호, 최근 생성 순 |
+| POST | `/v1/coupons/{couponId}/issue` | 구매자 쿠폰 내려받기. 201 또는 200 `{issuedCouponId}`(아래 "선착순 발급") |
 | POST | `/v1/seller/coupons` | 판매자 쿠폰 생성. `Idempotency-Key` 필수. 201 `{couponId}` |
 | POST | `/v1/seller/coupons/{couponId}/stop` | 자기 쿠폰 발급 중지. 204 |
 | GET | `/v1/seller/coupons?status=&page=&size=` | 자기 쿠폰 목록. 쪽 번호, 최근 생성 순 |
@@ -42,7 +43,8 @@ M5 시작(2026-10-22)에 정한 규칙이다. API와 화면은 각 PR에서 이 
 
 - 생성 본문: `name`, `discountType`(`FIXED`/`RATE`), `discountValue`, `maxDiscount`(정률만, 선택), `minOrderAmount`, `quantity`, `issueStartAt`, `issueEndAt`, `validDays`. 위 표의 규칙을 어기면 400 `PROMOTION_INVALID_INPUT`이다.
 - 없는 쿠폰, 판매자에게 다른 판매자의 쿠폰이나 플랫폼 쿠폰은 404 `PROMOTION_COUPON_NOT_FOUND`다.
-- 중지는 쿠폰 행을 잠그고 한다. 발급 수(남은 수량)는 발급 PR에서 응답에 더한다.
+- 중지는 쿠폰 행을 잠그고 한다.
+- 조회 응답의 `issuedCount`는 DB 발급 수다. 남은 수량은 `quantity - issuedCount`다.
 
 ## 발급 쿠폰(`IssuedCoupon`, PRM-2)
 | 상태 | 뜻 | 다음 |
@@ -55,17 +57,25 @@ M5 시작(2026-10-22)에 정한 규칙이다. API와 화면은 각 PR에서 이 
 - 쿠폰 정책과 회원의 쌍은 하나다(유니크 `(coupon_id, member_id)`). 복원해도 새 쿠폰을 만들지 않는다.
 
 ### 선착순 발급
-구매자가 `POST /v1/coupons/{couponId}/issue`로 내려받는다.
-1. 쿠폰이 `ISSUING`이고 발급 기간 안이어야 한다. 아니면 409 `PROMOTION_COUPON_NOT_ISSUING`이다.
-2. Redis Lua 스크립트 하나로 1인 1매와 수량을 함께 확인하고 차지한다. 키는 발급한 회원 집합 `promotion:coupon-issued:<couponId>`와 발급 수 `promotion:coupon-stock:<couponId>`다.
-   - 이미 집합에 있으면 차지하지 않는다. DB의 발급 쿠폰을 찾아 200 `{issuedCouponId}`로 준다(다시 눌러도 같은 결과).
-   - 발급 수가 수량 이상이면 409 `PROMOTION_COUPON_SOLD_OUT`이다.
+구매자가 `POST /v1/coupons/{couponId}/issue`로 내려받는다. 새로 받으면 201, 이미 받았으면 200이고 둘 다 `{issuedCouponId}`다(다시 눌러도 같은 결과).
+1. 쿠폰이 `ISSUING`이고 발급 기간 안이어야 한다. 아니면 409 `PROMOTION_COUPON_NOT_ISSUING`이다. 없는 쿠폰은 404 `PROMOTION_COUPON_NOT_FOUND`다.
+2. Redis Lua 스크립트 하나로 1인 1매와 수량을 함께 확인하고 차지한다. 키는 발급 수 `promotion:coupon-stock:<couponId>`와 발급한 회원 집합 `promotion:coupon-issued:<couponId>`이고, 발급 기간 끝 + 1시간에 사라진다.
+   - 이미 집합에 있으면 차지하지 않는다. DB의 발급 쿠폰을 찾아 200으로 준다. DB에 없으면(차지한 요청이 저장 전에 끝남) 3으로 간다.
+   - 발급 수가 수량 이상이면 409 `PROMOTION_COUPON_SOLD_OUT`이다. DB에 가지 않는다.
    - 아니면 집합에 넣고 발급 수를 1 올린다.
-3. 발급 쿠폰을 DB에 저장한다(201 `{issuedCouponId}`). 저장이 실패하면 Redis에서 차지한 것을 되돌린다(집합에서 빼고 발급 수를 1 내린다).
-- DB 유니크 `(coupon_id, member_id)`가 1인 1매의 마지막 방어선이다. 수량은 Redis가 지키고, 발급 작업 뒤 DB 발급 수가 수량을 넘지 않는지는 동시성 테스트로 확인한다([risks.md](risks.md) R11).
-- Redis 키가 없으면(재시작, 처음 발급) 그 쿠폰의 DB 발급 행으로 집합과 발급 수를 다시 만든 뒤 스크립트를 돈다. 다시 만드는 동안 다른 요청이 끼어들지 않게 하는 방법은 R11에서 정한다.
+3. DB 트랜잭션 하나에서 저장한다. 이미 발급 행이 있으면 그것을 준다. 없으면 쿠폰 행의 발급 수(`issued_count`)를 조건부 UPDATE로 1 올리고(발급 중, 발급 기간 안, 발급 수 < 수량일 때만) 발급 쿠폰을 넣는다(`ON CONFLICT (coupon_id, member_id) DO NOTHING`). 올리지 못하면 중지면 409 `PROMOTION_COUPON_NOT_ISSUING`, 아니면 409 `PROMOTION_COUPON_SOLD_OUT`이다.
+   - 저장이 실패하면 Redis에서 차지한 것을 되돌린다(집합에서 빼고 발급 수를 1 내린다). DB가 매진이라고 하면 Redis 발급 수도 수량으로 올려 다음 요청부터 Redis에서 거른다.
+   - 같은 회원의 요청이 동시에 저장하면 늦은 쪽은 0행이 되고 트랜잭션을 롤백해 올린 발급 수를 되돌린다. 먼저 저장한 발급 쿠폰을 200으로 준다.
+
+#### 정합성(R11, 2026-10-23 확정)
+- 수량과 1인 1매는 DB가 마지막으로 지킨다. 수량은 쿠폰 행의 조건부 UPDATE와 `CHECK (issued_count BETWEEN 0 AND quantity)`, 1인 1매는 유니크 `(coupon_id, member_id)`다. Redis는 DB까지 가는 요청을 수량 근처로 줄이는 앞단 필터다. 그래서 Redis가 DB와 어긋나도 초과 발급이나 1인 2매가 되지 않는다.
+- Redis 키가 없으면(재시작, 처음 발급) DB의 발급 회원으로 집합을 채우고, 발급 수(= 회원 수)를 두는 것과 차지를 스크립트 하나로 한다. 그 사이 키가 다시 사라져도 차지가 키 없이 끝나지 않는다. 키를 다시 만드는 동안 끼어든 요청을 따로 막지 않는다. 끼어들어 Redis가 적게 세면 DB가 막는다.
+- 어긋남이 남는 쪽: 차지한 요청이 되돌리기 전에 죽거나 되돌리기가 실패하면 Redis가 많게 센다. 그 쿠폰은 키가 사라질 때까지 수량보다 적게 나갈 수 있다(초과 발급의 반대쪽이라 받아들인다).
+- 확인: 수량 30에 회원 120명이 두 번씩 동시에 누르고 그사이 Redis 키를 20번 지워도 DB 발급 수 30, 회원당 1장, 같은 회원의 두 요청이 같은 발급 쿠폰을 받는다(`IssueCouponApiIntegrationTest`). 저장 실패, Redis 장애, Redis가 적게 센 경우, 집합에서 빠진 경우는 유스케이스 테스트(`IssueCouponUseCaseTest`)가 본다.
+
 - Redis를 부를 수 없으면 503 `PROMOTION_UNAVAILABLE`이다. DB만으로 발급하지 않는다.
 - 발급은 상태가 정해지는 요청이라 `Idempotency-Key`는 받지 않는다(위 2의 "이미 발급").
+- gateway는 이 경로에 엄격한 한도(사용자마다 1분에 `openmarket.gateway.strict-rate-limit.requests-per-minute`회)를 더 건다.
 
 ## 할인 계산
 order의 주문 생성과 shop 주문서가 같은 계산을 쓴다. promotion이 계산하고, order는 결과를 스냅샷으로 저장한다.

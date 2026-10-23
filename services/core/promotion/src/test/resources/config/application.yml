@@ -12,6 +12,8 @@ spring:
     schemas: promotion
     default-schema: promotion
   jpa:
+    # infra/config-repo/application.yml과 같게 둔다. 요청 하나가 영속성 컨텍스트를 끝까지 잡지 않는다.
+    open-in-view: false
     hibernate:
       ddl-auto: validate
     properties:

@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.jayway.jsonpath.JsonPath;
 import com.openmarket.common.test.container.PostgresContainerConfiguration;
+import com.openmarket.common.test.container.RedisContainerConfiguration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -28,7 +29,7 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
 /** 쿠폰 정책 생성·중지·조회(docs/architecture/promotion.md "API"). */
 @SpringBootTest(properties = "spring.kafka.listener.auto-startup=false")
 @AutoConfigureMockMvc
-@Import(PostgresContainerConfiguration.class)
+@Import({PostgresContainerConfiguration.class, RedisContainerConfiguration.class})
 class CouponApiIntegrationTest {
 
     @Autowired MockMvc mockMvc;

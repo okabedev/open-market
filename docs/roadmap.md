@@ -247,7 +247,7 @@
 - [x] 설계: 쿠폰([promotion.md](architecture/promotion.md)), 리뷰([review.md](architecture/review.md)), 정산([settlement.md](architecture/settlement.md)), 검색 v2([search.md](architecture/search.md) "M5 설계"), 이벤트 필드([context-map.md](architecture/context-map.md)), 리스크 R11·R12
 - [ ] promotion: 쿠폰 정책, 선착순 발급(Redis), 주문 예약·사용·복원
   - [x] 골격, 쿠폰 정책 생성(관리자·판매자)·중지·조회
-  - [ ] 선착순 발급(Redis Lua + DB 유니크)과 동시성 테스트(R11)
+  - [x] 선착순 발급(Redis Lua + DB 유니크)과 동시성 테스트(R11)
   - [ ] 할인 계산 API, `OrderPlaced` → 쿠폰 예약·실패, `OrderPaid` → 사용, `OrderCancelled` → 복원
 - [ ] order: 주문 쿠폰 적용과 재고·쿠폰 예약 결과 합류(R12). `OrderPaid`·`PurchaseConfirmed`의 쿠폰 필드, fulfillment 환불 금액
 - [ ] review: 작성 자격, 리뷰, 답글, 숨김, 별점 요약

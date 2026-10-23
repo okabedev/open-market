@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.openmarket.common.messaging.outbox.Outbox;
 import com.openmarket.common.test.container.PostgresContainerConfiguration;
+import com.openmarket.common.test.container.RedisContainerConfiguration;
 import com.openmarket.common.test.openapi.OpenApiSnapshot;
 import java.util.List;
 import java.util.Map;
@@ -27,7 +28,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  */
 @SpringBootTest(properties = "spring.kafka.listener.auto-startup=false")
 @AutoConfigureMockMvc
-@Import(PostgresContainerConfiguration.class)
+@Import({PostgresContainerConfiguration.class, RedisContainerConfiguration.class})
 class PromotionApplicationIntegrationTest {
 
     @Autowired MockMvc mockMvc;

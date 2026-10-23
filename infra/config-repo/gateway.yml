@@ -85,6 +85,18 @@ spring:
                 - Path=/api/fulfillment/**
               filters:
                 - StripPrefix=2
+            # 선착순 쿠폰 내려받기. 몰리는 요청이라 기본 한도에 더해 엄격한 한도를 건다(사용자마다). 아래 promotion 라우트보다 먼저 와야 한다.
+            - id: promotion-issue
+              uri: lb://promotion
+              predicates:
+                - Method=POST
+                - Path=/api/promotion/v1/coupons/*/issue
+              filters:
+                - StripPrefix=2
+                - name: RequestRateLimiter
+                  args:
+                    rate-limiter: "#{@strictRateLimiter}"
+                    key-resolver: "#{@strictKeyResolver}"
             - id: promotion
               uri: lb://promotion
               predicates:
