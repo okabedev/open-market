@@ -21,11 +21,28 @@ M5 시작(2026-10-22)에 정한 규칙이다. API와 화면은 각 PR에서 이 
 | 최대 할인 | 정률만. 선택, 1원 이상. 없으면 상한이 없다 |
 | 최소 주문 금액 | 0원 이상. 아래 "할인 계산"의 적용 대상 금액과 비교한다 |
 | 발급 수량 | 1~1,000,000 |
-| 발급 기간 | 시작·끝 시각. 끝이 시작보다 뒤 |
+| 발급 기간 | 시작·끝 시각. 끝이 시작보다 뒤이고 만들 때 지금보다 뒤. 시작은 지나도 된다(바로 발급). 끝 시각부터 내려받을 수 없다 |
 | 사용 기한 | 발급 후 일수(1~365). 발급 쿠폰의 만료 시각 = 발급 시각 + 일수 |
 
 - 상태: `ISSUING`(발급 기간 안이면 내려받을 수 있다) → `STOPPED`(발급 중지, 끝 상태). 발급 기간이 지나도 상태는 `ISSUING`이고, 발급 가능 여부는 기간으로 정한다. 중지해도 이미 발급한 쿠폰은 쓸 수 있다.
-- 관리자는 모든 쿠폰을, 판매자는 자기 쿠폰만 중지한다. 관리자 작업은 감사 로그를 남긴다(NFR-8).
+- 관리자는 모든 쿠폰을, 판매자는 자기 쿠폰만 중지한다. 관리자 작업은 감사 로그를 남긴다(NFR-8): 플랫폼 쿠폰 생성 `COUPON_CREATED`, 중지 `COUPON_STOPPED`(대상 `COUPON`). 이미 중지한 쿠폰을 다시 중지하면 아무것도 바꾸지 않고 기록도 남기지 않는다.
+- 정책에는 이벤트가 없다. 다른 서비스는 정책을 받지 않고, order는 할인 계산을 조회한다.
+
+### API
+| 메서드 | 경로 | 설명 |
+|---|---|---|
+| POST | `/v1/admin/coupons` | 플랫폼 쿠폰 생성. `Idempotency-Key` 필수. 201 `{couponId}` |
+| POST | `/v1/admin/coupons/{couponId}/stop` | 쿠폰(플랫폼·판매자) 발급 중지. 204 |
+| GET | `/v1/admin/coupons?issuer=&sellerId=&status=&page=&size=` | 관리자 목록. 쪽 번호, 최근 생성 순 |
+| POST | `/v1/seller/coupons` | 판매자 쿠폰 생성. `Idempotency-Key` 필수. 201 `{couponId}` |
+| POST | `/v1/seller/coupons/{couponId}/stop` | 자기 쿠폰 발급 중지. 204 |
+| GET | `/v1/seller/coupons?status=&page=&size=` | 자기 쿠폰 목록. 쪽 번호, 최근 생성 순 |
+| GET | `/v1/coupons?sellerId=` | 공개. 지금 내려받을 수 있는 쿠폰(`ISSUING`이고 발급 기간 안). `sellerId`가 없으면 플랫폼 쿠폰, 있으면 그 판매자 쿠폰. 발급 기간이 먼저 끝나는 순, 최대 100개(페이징 없음) |
+| GET | `/v1/coupons/{couponId}` | 공개. 쿠폰 한 건. 상태와 상관없이 보인다 |
+
+- 생성 본문: `name`, `discountType`(`FIXED`/`RATE`), `discountValue`, `maxDiscount`(정률만, 선택), `minOrderAmount`, `quantity`, `issueStartAt`, `issueEndAt`, `validDays`. 위 표의 규칙을 어기면 400 `PROMOTION_INVALID_INPUT`이다.
+- 없는 쿠폰, 판매자에게 다른 판매자의 쿠폰이나 플랫폼 쿠폰은 404 `PROMOTION_COUPON_NOT_FOUND`다.
+- 중지는 쿠폰 행을 잠그고 한다. 발급 수(남은 수량)는 발급 PR에서 응답에 더한다.
 
 ## 발급 쿠폰(`IssuedCoupon`, PRM-2)
 | 상태 | 뜻 | 다음 |

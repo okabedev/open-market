@@ -1,0 +1,19 @@
+# promotion 실행 설정. 공통 설정은 application.yml에 있다. 설계는 docs/architecture/promotion.md.
+server:
+  port: 8106
+spring:
+  datasource:
+    password: ${PROMOTION_DB_PASSWORD}
+  kafka:
+    consumer:
+      group-id: promotion
+
+openmarket:
+  # 토큰 없이 여는 서비스 경로(common-security). gateway.yml의 public-paths에도 gateway 기준 경로로 적는다.
+  security:
+    public-paths:
+      # 내려받을 수 있는 쿠폰 목록과 쿠폰 한 건(docs/architecture/promotion.md "API")
+      - method: GET
+        pattern: /v1/coupons
+      - method: GET
+        pattern: /v1/coupons/*

@@ -1,0 +1,419 @@
+{
+  "openapi" : "3.1.0",
+  "info" : {
+    "title" : "OpenAPI definition",
+    "version" : "v0"
+  },
+  "paths" : {
+    "/v1/seller/coupons" : {
+      "get" : {
+        "tags" : [ "seller-coupon-query-controller" ],
+        "operationId" : "list",
+        "parameters" : [ {
+          "name" : "status",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "enum" : [ "ISSUING", "STOPPED" ]
+          }
+        }, {
+          "name" : "page",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 0,
+            "minimum" : 0
+          }
+        }, {
+          "name" : "size",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 20,
+            "maximum" : 100,
+            "minimum" : 1
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PageViewCouponView"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "seller-coupon-command-controller" ],
+        "operationId" : "create",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CreateCouponRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Created",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CreateCouponResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/seller/coupons/{couponId}/stop" : {
+      "post" : {
+        "tags" : [ "seller-coupon-command-controller" ],
+        "operationId" : "stop",
+        "parameters" : [ {
+          "name" : "couponId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        }
+      }
+    },
+    "/v1/admin/coupons" : {
+      "get" : {
+        "tags" : [ "admin-coupon-query-controller" ],
+        "operationId" : "list_1",
+        "parameters" : [ {
+          "name" : "issuer",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "enum" : [ "PLATFORM", "SELLER" ]
+          }
+        }, {
+          "name" : "sellerId",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "status",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "enum" : [ "ISSUING", "STOPPED" ]
+          }
+        }, {
+          "name" : "page",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 0,
+            "minimum" : 0
+          }
+        }, {
+          "name" : "size",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 20,
+            "maximum" : 100,
+            "minimum" : 1
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PageViewCouponView"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "admin-coupon-command-controller" ],
+        "operationId" : "create_1",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CreateCouponRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Created",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CreateCouponResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/coupons/{couponId}/stop" : {
+      "post" : {
+        "tags" : [ "admin-coupon-command-controller" ],
+        "operationId" : "stop_1",
+        "parameters" : [ {
+          "name" : "couponId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        }
+      }
+    },
+    "/v1/coupons" : {
+      "get" : {
+        "tags" : [ "coupon-query-controller" ],
+        "operationId" : "issuable",
+        "parameters" : [ {
+          "name" : "sellerId",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/IssuableCouponsView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/coupons/{couponId}" : {
+      "get" : {
+        "tags" : [ "coupon-query-controller" ],
+        "operationId" : "coupon",
+        "parameters" : [ {
+          "name" : "couponId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CouponView"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "CreateCouponRequest" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string"
+          },
+          "discountType" : {
+            "type" : "string",
+            "enum" : [ "FIXED", "RATE" ]
+          },
+          "discountValue" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "maxDiscount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "minOrderAmount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "quantity" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "issueStartAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "issueEndAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "validDays" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        },
+        "required" : [ "discountType", "issueEndAt", "issueStartAt", "name" ]
+      },
+      "CreateCouponResponse" : {
+        "type" : "object",
+        "properties" : {
+          "couponId" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }
+      },
+      "CouponView" : {
+        "type" : "object",
+        "properties" : {
+          "couponId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "issuer" : {
+            "type" : "string",
+            "enum" : [ "PLATFORM", "SELLER" ]
+          },
+          "sellerId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "discountType" : {
+            "type" : "string",
+            "enum" : [ "FIXED", "RATE" ]
+          },
+          "discountValue" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "maxDiscount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "minOrderAmount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "quantity" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "issueStartAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "issueEndAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "validDays" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "status" : {
+            "type" : "string",
+            "enum" : [ "ISSUING", "STOPPED" ]
+          },
+          "stoppedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "PageViewCouponView" : {
+        "type" : "object",
+        "properties" : {
+          "items" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/CouponView"
+            }
+          },
+          "totalCount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "page" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "size" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }
+      },
+      "IssuableCouponsView" : {
+        "type" : "object",
+        "properties" : {
+          "items" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/CouponView"
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -21,4 +21,8 @@ export type {
 } from "./generated/notification";
 export type { components as OrderComponents, paths as OrderPaths } from "./generated/order";
 export type { components as PaymentComponents, paths as PaymentPaths } from "./generated/payment";
+export type {
+  components as PromotionComponents,
+  paths as PromotionPaths,
+} from "./generated/promotion";
 export type { components as SearchComponents, paths as SearchPaths } from "./generated/search";
