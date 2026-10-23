@@ -1,0 +1,52 @@
+# 테스트 설정. config 서버와 Eureka 없이 뜨게 하고, config-repo가 줄 데이터 설정을 대신한다.
+# classpath:config/ 아래에 두어 main의 application.yml을 가리지 않고 그 위에 덮는다.
+spring:
+  cloud:
+    config:
+      enabled: false
+  datasource:
+    hikari:
+      # 공통 라이브러리의 JDBC 쿼리는 스키마 이름을 쓰지 않으므로 연결의 search_path를 서비스 스키마로 둔다.
+      schema: promotion
+  flyway:
+    schemas: promotion
+    default-schema: promotion
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: promotion
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # 테스트는 spring-security-test의 jwt()로 인증을 넣어 디코더를 쓰지 않는다. 토큰 검증 자체는 common-security가 테스트한다.
+          jwk-set-uri: http://localhost:1/oauth2/jwks
+  # 아래 Kafka·트레이싱 값은 infra/config-repo/application.yml과 같게 둔다. 브로커 주소는 KafkaContainerConfiguration이 넣는다.
+  kafka:
+    consumer:
+      auto-offset-reset: earliest
+    listener:
+      observation-enabled: true
+    template:
+      observation-enabled: true
+management:
+  tracing:
+    sampling:
+      probability: 1.0
+  otlp:
+    metrics:
+      export:
+        enabled: false
+eureka:
+  client:
+    enabled: false
+openmarket:
+  # infra/config-repo/promotion.yml과 같게 둔다.
+  security:
+    public-paths:
+      - method: GET
+        pattern: /v1/coupons
+      - method: GET
+        pattern: /v1/coupons/*

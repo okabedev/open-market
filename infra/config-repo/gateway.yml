@@ -85,6 +85,12 @@ spring:
                 - Path=/api/fulfillment/**
               filters:
                 - StripPrefix=2
+            - id: promotion
+              uri: lb://promotion
+              predicates:
+                - Path=/api/promotion/**
+              filters:
+                - StripPrefix=2
             - id: notification
               uri: lb://notification
               predicates:
@@ -129,6 +135,11 @@ openmarket:
       # 구매자 상품 검색. search 쪽 public-paths(config-repo search.yml)에도 있다.
       - method: GET
         pattern: /api/search/v1/products
+      # 내려받을 수 있는 쿠폰 목록과 쿠폰 한 건. promotion 쪽 public-paths(config-repo promotion.yml)에도 있다.
+      - method: GET
+        pattern: /api/promotion/v1/coupons
+      - method: GET
+        pattern: /api/promotion/v1/coupons/*
       # 공개 이미지 변형. file 쪽 public-paths(config-repo file.yml)에도 있다.
       - method: GET
         pattern: /files/**
