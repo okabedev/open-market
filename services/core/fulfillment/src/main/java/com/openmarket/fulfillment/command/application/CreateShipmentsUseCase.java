@@ -37,6 +37,8 @@ public class CreateShipmentsUseCase {
                             sellerOrder.sellerId(),
                             command.buyerId(),
                             sellerOrder.amount(),
+                            sellerOrder.sellerCouponDiscount(),
+                            sellerOrder.paymentAmount(),
                             sellerOrder.lines().stream()
                                     .map(
                                             line ->

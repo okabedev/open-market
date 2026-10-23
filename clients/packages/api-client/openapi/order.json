@@ -333,6 +333,17 @@
           },
           "shipping" : {
             "$ref" : "#/components/schemas/Shipping"
+          },
+          "issuedCouponIds" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string",
+              "format" : "uuid"
+            }
+          },
+          "expectedAmount" : {
+            "type" : "integer",
+            "format" : "int64"
           }
         },
         "required" : [ "lines", "shipping" ]
@@ -599,7 +610,7 @@
           },
           "cancelReason" : {
             "type" : "string",
-            "enum" : [ "STOCK_UNAVAILABLE", "PAYMENT_TIMEOUT", "BUYER_CANCELLED" ]
+            "enum" : [ "STOCK_UNAVAILABLE", "COUPON_UNAVAILABLE", "PAYMENT_TIMEOUT", "BUYER_CANCELLED" ]
           },
           "amount" : {
             "type" : "integer",
@@ -627,7 +638,7 @@
           },
           "cancelReason" : {
             "type" : "string",
-            "enum" : [ "STOCK_UNAVAILABLE", "PAYMENT_TIMEOUT", "BUYER_CANCELLED" ]
+            "enum" : [ "STOCK_UNAVAILABLE", "COUPON_UNAVAILABLE", "PAYMENT_TIMEOUT", "BUYER_CANCELLED" ]
           },
           "amount" : {
             "type" : "integer",
@@ -670,6 +681,18 @@
             "type" : "string"
           },
           "amount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "sellerCouponDiscount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "platformCouponDiscount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "paymentAmount" : {
             "type" : "integer",
             "format" : "int64"
           },

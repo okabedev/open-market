@@ -42,8 +42,22 @@ public class SellerOrder {
     @Column(name = "store_name", nullable = false)
     private String storeName;
 
+    // 상품 금액(항목 금액의 합).
     @Column(nullable = false)
     private long amount;
+
+    // 쿠폰 할인 스냅샷(docs/architecture/promotion.md "할인 계산"). 쿠폰이 없으면 0이고 결제 금액이 상품 금액과 같다.
+    @Column(name = "seller_issued_coupon_id")
+    private @Nullable UUID sellerIssuedCouponId;
+
+    @Column(name = "seller_coupon_discount", nullable = false)
+    private long sellerCouponDiscount;
+
+    @Column(name = "platform_coupon_discount", nullable = false)
+    private long platformCouponDiscount;
+
+    @Column(name = "payment_amount", nullable = false)
+    private long paymentAmount;
 
     // 결제 전에는 비어 있다. 결제 완료가 되면 PAID부터 앞으로만 간다.
     @Enumerated(EnumType.STRING)
@@ -86,6 +100,23 @@ public class SellerOrder {
         OrderLine line = new OrderLine(this, lines.size(), item);
         lines.add(line);
         amount = Math.addExact(amount, line.amount());
+        paymentAmount = amount - sellerCouponDiscount - platformCouponDiscount;
+    }
+
+    /** 쿠폰 할인을 기록한다. 판매자는 부르는 쪽이 확인했다. */
+    void applyDiscount(SellerOrderDiscount discount) {
+        long seller = discount.sellerCouponDiscount();
+        long platform = discount.platformCouponDiscount();
+        if (seller < 0 || platform < 0 || Math.addExact(seller, platform) > amount) {
+            throw new IllegalArgumentException("할인이 음수이거나 하위 주문 금액보다 크다");
+        }
+        if (discount.sellerIssuedCouponId() == null && seller != 0) {
+            throw new IllegalArgumentException("판매자 쿠폰 없이 판매자 할인이 있다");
+        }
+        sellerIssuedCouponId = discount.sellerIssuedCouponId();
+        sellerCouponDiscount = seller;
+        platformCouponDiscount = platform;
+        paymentAmount = amount - seller - platform;
     }
 
     /** 주문이 결제 완료가 됐다. */
@@ -134,8 +165,26 @@ public class SellerOrder {
         return sellerId;
     }
 
+    /** 상품 금액(원). */
     public long amount() {
         return amount;
+    }
+
+    public @Nullable UUID sellerIssuedCouponId() {
+        return sellerIssuedCouponId;
+    }
+
+    public long sellerCouponDiscount() {
+        return sellerCouponDiscount;
+    }
+
+    public long platformCouponDiscount() {
+        return platformCouponDiscount;
+    }
+
+    /** 결제 금액(원). 상품 금액 − 판매자 쿠폰 할인 − 플랫폼 쿠폰 할인 몫. */
+    public long paymentAmount() {
+        return paymentAmount;
     }
 
     public @Nullable SellerOrderProgress progress() {

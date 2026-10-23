@@ -50,6 +50,8 @@ class PurchaseConfirmUseCasesTest {
                 UUID.randomUUID(),
                 UUID.randomUUID(),
                 19_900,
+                1_000,
+                18_000,
                 List.of(
                         new ShipmentLine(
                                 orderLineId,
@@ -75,7 +77,7 @@ class PurchaseConfirmUseCasesTest {
     }
 
     @Test
-    @DisplayName("구매자가 확정하면 PurchaseConfirmed(BUYER, 주문 항목)를 낸다. 다시 해도 한 번이다")
+    @DisplayName("구매자가 확정하면 PurchaseConfirmed(BUYER, 판매자 쿠폰 할인, 주문 항목)를 낸다. 다시 해도 한 번이다")
     void confirmsByBuyer() {
         deliver();
 
@@ -91,12 +93,16 @@ class PurchaseConfirmUseCasesTest {
         assertThat(event.mode()).isEqualTo("BUYER");
         assertThat(event.confirmedAt()).isEqualTo(NOW);
         assertThat(event.sellerId()).isEqualTo(shipment.sellerId());
+        assertThat(event.sellerCouponDiscount()).isEqualTo(1_000);
         assertThat(event.lines())
                 .containsExactly(
                         new PurchaseConfirmed.Line(
                                 orderLineId,
                                 shipment.lines().getFirst().productId(),
+                                "반팔 티셔츠",
+                                List.of(),
                                 shipment.lines().getFirst().categoryId(),
+                                1,
                                 19_900));
     }
 

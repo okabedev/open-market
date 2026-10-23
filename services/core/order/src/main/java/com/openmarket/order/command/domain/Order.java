@@ -18,6 +18,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import org.jspecify.annotations.Nullable;
 
@@ -56,6 +57,17 @@ public class Order {
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("position ASC")
     private List<SellerOrder> sellerOrders = new ArrayList<>();
+
+    // 주문에 쓴 플랫폼 쿠폰. 판매자 쿠폰은 하위 주문에 있다.
+    @Column(name = "platform_issued_coupon_id")
+    private @Nullable UUID platformIssuedCouponId;
+
+    // 받은 예약 결과(docs/architecture/order.md "예약 결과"). 결제 전에만 쓴다.
+    @Column(name = "stock_reserved", nullable = false)
+    private boolean stockReserved;
+
+    @Column(name = "coupon_reserved", nullable = false)
+    private boolean couponReserved;
 
     @Column(name = "placed_at", nullable = false)
     private Instant placedAt;
@@ -109,11 +121,63 @@ public class Order {
                             });
             sellerOrder.add(item);
         }
-        order.amount =
-                order.sellerOrders.stream()
-                        .mapToLong(SellerOrder::amount)
-                        .reduce(0, Math::addExact);
+        order.updateAmount();
         return order;
+    }
+
+    /**
+     * promotion이 계산한 쿠폰 할인을 하위 주문에 기록한다(docs/architecture/order.md "쿠폰 적용"). 주문 금액은 하위 주문 결제 금액의 합이
+     * 된다. 주문을 만든 직후 저장하기 전에 한 번만 부른다.
+     *
+     * @param discounts 하위 주문 순서대로 하나씩
+     * @throws IllegalArgumentException 할인이 하위 주문과 맞지 않는다(판매자 순서, 음수, 하위 주문 금액 초과, 쿠폰 없는 할인)
+     */
+    public void applyCoupons(
+            @Nullable UUID platformIssuedCouponId, List<SellerOrderDiscount> discounts) {
+        if (status != OrderStatus.PENDING || !issuedCouponIds().isEmpty()) {
+            throw new IllegalStateException("쿠폰은 주문을 만들 때 한 번만 적용한다: orderId=" + id);
+        }
+        if (discounts.size() != sellerOrders.size()) {
+            throw new IllegalArgumentException("할인 수가 하위 주문 수와 다르다");
+        }
+        for (int i = 0; i < discounts.size(); i++) {
+            SellerOrderDiscount discount = discounts.get(i);
+            SellerOrder sellerOrder = sellerOrders.get(i);
+            if (!sellerOrder.sellerId().equals(discount.sellerId())) {
+                throw new IllegalArgumentException("할인의 판매자가 하위 주문 순서와 다르다");
+            }
+            if (platformIssuedCouponId == null && discount.platformCouponDiscount() != 0) {
+                throw new IllegalArgumentException("플랫폼 쿠폰 없이 플랫폼 할인이 있다");
+            }
+            sellerOrder.applyDiscount(discount);
+        }
+        this.platformIssuedCouponId = platformIssuedCouponId;
+        updateAmount();
+    }
+
+    private void updateAmount() {
+        amount =
+                sellerOrders.stream()
+                        .mapToLong(SellerOrder::paymentAmount)
+                        .reduce(0, Math::addExact);
+    }
+
+    /** 주문에 쓴 발급 쿠폰. 플랫폼 쿠폰, 하위 주문 순서의 판매자 쿠폰 순이다. 쿠폰이 없으면 비어 있다. */
+    public List<UUID> issuedCouponIds() {
+        List<UUID> ids = new ArrayList<>();
+        if (platformIssuedCouponId != null) {
+            ids.add(platformIssuedCouponId);
+        }
+        sellerOrders.stream()
+                .map(SellerOrder::sellerIssuedCouponId)
+                .filter(Objects::nonNull)
+                .forEach(ids::add);
+        return ids;
+    }
+
+    /** 쿠폰 예약 결과도 기다려야 하는가. */
+    public boolean requiresCouponReservation() {
+        return !issuedCouponIds().isEmpty();
     }
 
     /** 첫 항목의 상품명. 둘 이상이면 {@code <상품명> 외 <n>건}. 100자를 넘으면 상품명을 줄인다. */
@@ -127,17 +191,35 @@ public class Order {
         return name + suffix;
     }
 
-    /** 재고 예약이 끝나 결제를 기다린다. {@code PENDING}에서만 바뀐다. */
-    public Transition awaitPayment(Instant now) {
+    /**
+     * 예약 성공 결과를 기록한다(R12, docs/architecture/order.md "예약 결과"). 필요한 예약(재고, 쿠폰이 있으면 쿠폰)을 모두 받으면
+     * {@code PENDING} → {@code AWAITING_PAYMENT}다. 실패 결과는 {@link #cancel}이다.
+     */
+    public ReservationOutcome recordReservation(Reservation reservation, Instant now) {
+        if (reservation == Reservation.COUPON && !requiresCouponReservation()) {
+            return ReservationOutcome.INVALID;
+        }
         if (status == OrderStatus.AWAITING_PAYMENT) {
-            return Transition.ALREADY;
+            return ReservationOutcome.ALREADY;
         }
         if (status != OrderStatus.PENDING) {
-            return Transition.INVALID;
+            return ReservationOutcome.INVALID;
+        }
+        boolean already = reservation == Reservation.STOCK ? stockReserved : couponReserved;
+        if (already) {
+            return ReservationOutcome.ALREADY;
+        }
+        if (reservation == Reservation.STOCK) {
+            stockReserved = true;
+        } else {
+            couponReserved = true;
+        }
+        updatedAt = now;
+        if (!stockReserved || (requiresCouponReservation() && !couponReserved)) {
+            return ReservationOutcome.RECORDED;
         }
         status = OrderStatus.AWAITING_PAYMENT;
-        updatedAt = now;
-        return Transition.APPLIED;
+        return ReservationOutcome.AWAITING_PAYMENT;
     }
 
     /**
@@ -243,8 +325,13 @@ public class Order {
         return cancelReason;
     }
 
+    /** 결제 금액(원). 하위 주문 결제 금액의 합이다. */
     public long amount() {
         return amount;
+    }
+
+    public @Nullable UUID platformIssuedCouponId() {
+        return platformIssuedCouponId;
     }
 
     public String orderName() {
@@ -261,6 +348,26 @@ public class Order {
 
     public List<SellerOrder> sellerOrders() {
         return Collections.unmodifiableList(sellerOrders);
+    }
+
+    /** 주문이 기다리는 예약. */
+    public enum Reservation {
+        /** 재고 예약(catalog). */
+        STOCK,
+        /** 쿠폰 예약(promotion). 쿠폰이 있는 주문만. */
+        COUPON
+    }
+
+    /** 예약 결과 기록의 결과. */
+    public enum ReservationOutcome {
+        /** 필요한 예약을 모두 받아 결제 대기가 됐다. */
+        AWAITING_PAYMENT,
+        /** 기록했다. 다른 예약 결과를 기다린다. */
+        RECORDED,
+        /** 이미 기록했거나 이미 결제 대기다. 아무것도 하지 않았다. */
+        ALREADY,
+        /** 지금 상태에서는 할 수 없다(취소됨, 결제됨, 쿠폰 없는 주문의 쿠폰 결과). 부르는 쪽이 경고 로그를 남기고 넘긴다. */
+        INVALID
     }
 
     /** 상태 전이 결과. */

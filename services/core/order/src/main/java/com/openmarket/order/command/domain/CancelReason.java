@@ -4,6 +4,8 @@ package com.openmarket.order.command.domain;
 public enum CancelReason {
     /** 재고 예약 실패. */
     STOCK_UNAVAILABLE,
+    /** 쿠폰 예약 실패. */
+    COUPON_UNAVAILABLE,
     /** 결제 대기 시간 초과(주문 만료). */
     PAYMENT_TIMEOUT,
     /** 결제 전 구매자 취소. */

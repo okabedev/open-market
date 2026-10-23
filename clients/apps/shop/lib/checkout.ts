@@ -120,6 +120,8 @@ export function cancelReasonMessage(reason: string | undefined): string {
   switch (reason) {
     case "STOCK_UNAVAILABLE":
       return "재고가 모자라 주문이 취소되었습니다.";
+    case "COUPON_UNAVAILABLE":
+      return "쿠폰을 쓸 수 없게 되어 주문이 취소되었습니다.";
     case "PAYMENT_TIMEOUT":
       return "결제 기한이 지나 주문이 취소되었습니다.";
     case "BUYER_CANCELLED":

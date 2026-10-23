@@ -72,11 +72,17 @@ gateway 경로는 `/api/order` + 아래 경로다.
    - 하위 주문은 판매자가 처음 나온 순서, 항목은 요청 순서다.
 - 장바구니는 주문할 때 바꾸지 않는다. 주문한 SKU는 결제가 끝나(`PAID`) 장바구니에서 뺀다(2026-10-20 결정, 아래 "결제 결과"). 재고 부족·만료·취소로 끝난 주문은 장바구니에 영향이 없다.
 
-### 쿠폰 적용(M5 설계, 2026-10-22)
-주문 생성 본문에 쓸 발급 쿠폰(`issuedCouponIds`, 0~1장의 플랫폼 쿠폰과 판매자마다 0~1장)을 더한다. 규칙과 계산은 [promotion.md](promotion.md) "할인 계산"이고, API 형식은 order 쿠폰 PR에서 이 절에 더한다.
-- 위 확인(가격, 재고)을 지나면 promotion 내부 API([promotion.md](promotion.md) "할인 계산 API(내부)")로 할인을 계산한다(동기 조회, 호출 방식은 아래 "catalog 조회"와 같다). 쓸 수 없는 쿠폰이 있으면 422 `ORDER_COUPON_NOT_APPLICABLE`(쿠폰마다 이유)이다. promotion을 부를 수 없으면 503 `ORDER_PROMOTION_UNAVAILABLE`이다. 쿠폰이 없는 주문은 promotion을 부르지 않는다.
-- 하위 주문마다 판매자 쿠폰 할인, 플랫폼 쿠폰 할인 몫, 결제 금액을 스냅샷으로 저장한다. 주문 금액(결제 금액)은 하위 주문 결제 금액의 합이다. 화면이 보여 준 결제 금액(`expectedAmount`)과 다르면 409 `ORDER_AMOUNT_CHANGED`다(가격 확인과 같은 뜻).
-- `OrderPlaced`의 issuedCouponIds에 쓴 쿠폰을 싣는다. 예약은 promotion이 한다(아래 "예약 결과").
+### 쿠폰 적용(M5)
+주문 생성 본문에 선택 필드 두 개를 더한다. 규칙과 계산은 [promotion.md](promotion.md) "할인 계산"이다.
+| 필드 | 규칙 | 어기면 |
+|---|---|---|
+| `issuedCouponIds` | 쓸 발급 쿠폰. 플랫폼 쿠폰 0~1장과 판매자마다 0~1장. 50장까지, 같은 쿠폰은 한 번만. 빼면 쿠폰 없음 | 400 `ORDER_INVALID_INPUT`. 자리 규칙(같은 자리에 두 장)은 promotion이 본다 |
+| `expectedAmount` | 주문서 화면이 보여 준 결제 금액(원). 0 이상. 주면 지금 계산한 결제 금액과 비교한다 | 다르면 409 `ORDER_AMOUNT_CHANGED`(`expectedAmount`, `currentAmount`) |
+
+- 위 확인(가격, 재고)을 지나면 promotion 내부 API([promotion.md](promotion.md) "할인 계산 API(내부)")로 할인을 계산한다(동기 조회, 아래 "promotion 조회"). 하위 주문 순서대로 판매자와 상품 금액을 보낸다. 쓸 수 없는 쿠폰이 있으면 422 `ORDER_COUPON_NOT_APPLICABLE`(`coupons`: issuedCouponId, reason)이다. promotion을 부를 수 없으면 503 `ORDER_PROMOTION_UNAVAILABLE`이다. 쿠폰이 없는 주문은 promotion을 부르지 않는다.
+- 하위 주문마다 판매자 쿠폰, 판매자 쿠폰 할인, 플랫폼 쿠폰 할인 몫, 결제 금액을 스냅샷으로 저장하고, 플랫폼 쿠폰은 주문에 저장한다. 하위 주문 금액(`amount`)은 상품 금액 그대로다. 주문 금액은 결제 금액(하위 주문 결제 금액의 합)이다. 쿠폰이 없으면 두 할인이 0이고 결제 금액이 상품 금액과 같다.
+- 결제 금액 비교(`expectedAmount`)는 쿠폰이 없어도 한다. 정책을 바꾸지 않으므로 가격이 같으면 할인도 같지만, 화면이 계산을 틀렸을 때 다른 금액으로 결제창을 열지 않게 하기 위해서다.
+- `OrderPlaced`의 issuedCouponIds에 쓴 쿠폰을 싣는다(플랫폼 쿠폰, 하위 주문 순서의 판매자 쿠폰 순). 예약은 promotion이 한다(아래 "예약 결과").
 
 ### 예약 결과
 order는 `catalog.stock`에서 재고 예약 결과를, 쿠폰이 있으면 `promotion.issued-coupon`에서 쿠폰 예약 결과를 받는다([messaging.md](messaging.md) "주문·결제 Saga").
@@ -87,8 +93,9 @@ order는 `catalog.stock`에서 재고 예약 결과를, 쿠폰이 있으면 `pro
 | `StockReservationFailed` | `PENDING` → `CANCELLED`(사유 `STOCK_UNAVAILABLE`) | `OrderCancelled` |
 | `CouponReservationFailed` | `PENDING` → `CANCELLED`(사유 `COUPON_UNAVAILABLE`) | `OrderCancelled` |
 
-- 두 결과는 다른 토픽이라 어느 쪽이 먼저 와도 된다. 주문 행을 잠그고 결과를 기록하므로, 둘째 결과를 받은 쪽만 상태를 바꾼다. 실패가 오면 다른 쪽을 기다리지 않고 취소한다. 받은 예약은 catalog와 promotion이 `OrderCancelled`로 푼다.
-- 쿠폰 예약 결과 기록과 합류는 M5 order 쿠폰 PR에서 더한다. M3의 주문(쿠폰 없음)은 재고 결과 하나로 정해 그대로다.
+- 두 결과는 다른 토픽이라 어느 쪽이 먼저 와도 된다(R12, 2026-10-23 확인). 성공 결과는 주문에 따로 기록한다(`stock_reserved`, `coupon_reserved`). 주문 행을 잠그고(`SELECT ... FOR UPDATE`) 기록하므로 두 결과가 동시에 와도 하나씩 처리되고, 필요한 결과를 모두 받은 둘째 트랜잭션만 상태를 바꾸고 `OrderAwaitingPayment`를 낸다. 쿠폰이 없는 주문은 재고 결과 하나로 정한다.
+- 실패가 오면 다른 쪽을 기다리지 않고 취소한다. 그 뒤에 온 성공 결과는 취소된 주문이라 넘긴다(경고 로그). 두 쪽이 다 실패하면 먼저 받은 실패의 사유가 남는다. 받은 예약은 catalog와 promotion이 `OrderCancelled`로 푼다.
+- 쿠폰이 없는 주문에 쿠폰 예약 결과가 오면 경고 로그를 남기고 넘긴다(promotion은 쿠폰 없는 주문에 결과를 내지 않으므로 생기면 버그다).
 
 - 리스너는 처리 기록(`processed_event`)으로 같은 이벤트를 한 번만 처리한다. 주문 행을 잠그고 상태를 바꾼다.
 - `PENDING`이 아닌 주문에 결과가 오면(이미 같은 상태면 조용히, 다른 상태면 경고 로그) 넘긴다. order가 모르는 주문이면 경고 로그를 남기고 넘긴다.
@@ -105,7 +112,7 @@ order는 `payment.payment`에서 결제 결과를 받는다([payment.md](payment
 - `CANCELLED` 주문(만료·구매자 취소가 먼저 됐다)에 온 승인은 경고 로그를 남기고 넘긴다. 결제는 payment가 `OrderCancelled`를 받아 보상 취소한다([messaging.md](messaging.md) "실패와 보상"). `PENDING` 주문에는 결제가 생기지 않으므로 승인이 오면 같은 경고다. 모르는 주문도 경고 로그만 남긴다.
 - 승인 금액이 주문 금액과 다르면 예외를 던진다. payment가 `OrderAwaitingPayment`의 금액을 고정하므로 생기면 버그다. 재시도 뒤 DLT로 가서 운영자가 본다.
 - `PAID`가 되면 같은 트랜잭션에서 구매자 장바구니를 잠그고 주문한 SKU의 줄을 뺀다. 담은 수량이 주문 수량과 달라도 줄을 뺀다. order는 주문이 장바구니에서 왔는지 상품 하나를 바로 주문했는지 구분하지 않아서, 바로 주문한 SKU도 장바구니에 있으면 빠진다. shop의 "바로 구매"는 상품 상세에서 SKU와 수량으로 주문서(`/checkout?buyNow=&productId=&quantity=`)를 열고, 장바구니를 거치지 않고 지금 가격으로 같은 주문 API를 부른다. 장바구니가 없으면 아무것도 하지 않는다.
-- `OrderPaid`에는 하위 주문(판매자, 금액, 항목의 SKU·상품·카테고리·개당 가격·수량·금액)과 배송지가 실린다. 필드는 [context-map.md](context-map.md) "order.order".
+- `OrderPaid`에는 하위 주문(판매자, 상품 금액, 판매자 쿠폰 할인, 플랫폼 쿠폰 할인 몫, 결제 금액, 항목의 SKU·상품·카테고리·개당 가격·수량·금액)과 배송지가 실린다. 필드는 [context-map.md](context-map.md) "order.order".
 
 ### 하위 주문 진행 상태(`SellerOrderProgress`)
 결제된 주문의 하위 주문마다 배송 진행을 따로 갖는다(ORD-3 "판매자별 진행 상태"). fulfillment의 배송 이벤트(`fulfillment.shipment`)로 바꾼다([fulfillment.md](fulfillment.md) "배송").
@@ -161,7 +168,7 @@ order는 `payment.payment`에서 결제 결과를 받는다([payment.md](payment
 | 메서드 | 경로 | 설명 |
 |---|---|---|
 | GET | `/v1/orders?cursor=&size=` | 본인 주문 목록. 모든 상태를 최근 주문 순으로 준다(주문 시각이 같으면 주문 ID 역순). 줄은 상태, 취소 사유, 금액, 주문명, 주문 시각이다. 커서 페이징이고 `size`는 1~50(기본 20)이다. 형식이 틀린 커서는 400 `ORDER_INVALID_CURSOR` |
-| GET | `/v1/orders/{orderId}` | 본인 주문 상세. 상태, 취소 사유, 금액, 주문명, 배송지, 하위 주문(판매자, 상호, 금액, 진행 상태, 클레임(유형, 상태), 항목), 주문 시각, 결제 시각(결제됐을 때만). 다른 회원의 주문은 404 `ORDER_NOT_FOUND`다. 화면은 주문을 만든 뒤 이 API로 `AWAITING_PAYMENT`가 될 때까지 기다린다 |
+| GET | `/v1/orders/{orderId}` | 본인 주문 상세. 상태, 취소 사유, 금액(결제 금액), 주문명, 배송지, 하위 주문(판매자, 상호, 상품 금액, 판매자 쿠폰 할인, 플랫폼 쿠폰 할인 몫, 결제 금액, 진행 상태, 클레임(유형, 상태), 항목), 주문 시각, 결제 시각(결제됐을 때만). 다른 회원의 주문은 404 `ORDER_NOT_FOUND`다. 화면은 주문을 만든 뒤 이 API로 `AWAITING_PAYMENT`가 될 때까지 기다린다 |
 
 판매자(ORD-4). `SELLER` 역할이 있어야 하고, 주체는 토큰의 `sub`(= sellerId)다.
 | 메서드 | 경로 | 설명 |
@@ -191,3 +198,9 @@ order는 catalog 내부 API `GET /internal/v1/skus`로 SKU의 상품명, 판매 
 - **서킷 브레이커**(NFR-4, Resilience4j): 최근 20건 중 10건 이상에서 절반이 실패하면 10초 동안 catalog를 부르지 않고 바로 실패한다. 4xx는 실패로 세지 않는다. 값은 config-repo `order.yml`에 있다.
 - catalog를 부를 수 없으면(타임아웃, 5xx, 서킷 열림) 503 `ORDER_CATALOG_UNAVAILABLE`이다. 장바구니 조회, 담기, 주문 생성이 이 응답을 받는다. 수량 바꾸기와 빼기는 영향이 없다.
 - 커맨드(담기)와 조회(장바구니 보기)는 각자 Feign 클라이언트를 둔다. 커맨드는 `command.application`의 `SkuCatalogPort`를 `infra`가 구현하고, 조회는 `query.dao`가 직접 부른다. 커맨드와 쿼리가 모델을 공유하지 않는다는 규칙([conventions.md](conventions.md)) 때문이다.
+
+## promotion 조회
+order는 주문을 만들 때 promotion 내부 API `POST /internal/v1/coupon-discounts`로 쿠폰 할인을 계산한다([promotion.md](promotion.md) "할인 계산 API(내부)"). 상태를 바꾸지 않는 조회다.
+- 클라이언트(`lb://promotion`), 서비스 간 토큰, 타임아웃, 재시도, 서킷 브레이커는 위 "catalog 조회"와 같다. 서킷 브레이커는 클라이언트마다 따로 센다.
+- promotion을 부를 수 없으면(타임아웃, 5xx, 서킷 열림) 503 `ORDER_PROMOTION_UNAVAILABLE`이다. 쿠폰이 있는 주문 생성만 영향을 받는다. 4xx는 order가 요청을 잘못 만든 것이라 500이다.
+- 커맨드(주문 생성)만 쓴다. `command.application`의 `CouponDiscountPort`를 `infra`가 구현한다.

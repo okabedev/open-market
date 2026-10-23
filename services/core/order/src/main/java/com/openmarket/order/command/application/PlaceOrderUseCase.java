@@ -1,8 +1,11 @@
 package com.openmarket.order.command.application;
 
 import com.openmarket.common.messaging.outbox.Outbox;
+import com.openmarket.order.command.application.CouponDiscountPort.CouponDiscount;
 import com.openmarket.order.command.application.SkuCatalogPort.CatalogSku;
+import com.openmarket.order.command.domain.AmountChangedException;
 import com.openmarket.order.command.domain.CartItem;
+import com.openmarket.order.command.domain.CouponNotApplicableException;
 import com.openmarket.order.command.domain.InsufficientStockException;
 import com.openmarket.order.command.domain.InvalidOrderInputException;
 import com.openmarket.order.command.domain.Order;
@@ -10,6 +13,7 @@ import com.openmarket.order.command.domain.OrderItem;
 import com.openmarket.order.command.domain.OrderPlaced;
 import com.openmarket.order.command.domain.OrderRepository;
 import com.openmarket.order.command.domain.PriceChangedException;
+import com.openmarket.order.command.domain.SellerOrderDiscount;
 import com.openmarket.order.command.domain.ShippingAddress;
 import com.openmarket.order.command.domain.SkuNotFoundException;
 import com.openmarket.order.command.domain.SkuNotOnSaleException;
@@ -25,8 +29,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionOperations;
 
 /**
- * 주문을 만든다(ORD-2, docs/architecture/order.md "주문 생성"). catalog에서 판매 상태, 가격, 수량을 다시 확인하고, 하나라도 걸리면
- * 주문을 만들지 않는다. 주문은 {@code PENDING}으로 저장하고 {@code OrderPlaced}를 낸다. catalog 조회는 트랜잭션 밖에서 한다.
+ * 주문을 만든다(ORD-2, docs/architecture/order.md "주문 생성", "쿠폰 적용"). catalog에서 판매 상태, 가격, 수량을 다시 확인하고,
+ * 쿠폰이 있으면 promotion에서 할인을 계산한다. 하나라도 걸리면 주문을 만들지 않는다. 주문은 {@code PENDING}으로 저장하고 {@code
+ * OrderPlaced}를 낸다. catalog·promotion 조회는 트랜잭션 밖에서 한다.
  */
 @Service
 public class PlaceOrderUseCase {
@@ -36,8 +41,12 @@ public class PlaceOrderUseCase {
     /** 주문 하나의 줄 수 상한. 장바구니 상한과 같다. */
     static final int MAX_LINES = 50;
 
+    /** 주문 하나의 쿠폰 수 상한. promotion 할인 계산 API의 상한과 같다. */
+    static final int MAX_COUPONS = 50;
+
     private final OrderRepository orders;
     private final SkuCatalogPort catalog;
+    private final CouponDiscountPort promotion;
     private final Outbox outbox;
     private final TransactionOperations transaction;
     private final Clock clock;
@@ -45,11 +54,13 @@ public class PlaceOrderUseCase {
     public PlaceOrderUseCase(
             OrderRepository orders,
             SkuCatalogPort catalog,
+            CouponDiscountPort promotion,
             Outbox outbox,
             TransactionOperations transaction,
             Clock clock) {
         this.orders = orders;
         this.catalog = catalog;
+        this.promotion = promotion;
         this.outbox = outbox;
         this.transaction = transaction;
         this.clock = clock;
@@ -78,6 +89,13 @@ public class PlaceOrderUseCase {
                                 .toList(),
                         address,
                         clock.instant());
+        if (!command.issuedCouponIds().isEmpty()) {
+            applyCoupons(order, command.issuedCouponIds());
+        }
+        Long expectedAmount = command.expectedAmount();
+        if (expectedAmount != null && expectedAmount != order.amount()) {
+            throw new AmountChangedException(expectedAmount, order.amount());
+        }
         transaction.executeWithoutResult(
                 status -> {
                     orders.save(order);
@@ -85,6 +103,45 @@ public class PlaceOrderUseCase {
                             TOPIC, order.id().toString(), OrderPlaced.TYPE, OrderPlaced.of(order));
                 });
         return order.id();
+    }
+
+    /** promotion이 계산한 할인을 주문에 기록한다. 쓸 수 없는 쿠폰이 있으면 422다. */
+    private void applyCoupons(Order order, List<UUID> issuedCouponIds) {
+        CouponDiscount discount =
+                promotion.calculate(
+                        order.buyerId(),
+                        issuedCouponIds,
+                        order.sellerOrders().stream()
+                                .map(
+                                        sellerOrder ->
+                                                new CouponDiscountPort.SellerAmount(
+                                                        sellerOrder.sellerId(),
+                                                        sellerOrder.amount()))
+                                .toList());
+        if (!discount.applicable()) {
+            throw new CouponNotApplicableException(
+                    discount.unavailable().stream()
+                            .map(
+                                    unavailable ->
+                                            new CouponNotApplicableException.Coupon(
+                                                    unavailable.issuedCouponId(),
+                                                    unavailable.reason()))
+                            .toList());
+        }
+        order.applyCoupons(
+                discount.platformIssuedCouponId(),
+                discount.sellerOrders().stream()
+                        .map(
+                                sellerOrder ->
+                                        new SellerOrderDiscount(
+                                                sellerOrder.sellerId(),
+                                                sellerOrder.sellerIssuedCouponId(),
+                                                sellerOrder.sellerCouponDiscount(),
+                                                sellerOrder.platformCouponDiscount()))
+                        .toList());
+        if (order.amount() != discount.paymentAmount()) {
+            throw new IllegalStateException("promotion의 결제 금액이 하위 주문 결제 금액의 합과 다르다");
+        }
     }
 
     private static ShippingAddress checkInput(PlaceOrderCommand command) {
@@ -101,6 +158,14 @@ public class PlaceOrderUseCase {
             if (line.expectedPrice() < 0) {
                 throw new InvalidOrderInputException("가격이 올바르지 않습니다.");
             }
+        }
+        List<UUID> couponIds = command.issuedCouponIds();
+        if (couponIds.size() > MAX_COUPONS || new HashSet<>(couponIds).size() != couponIds.size()) {
+            throw new InvalidOrderInputException("쿠폰은 50장까지, 같은 쿠폰은 한 번만 쓸 수 있습니다.");
+        }
+        Long expectedAmount = command.expectedAmount();
+        if (expectedAmount != null && expectedAmount < 0) {
+            throw new InvalidOrderInputException("결제 금액이 올바르지 않습니다.");
         }
         PlaceOrderCommand.Shipping shipping = command.shipping();
         return ShippingAddress.of(

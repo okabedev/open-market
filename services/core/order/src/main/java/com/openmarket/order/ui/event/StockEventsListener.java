@@ -48,7 +48,9 @@ class StockEventsListener {
                             ReservationMessage.class,
                             event ->
                                     awaitPayment.execute(
-                                            new AwaitPaymentCommand(event.payload().orderId())));
+                                            new AwaitPaymentCommand(
+                                                    event.payload().orderId(),
+                                                    AwaitPaymentCommand.Reservation.STOCK)));
             case STOCK_RESERVATION_FAILED ->
                     processor.process(
                             "order.stock-reservation-failed",

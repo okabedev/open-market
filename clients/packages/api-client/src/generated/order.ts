@@ -149,6 +149,9 @@ export interface components {
         PlaceOrderRequest: {
             lines: components["schemas"]["Line"][];
             shipping: components["schemas"]["Shipping"];
+            issuedCouponIds?: string[];
+            /** Format: int64 */
+            expectedAmount?: number;
         };
         Shipping: {
             recipientName?: string;
@@ -257,7 +260,7 @@ export interface components {
             /** @enum {string} */
             status?: "PENDING" | "AWAITING_PAYMENT" | "PAID" | "CANCELLED";
             /** @enum {string} */
-            cancelReason?: "STOCK_UNAVAILABLE" | "PAYMENT_TIMEOUT" | "BUYER_CANCELLED";
+            cancelReason?: "STOCK_UNAVAILABLE" | "COUPON_UNAVAILABLE" | "PAYMENT_TIMEOUT" | "BUYER_CANCELLED";
             /** Format: int64 */
             amount?: number;
             orderName?: string;
@@ -270,7 +273,7 @@ export interface components {
             /** @enum {string} */
             status?: "PENDING" | "AWAITING_PAYMENT" | "PAID" | "CANCELLED";
             /** @enum {string} */
-            cancelReason?: "STOCK_UNAVAILABLE" | "PAYMENT_TIMEOUT" | "BUYER_CANCELLED";
+            cancelReason?: "STOCK_UNAVAILABLE" | "COUPON_UNAVAILABLE" | "PAYMENT_TIMEOUT" | "BUYER_CANCELLED";
             /** Format: int64 */
             amount?: number;
             orderName?: string;
@@ -289,6 +292,12 @@ export interface components {
             storeName?: string;
             /** Format: int64 */
             amount?: number;
+            /** Format: int64 */
+            sellerCouponDiscount?: number;
+            /** Format: int64 */
+            platformCouponDiscount?: number;
+            /** Format: int64 */
+            paymentAmount?: number;
             /** @enum {string} */
             progress?: "PAID" | "ACCEPTED" | "SHIPPED" | "IN_TRANSIT" | "DELIVERED" | "CONFIRMED" | "CANCELLED" | "RETURNED";
             claim?: components["schemas"]["SellerOrderClaimView"];

@@ -39,6 +39,27 @@ class ReturnClaimTest {
                 NOW);
     }
 
+    /** 쿠폰 할인을 뺀 결제 금액이 상품 금액보다 작은 배송 완료 배송. */
+    Shipment deliveredWithCoupon(long amount, long sellerCouponDiscount, long paymentAmount) {
+        Shipment shipment =
+                Shipment.ready(
+                        UUID.randomUUID(),
+                        UUID.randomUUID(),
+                        UUID.randomUUID(),
+                        UUID.randomUUID(),
+                        amount,
+                        sellerCouponDiscount,
+                        paymentAmount,
+                        List.of(ClaimTest.line(sku, 2, amount / 2)),
+                        NOW,
+                        NOW);
+        shipment.accept(NOW);
+        shipment.ship(TrackingInfo.of("CJ_LOGISTICS", "123456789012"), NOW);
+        shipment.startTransit(NOW);
+        shipment.deliver(NOW, Duration.ofDays(7));
+        return shipment;
+    }
+
     Claim request(Shipment shipment, ClaimType type, ClaimReason reason) {
         return Claim.request(
                 type, shipment, reason, "  사진처럼 찢어져 왔습니다.  ", List.of(UUID.randomUUID()), NOW);
@@ -152,6 +173,20 @@ class ReturnClaimTest {
     }
 
     @Test
+    @DisplayName("쿠폰을 쓴 하위 주문의 반품은 결제 금액에서 계산한다. 구매자 귀책은 반품 배송비를 더 뺀다")
+    void approveReturnWithCoupon() {
+        Shipment shipment = deliveredWithCoupon(39_800, 2_000, 35_800);
+        Claim buyerFault = request(shipment, ClaimType.RETURN, ClaimReason.CHANGE_OF_MIND);
+        buyerFault.approve(shipment, true, FEE, NOW);
+        assertThat(buyerFault.refundAmount()).isEqualTo(35_800 - FEE);
+
+        Shipment other = deliveredWithCoupon(39_800, 2_000, 35_800);
+        Claim sellerFault = request(other, ClaimType.RETURN, ClaimReason.DEFECTIVE);
+        sellerFault.approve(other, false, FEE, NOW);
+        assertThat(sellerFault.refundAmount()).isEqualTo(35_800);
+    }
+
+    @Test
     @DisplayName("구매자 귀책 반품은 환불에서 반품 배송비를 빼고(0 미만이면 0), 판매자 귀책은 전액이다. 다시 승인해도 그대로다")
     void approveReturn() {
         Shipment shipment = delivered(39_800);
@@ -203,6 +238,8 @@ class ReturnClaimTest {
         assertThat(reshipment.status()).isEqualTo(ShipmentStatus.READY);
         assertThat(reshipment.claimId()).isEqualTo(claim.id());
         assertThat(reshipment.sellerOrderId()).isEqualTo(shipment.sellerOrderId());
+        assertThat(reshipment.paymentAmount()).isEqualTo(shipment.paymentAmount());
+        assertThat(reshipment.sellerCouponDiscount()).isEqualTo(shipment.sellerCouponDiscount());
         assertThat(reshipment.amount()).isEqualTo(39_800);
         assertThat(reshipment.lines())
                 .usingRecursiveFieldByFieldElementComparator()

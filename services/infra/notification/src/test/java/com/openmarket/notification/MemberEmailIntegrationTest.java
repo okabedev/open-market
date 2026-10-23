@@ -139,7 +139,7 @@ class MemberEmailIntegrationTest {
         JsonNode message = mailpitJson("/api/v1/message/" + summary.get("ID").asString());
         String link = "http://localhost:3000/orders/" + orderId;
         assertThat(message.get("Text").asString())
-                .contains("주문이 완료됐습니다. 반팔 티셔츠 외 1건, 59,700원")
+                .contains("주문이 완료됐습니다. 반팔 티셔츠 외 1건, 54,700원")
                 .contains(link);
         assertThat(message.get("HTML").asString()).contains("href=\"" + link + "\"");
 

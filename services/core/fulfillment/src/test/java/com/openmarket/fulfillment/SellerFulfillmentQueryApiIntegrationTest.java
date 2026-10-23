@@ -87,6 +87,8 @@ class SellerFulfillmentQueryApiIntegrationTest {
                                 sellerOrderId,
                                 sellerId,
                                 19_900,
+                                0,
+                                19_900,
                                 List.of(
                                         new CreateShipmentsCommand.Line(
                                                 UUID.randomUUID(),

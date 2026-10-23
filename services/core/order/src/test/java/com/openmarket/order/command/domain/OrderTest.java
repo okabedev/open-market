@@ -67,19 +67,191 @@ class OrderTest {
     }
 
     @Test
-    @DisplayName("예약이 끝나면 결제 대기가 된다. 다시 와도 그대로이고, 취소된 주문은 바뀌지 않는다")
-    void awaitPayment() {
+    @DisplayName("쿠폰이 없으면 재고 예약 결과 하나로 결제 대기가 된다. 다시 와도 그대로이고, 취소된 주문은 바뀌지 않는다")
+    void stockReservationAlone() {
         Order order = Order.place(buyerId, List.of(item(sellerA, "청바지", 1_000, 1)), address, NOW);
 
-        assertThat(order.awaitPayment(NOW)).isEqualTo(Order.Transition.APPLIED);
+        assertThat(order.requiresCouponReservation()).isFalse();
+        assertThat(order.recordReservation(Order.Reservation.STOCK, NOW))
+                .isEqualTo(Order.ReservationOutcome.AWAITING_PAYMENT);
         assertThat(order.status()).isEqualTo(OrderStatus.AWAITING_PAYMENT);
-        assertThat(order.awaitPayment(NOW)).isEqualTo(Order.Transition.ALREADY);
+        assertThat(order.recordReservation(Order.Reservation.STOCK, NOW))
+                .isEqualTo(Order.ReservationOutcome.ALREADY);
 
         Order cancelled =
                 Order.place(buyerId, List.of(item(sellerA, "청바지", 1_000, 1)), address, NOW);
         cancelled.cancel(CancelReason.STOCK_UNAVAILABLE, NOW);
-        assertThat(cancelled.awaitPayment(NOW)).isEqualTo(Order.Transition.INVALID);
+        assertThat(cancelled.recordReservation(Order.Reservation.STOCK, NOW))
+                .isEqualTo(Order.ReservationOutcome.INVALID);
         assertThat(cancelled.status()).isEqualTo(OrderStatus.CANCELLED);
+    }
+
+    @Test
+    @DisplayName("쿠폰이 있으면 재고·쿠폰 예약 결과를 둘 다 받아야 결제 대기가 된다. 어느 쪽이 먼저 와도 둘째 결과가 상태를 바꾼다")
+    void bothReservationsJoin() {
+        for (List<Order.Reservation> arrival :
+                List.of(
+                        List.of(Order.Reservation.STOCK, Order.Reservation.COUPON),
+                        List.of(Order.Reservation.COUPON, Order.Reservation.STOCK))) {
+            Order order = couponOrder();
+
+            assertThat(order.recordReservation(arrival.get(0), NOW))
+                    .isEqualTo(Order.ReservationOutcome.RECORDED);
+            assertThat(order.status()).isEqualTo(OrderStatus.PENDING);
+            assertThat(order.recordReservation(arrival.get(0), NOW))
+                    .isEqualTo(Order.ReservationOutcome.ALREADY);
+            assertThat(order.recordReservation(arrival.get(1), NOW))
+                    .isEqualTo(Order.ReservationOutcome.AWAITING_PAYMENT);
+            assertThat(order.status()).isEqualTo(OrderStatus.AWAITING_PAYMENT);
+            assertThat(order.recordReservation(arrival.get(1), NOW))
+                    .isEqualTo(Order.ReservationOutcome.ALREADY);
+        }
+    }
+
+    @Test
+    @DisplayName("쿠폰이 없는 주문에 쿠폰 예약 결과가 오면 바꾸지 않는다")
+    void couponReservationWithoutCoupons() {
+        Order order = Order.place(buyerId, List.of(item(sellerA, "청바지", 1_000, 1)), address, NOW);
+
+        assertThat(order.recordReservation(Order.Reservation.COUPON, NOW))
+                .isEqualTo(Order.ReservationOutcome.INVALID);
+        assertThat(order.status()).isEqualTo(OrderStatus.PENDING);
+    }
+
+    @Test
+    @DisplayName("한쪽 예약이 먼저 성공했어도 다른 쪽이 실패하면 취소되고, 늦게 온 성공은 바꾸지 않는다")
+    void failureAfterOneReservation() {
+        Order order = couponOrder();
+        order.recordReservation(Order.Reservation.STOCK, NOW);
+
+        assertThat(order.cancel(CancelReason.COUPON_UNAVAILABLE, NOW))
+                .isEqualTo(Order.Transition.APPLIED);
+        assertThat(order.recordReservation(Order.Reservation.COUPON, NOW))
+                .isEqualTo(Order.ReservationOutcome.INVALID);
+        assertThat(order.status()).isEqualTo(OrderStatus.CANCELLED);
+        assertThat(order.cancelReason()).isEqualTo(CancelReason.COUPON_UNAVAILABLE);
+    }
+
+    @Test
+    @DisplayName("쿠폰 할인을 하위 주문에 기록하고, 주문 금액은 하위 주문 결제 금액의 합이다. 쓴 쿠폰은 플랫폼 쿠폰부터 하위 주문 순서다")
+    void appliesCoupons() {
+        Order order =
+                Order.place(
+                        buyerId,
+                        List.of(
+                                item(sellerA, "반팔 티셔츠", 20_000, 1),
+                                item(sellerB, "청바지", 30_000, 1)),
+                        address,
+                        NOW);
+        UUID platformCoupon = UUID.randomUUID();
+        UUID sellerCoupon = UUID.randomUUID();
+
+        order.applyCoupons(
+                platformCoupon,
+                List.of(
+                        new SellerOrderDiscount(sellerA, null, 0, 2_000),
+                        new SellerOrderDiscount(sellerB, sellerCoupon, 5_000, 3_000)));
+
+        assertThat(order.amount()).isEqualTo(50_000 - 5_000 - 5_000);
+        SellerOrder a = order.sellerOrders().get(0);
+        assertThat(a.amount()).isEqualTo(20_000);
+        assertThat(a.sellerIssuedCouponId()).isNull();
+        assertThat(a.sellerCouponDiscount()).isZero();
+        assertThat(a.platformCouponDiscount()).isEqualTo(2_000);
+        assertThat(a.paymentAmount()).isEqualTo(18_000);
+        SellerOrder b = order.sellerOrders().get(1);
+        assertThat(b.sellerIssuedCouponId()).isEqualTo(sellerCoupon);
+        assertThat(b.paymentAmount()).isEqualTo(22_000);
+        assertThat(order.platformIssuedCouponId()).isEqualTo(platformCoupon);
+        assertThat(order.issuedCouponIds()).containsExactly(platformCoupon, sellerCoupon);
+        assertThat(order.requiresCouponReservation()).isTrue();
+    }
+
+    @Test
+    @DisplayName("쿠폰이 없는 주문은 할인이 0이고 결제 금액이 하위 주문 금액과 같다")
+    void noCoupons() {
+        Order order = Order.place(buyerId, List.of(item(sellerA, "청바지", 1_000, 2)), address, NOW);
+
+        assertThat(order.issuedCouponIds()).isEmpty();
+        assertThat(order.platformIssuedCouponId()).isNull();
+        assertThat(order.sellerOrders().getFirst().paymentAmount()).isEqualTo(2_000);
+        assertThat(order.sellerOrders().getFirst().sellerCouponDiscount()).isZero();
+    }
+
+    @Test
+    @DisplayName("할인 결과가 하위 주문과 맞지 않으면(판매자 순서, 음수, 금액 초과, 쿠폰 없는 할인) 받지 않는다")
+    void rejectsInconsistentDiscounts() {
+        UUID coupon = UUID.randomUUID();
+        assertThatThrownBy(
+                        () ->
+                                twoSellerOrder()
+                                        .applyCoupons(
+                                                coupon,
+                                                List.of(
+                                                        new SellerOrderDiscount(
+                                                                sellerB, null, 0, 1),
+                                                        new SellerOrderDiscount(
+                                                                sellerA, null, 0, 1))))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(
+                        () ->
+                                twoSellerOrder()
+                                        .applyCoupons(
+                                                coupon,
+                                                List.of(
+                                                        new SellerOrderDiscount(
+                                                                sellerA, null, 0, -1),
+                                                        new SellerOrderDiscount(
+                                                                sellerB, null, 0, 1))))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(
+                        () ->
+                                twoSellerOrder()
+                                        .applyCoupons(
+                                                coupon,
+                                                List.of(
+                                                        new SellerOrderDiscount(
+                                                                sellerA, null, 0, 1_001),
+                                                        new SellerOrderDiscount(
+                                                                sellerB, null, 0, 0))))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(
+                        () ->
+                                twoSellerOrder()
+                                        .applyCoupons(
+                                                null,
+                                                List.of(
+                                                        new SellerOrderDiscount(
+                                                                sellerA, null, 0, 1),
+                                                        new SellerOrderDiscount(
+                                                                sellerB, null, 0, 0))))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(
+                        () ->
+                                twoSellerOrder()
+                                        .applyCoupons(
+                                                null,
+                                                List.of(
+                                                        new SellerOrderDiscount(
+                                                                sellerA, null, 1, 0),
+                                                        new SellerOrderDiscount(
+                                                                sellerB, null, 0, 0))))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    private Order twoSellerOrder() {
+        return Order.place(
+                buyerId,
+                List.of(item(sellerA, "반팔 티셔츠", 1_000, 1), item(sellerB, "청바지", 2_000, 1)),
+                address,
+                NOW);
+    }
+
+    private Order couponOrder() {
+        Order order = Order.place(buyerId, List.of(item(sellerA, "청바지", 10_000, 1)), address, NOW);
+        order.applyCoupons(
+                UUID.randomUUID(), List.of(new SellerOrderDiscount(sellerA, null, 0, 1_000)));
+        return order;
     }
 
     @Test
@@ -99,7 +271,7 @@ class OrderTest {
     @DisplayName("결제 대기 주문은 결제가 승인되면 결제 완료가 되고 승인 시각이 결제 시각이다. 다시 와도 그대로다")
     void pay() {
         Order order = Order.place(buyerId, List.of(item(sellerA, "청바지", 1_000, 2)), address, NOW);
-        order.awaitPayment(NOW);
+        order.recordReservation(Order.Reservation.STOCK, NOW);
         Instant approvedAt = NOW.plusSeconds(60);
 
         assertThat(order.pay(2_000, approvedAt, NOW.plusSeconds(61)))
@@ -122,7 +294,7 @@ class OrderTest {
 
         Order cancelled =
                 Order.place(buyerId, List.of(item(sellerA, "청바지", 1_000, 1)), address, NOW);
-        cancelled.awaitPayment(NOW);
+        cancelled.recordReservation(Order.Reservation.STOCK, NOW);
         cancelled.cancel(CancelReason.PAYMENT_TIMEOUT, NOW);
         assertThat(cancelled.pay(1_000, NOW, NOW)).isEqualTo(Order.Transition.INVALID);
         assertThat(cancelled.status()).isEqualTo(OrderStatus.CANCELLED);
@@ -130,7 +302,7 @@ class OrderTest {
 
         Order awaiting =
                 Order.place(buyerId, List.of(item(sellerA, "청바지", 1_000, 1)), address, NOW);
-        awaiting.awaitPayment(NOW);
+        awaiting.recordReservation(Order.Reservation.STOCK, NOW);
         assertThatThrownBy(() -> awaiting.pay(999, NOW, NOW))
                 .isInstanceOf(IllegalStateException.class);
         assertThat(awaiting.status()).isEqualTo(OrderStatus.AWAITING_PAYMENT);
@@ -142,7 +314,7 @@ class OrderTest {
         Order order = twoSellers();
         assertThat(order.sellerOrders()).allSatisfy(s -> assertThat(s.progress()).isNull());
 
-        order.awaitPayment(NOW);
+        order.recordReservation(Order.Reservation.STOCK, NOW);
         order.pay(order.amount(), NOW, NOW);
 
         assertThat(order.sellerOrders())
@@ -153,7 +325,7 @@ class OrderTest {
     @DisplayName("하위 주문 진행 상태는 그 하위 주문만, 앞으로만 바뀐다. 같거나 뒤의 단계는 그대로다")
     void advancesSellerOrder() {
         Order order = twoSellers();
-        order.awaitPayment(NOW);
+        order.recordReservation(Order.Reservation.STOCK, NOW);
         order.pay(order.amount(), NOW, NOW);
         UUID first = order.sellerOrders().get(0).id();
 
@@ -176,7 +348,7 @@ class OrderTest {
 
         assertThat(order.advanceSellerOrder(first, SellerOrderProgress.ACCEPTED, NOW))
                 .isEqualTo(Order.Transition.INVALID);
-        order.awaitPayment(NOW);
+        order.recordReservation(Order.Reservation.STOCK, NOW);
         order.pay(order.amount(), NOW, NOW);
         assertThat(order.advanceSellerOrder(UUID.randomUUID(), SellerOrderProgress.ACCEPTED, NOW))
                 .isEqualTo(Order.Transition.INVALID);
@@ -186,7 +358,7 @@ class OrderTest {
     @DisplayName("하위 주문 클레임은 이벤트마다 상태가 바뀌고, 발송 전 취소가 끝나면 진행 상태가 CANCELLED가 된다. 그 뒤 배송 이벤트는 넘긴다")
     void appliesClaim() {
         Order order = twoSellers();
-        order.awaitPayment(NOW);
+        order.recordReservation(Order.Reservation.STOCK, NOW);
         order.pay(order.amount(), NOW, NOW);
         order.advanceSellerOrder(
                 order.sellerOrders().get(0).id(), SellerOrderProgress.ACCEPTED, NOW);
@@ -229,7 +401,7 @@ class OrderTest {
                                 ClaimStatus.REQUESTED,
                                 NOW))
                 .isEqualTo(Order.Transition.INVALID);
-        order.awaitPayment(NOW);
+        order.recordReservation(Order.Reservation.STOCK, NOW);
         order.pay(order.amount(), NOW, NOW);
         assertThat(
                         order.applyClaim(
@@ -255,7 +427,7 @@ class OrderTest {
     @DisplayName("반품이 거부되면 REJECTED이고 진행 상태는 그대로다. 새 반품이 끝나면 진행 상태가 RETURNED다")
     void appliesReturnClaim() {
         Order order = twoSellers();
-        order.awaitPayment(NOW);
+        order.recordReservation(Order.Reservation.STOCK, NOW);
         order.pay(order.amount(), NOW, NOW);
         UUID first = order.sellerOrders().get(0).id();
         order.advanceSellerOrder(first, SellerOrderProgress.DELIVERED, NOW);
@@ -282,7 +454,7 @@ class OrderTest {
     @DisplayName("교환이 끝나도 진행 상태는 배송 완료이고, 재발송의 배송 이벤트는 진행 상태를 바꾸지 않는다")
     void appliesExchangeClaim() {
         Order order = twoSellers();
-        order.awaitPayment(NOW);
+        order.recordReservation(Order.Reservation.STOCK, NOW);
         order.pay(order.amount(), NOW, NOW);
         UUID first = order.sellerOrders().get(0).id();
         order.advanceSellerOrder(first, SellerOrderProgress.DELIVERED, NOW);
@@ -303,7 +475,7 @@ class OrderTest {
     @DisplayName("중재 요청은 MEDIATING, 중재 승인과 거부 확정은 다시 APPROVED·REJECTED다")
     void appliesMediation() {
         Order order = twoSellers();
-        order.awaitPayment(NOW);
+        order.recordReservation(Order.Reservation.STOCK, NOW);
         order.pay(order.amount(), NOW, NOW);
         UUID first = order.sellerOrders().get(0).id();
         UUID claimId = UUID.randomUUID();

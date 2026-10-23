@@ -10,7 +10,7 @@ import org.jspecify.annotations.Nullable;
  * 구매자 본인 주문 상세(ORD-3). 하위 주문은 판매자가 처음 나온 순서, 항목은 주문한 순서다. 상품 정보는 주문 당시 스냅샷이다.
  *
  * @param cancelReason 취소됐을 때만
- * @param amount 결제 금액(원). M3는 배송비가 없다
+ * @param amount 결제 금액(원). 하위 주문 결제 금액의 합이다. 배송비는 없다
  * @param paidAt 결제 시각(토스 승인 시각). 결제됐을 때만
  */
 public record OrderDetailView(
@@ -36,6 +36,10 @@ public record OrderDetailView(
     /**
      * 하위 주문.
      *
+     * @param amount 상품 금액(원)
+     * @param sellerCouponDiscount 판매자 쿠폰 할인(원). 쿠폰이 없으면 0
+     * @param platformCouponDiscount 플랫폼 쿠폰 할인 중 이 하위 주문의 몫(원). 쿠폰이 없으면 0
+     * @param paymentAmount 하위 주문 결제 금액(원). 상품 금액 − 두 할인
      * @param progress 진행 상태(docs/architecture/order.md "하위 주문 진행 상태"). 결제 전이면 비어 있다
      * @param claim 마지막 클레임. 없으면 비어 있다
      */
@@ -45,6 +49,9 @@ public record OrderDetailView(
             UUID sellerId,
             String storeName,
             long amount,
+            long sellerCouponDiscount,
+            long platformCouponDiscount,
+            long paymentAmount,
             @Nullable SellerOrderProgress progress,
             @Nullable SellerOrderClaimView claim,
             List<Line> lines) {}

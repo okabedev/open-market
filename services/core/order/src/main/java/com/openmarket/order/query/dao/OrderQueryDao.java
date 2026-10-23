@@ -321,6 +321,9 @@ public class OrderQueryDao {
                                 sellerOrder.sellerId,
                                 sellerOrder.storeName,
                                 sellerOrder.amount,
+                                sellerOrder.sellerCouponDiscount,
+                                sellerOrder.platformCouponDiscount,
+                                sellerOrder.paymentAmount,
                                 PROGRESS,
                                 CLAIM_TYPE,
                                 CLAIM_STATUS)
@@ -339,6 +342,10 @@ public class OrderQueryDao {
                                     Objects.requireNonNull(r.get(sellerOrder.sellerId)),
                                     Objects.requireNonNull(r.get(sellerOrder.storeName)),
                                     Objects.requireNonNull(r.get(sellerOrder.amount)),
+                                    Objects.requireNonNull(r.get(sellerOrder.sellerCouponDiscount)),
+                                    Objects.requireNonNull(
+                                            r.get(sellerOrder.platformCouponDiscount)),
+                                    Objects.requireNonNull(r.get(sellerOrder.paymentAmount)),
                                     progress(r),
                                     claim(r),
                                     List.copyOf(lines.getOrDefault(id, List.of())));
