@@ -8,6 +8,7 @@ import type { paths as NotificationPaths } from "./generated/notification";
 import type { paths as OrderPaths } from "./generated/order";
 import type { paths as PaymentPaths } from "./generated/payment";
 import type { paths as PromotionPaths } from "./generated/promotion";
+import type { paths as ReviewPaths } from "./generated/review";
 import type { paths as SearchPaths } from "./generated/search";
 
 /** 서비스마다 생성한 경로 타입. 서비스를 추가하면 openapi/<서비스>.json과 함께 여기에 더한다. */
@@ -21,6 +22,7 @@ type ServicePaths = {
   order: OrderPaths;
   payment: PaymentPaths;
   promotion: PromotionPaths;
+  review: ReviewPaths;
   search: SearchPaths;
 };
 

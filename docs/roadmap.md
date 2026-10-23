@@ -251,7 +251,7 @@
   - [x] 할인 계산 API, `OrderPlaced` → 쿠폰 예약·실패, `OrderPaid` → 사용, `OrderCancelled` → 복원
 - [x] order: 주문 쿠폰 적용과 재고·쿠폰 예약 결과 합류(R12). `OrderPaid`·`PurchaseConfirmed`의 쿠폰 필드, fulfillment 환불 금액
 - [ ] review: 작성 자격, 리뷰, 답글, 숨김, 별점 요약
-  - [ ] 골격, 작성 자격(`PurchaseConfirmed`), 리뷰 작성, 별점 요약. file 리뷰 사진(`REVIEW_IMAGE`)
+  - [x] 골격, 작성 자격(`PurchaseConfirmed`), 리뷰 작성, 별점 요약. file 리뷰 사진(`REVIEW_IMAGE`)
   - [ ] 판매자 답글, 관리자 숨김, 상품 리뷰·내 리뷰 조회
 - [ ] settlement: 정산 대상, 수수료율, 주간 배치(멱등), 지급 처리
   - [ ] 골격, 정산 대상(`PurchaseConfirmed`), 카테고리별 수수료율. 서비스 15개 중간 메모리 측정(R6)

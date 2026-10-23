@@ -58,7 +58,7 @@
           "required" : true,
           "schema" : {
             "type" : "string",
-            "enum" : [ "CLAIM_IMAGE" ]
+            "enum" : [ "CLAIM_IMAGE", "REVIEW_IMAGE" ]
           }
         } ],
         "requestBody" : {

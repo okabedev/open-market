@@ -42,8 +42,8 @@ public class MemberFileController {
     }
 
     /**
-     * 클레임 사진을 올린다. 클레임에 붙기 전까지 {@code TEMP}이고, 24시간 안에 붙지 않으면 지운다. 검사와 오류는 판매자 업로드와 같다. 응답의 변형 URL은
-     * 토큰이 있어야 받는 비공개 경로다.
+     * 클레임 사진이나 리뷰 사진을 올린다. 클레임·리뷰에 붙기 전까지 {@code TEMP}이고, 24시간 안에 붙지 않으면 지운다. 검사와 오류는 판매자 업로드와 같다.
+     * 응답의 변형 URL은 클레임 사진이면 토큰이 있어야 받는 비공개 경로, 리뷰 사진이면 토큰 없이 받는 공개 경로다.
      */
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
@@ -58,7 +58,9 @@ public class MemberFileController {
                                 UploadFileCommand.Purpose.valueOf(purpose.name()),
                                 file.getSize(),
                                 file::getInputStream)),
-                MemberFileController::variantUrl);
+                purpose == MemberUploadPurpose.REVIEW_IMAGE
+                        ? FileQueryController::variantUrl
+                        : MemberFileController::variantUrl);
     }
 
     /**
@@ -78,8 +80,9 @@ public class MemberFileController {
         return "/api/file/v1/files/" + fileId + "/" + variant;
     }
 
-    /** 회원 경로가 받는 용도. 다른 값이면 400 {@code COMMON_INVALID_REQUEST}. 리뷰 사진은 M5에서 더한다. */
+    /** 회원 경로가 받는 용도. 다른 값이면 400 {@code COMMON_INVALID_REQUEST}. */
     public enum MemberUploadPurpose {
-        CLAIM_IMAGE
+        CLAIM_IMAGE,
+        REVIEW_IMAGE
     }
 }
