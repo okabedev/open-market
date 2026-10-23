@@ -2,10 +2,13 @@ package com.openmarket.promotion.infra.persistence;
 
 import com.openmarket.promotion.command.domain.IssuedCoupon;
 import com.openmarket.promotion.command.domain.IssuedCouponRepository;
+import jakarta.persistence.LockModeType;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.Repository;
@@ -14,6 +17,18 @@ import org.springframework.data.repository.query.Param;
 /** {@link IssuedCouponRepository}의 Spring Data JPA 구현. */
 public interface JpaIssuedCouponRepository
         extends Repository<IssuedCoupon, UUID>, IssuedCouponRepository {
+
+    /** {@code SELECT ... FOR UPDATE}, ID 순서. */
+    @Override
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select i from IssuedCoupon i where i.id in :ids order by i.id")
+    List<IssuedCoupon> findForUpdateByIdInOrderById(@Param("ids") Collection<UUID> ids);
+
+    /** {@code SELECT ... FOR UPDATE}, ID 순서. */
+    @Override
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select i from IssuedCoupon i where i.orderId = :orderId order by i.id")
+    List<IssuedCoupon> findForUpdateByOrderIdOrderById(@Param("orderId") UUID orderId);
 
     @Override
     default boolean insertIfAbsent(IssuedCoupon issued) {

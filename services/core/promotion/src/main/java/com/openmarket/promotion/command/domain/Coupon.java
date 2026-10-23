@@ -171,6 +171,28 @@ public class Coupon {
                 && now.isBefore(issueEndAt);
     }
 
+    /** 적용 대상 금액이 최소 주문 금액 이상인가. */
+    public boolean appliesTo(long targetAmount) {
+        return targetAmount >= minOrderAmount;
+    }
+
+    /**
+     * 적용 대상 금액에 대한 할인(원). 정액은 할인 값, 정률은 {@code floor(대상 × 율 / 100)}을 최대 할인으로 자른 값이다. 대상 금액을 넘지 않는다.
+     * 최소 주문 금액은 {@link #appliesTo}로 따로 본다.
+     */
+    public long discountFor(long targetAmount) {
+        long discount =
+                switch (discountType) {
+                    case FIXED -> discountValue;
+                    case RATE -> {
+                        long byRate = Math.multiplyExact(targetAmount, discountValue) / 100;
+                        Long cap = maxDiscount;
+                        yield cap == null ? byRate : Math.min(byRate, cap);
+                    }
+                };
+        return Math.min(discount, targetAmount);
+    }
+
     /** 이 판매자의 판매자 쿠폰인가. */
     public boolean isOwnedBy(UUID sellerId) {
         return sellerId.equals(this.sellerId);

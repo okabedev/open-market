@@ -34,4 +34,10 @@ final class PromotionTokens {
                         new SimpleGrantedAuthority("ROLE_BUYER"),
                         new SimpleGrantedAuthority("ROLE_SELLER"));
     }
+
+    /** 서비스 간 토큰. 역할 없이 {@code internal} scope만 있다. */
+    static RequestPostProcessor internal() {
+        return jwt().jwt(token -> token.subject("order").claim("scope", "internal"))
+                .authorities(new SimpleGrantedAuthority("SCOPE_internal"));
+    }
 }

@@ -1,6 +1,8 @@
 package com.openmarket.promotion.command.domain;
 
 import java.time.Instant;
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -10,6 +12,9 @@ public interface CouponRepository {
     Coupon save(Coupon coupon);
 
     Optional<Coupon> findById(UUID id);
+
+    /** 할인 계산. 없는 ID는 빠진다. */
+    List<Coupon> findAllByIdIn(Collection<UUID> ids);
 
     /** 쿠폰 행을 잠그고 읽는다. 중지가 겹쳐도 감사 로그가 한 번만 남는다. */
     Optional<Coupon> findForUpdateById(UUID id);

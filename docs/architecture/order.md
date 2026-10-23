@@ -74,7 +74,7 @@ gateway 경로는 `/api/order` + 아래 경로다.
 
 ### 쿠폰 적용(M5 설계, 2026-10-22)
 주문 생성 본문에 쓸 발급 쿠폰(`issuedCouponIds`, 0~1장의 플랫폼 쿠폰과 판매자마다 0~1장)을 더한다. 규칙과 계산은 [promotion.md](promotion.md) "할인 계산"이고, API 형식은 order 쿠폰 PR에서 이 절에 더한다.
-- 위 확인(가격, 재고)을 지나면 promotion 내부 API로 할인을 계산한다(동기 조회, 호출 방식은 아래 "catalog 조회"와 같다). 쓸 수 없는 쿠폰이 있으면 422 `ORDER_COUPON_NOT_APPLICABLE`(쿠폰마다 이유)이다. promotion을 부를 수 없으면 503 `ORDER_PROMOTION_UNAVAILABLE`이다. 쿠폰이 없는 주문은 promotion을 부르지 않는다.
+- 위 확인(가격, 재고)을 지나면 promotion 내부 API([promotion.md](promotion.md) "할인 계산 API(내부)")로 할인을 계산한다(동기 조회, 호출 방식은 아래 "catalog 조회"와 같다). 쓸 수 없는 쿠폰이 있으면 422 `ORDER_COUPON_NOT_APPLICABLE`(쿠폰마다 이유)이다. promotion을 부를 수 없으면 503 `ORDER_PROMOTION_UNAVAILABLE`이다. 쿠폰이 없는 주문은 promotion을 부르지 않는다.
 - 하위 주문마다 판매자 쿠폰 할인, 플랫폼 쿠폰 할인 몫, 결제 금액을 스냅샷으로 저장한다. 주문 금액(결제 금액)은 하위 주문 결제 금액의 합이다. 화면이 보여 준 결제 금액(`expectedAmount`)과 다르면 409 `ORDER_AMOUNT_CHANGED`다(가격 확인과 같은 뜻).
 - `OrderPlaced`의 issuedCouponIds에 쓴 쿠폰을 싣는다. 예약은 promotion이 한다(아래 "예약 결과").
 

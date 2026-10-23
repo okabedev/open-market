@@ -84,7 +84,15 @@ order의 주문 생성과 shop 주문서가 같은 계산을 쓴다. promotion�
 3. 쿠폰마다 적용 대상 금액이 최소 주문 금액보다 작으면 쓸 수 없다. 할인은 정액이면 할인 값, 정률이면 `floor(대상 금액 × 율 / 100)`을 최대 할인으로 자른 값이다. 할인은 대상 금액을 넘지 않는다.
 4. 플랫폼 쿠폰 할인은 하위 주문에 나눈다. 각 하위 주문의 몫은 (판매자 쿠폰을 뺀 하위 주문 금액) 비율로 내림하고, 남은 원은 내림으로 버린 값이 큰 하위 주문부터 1원씩 더한다(같으면 하위 주문 순서). 몫이 하위 주문 금액을 넘지 않는다.
 - 결과는 하위 주문마다 판매자 쿠폰 할인, 플랫폼 쿠폰 할인 몫, 결제 금액(상품 금액 − 두 할인)이다. 주문 결제 금액은 하위 주문 결제 금액의 합이다.
-- 쓸 수 없는 쿠폰이 있으면 계산은 쿠폰마다 이유를 준다: 내 쿠폰이 아님, 이미 묶임·사용됨, 만료, 최소 주문 금액 미달, 다른 판매자 쿠폰(주문에 그 판매자 상품이 없음), 같은 자리에 두 장(플랫폼 둘, 같은 판매자 둘).
+- 쓸 수 없는 쿠폰이 있으면 계산은 쿠폰마다 이유를 준다: 내 쿠폰이 아님(`NOT_OWNED`, 없는 발급 쿠폰 포함), 이미 묶임·사용됨(`NOT_AVAILABLE`), 만료(`EXPIRED`, 만료 시각부터), 최소 주문 금액 미달(`MIN_ORDER_AMOUNT_NOT_MET`), 다른 판매자 쿠폰(`SELLER_NOT_IN_ORDER`, 주문에 그 판매자 상품이 없음), 같은 자리에 두 장(`DUPLICATE_SLOT`, 플랫폼 둘, 같은 판매자 둘, 같은 쿠폰 두 번. 그 자리의 쿠폰 모두).
+- 계산은 도메인 규칙(`DiscountCalculator`)이라 커맨드 쪽 유스케이스(`CalculateCouponDiscountUseCase`, 읽기 전용 트랜잭션)가 한다. 쿠폰을 묶지 않는다.
+
+### 할인 계산 API(내부)
+order가 주문을 만들 때 부른다(OpenFeign, `internal` scope 토큰). 상태를 바꾸지 않는 조회지만 본문이 있어 POST다.
+
+`POST /internal/v1/coupon-discounts`
+- 요청: `{buyerId, issuedCouponIds, sellerOrders: [{sellerId, amount}]}`. amount는 하위 주문 상품 금액(원)이다. 하위 주문이 없거나 판매자가 겹치거나 금액이 음수이거나 쿠폰이 50장을 넘으면 400 `PROMOTION_INVALID_INPUT`이다.
+- 응답(200): `{applicable, sellerOrders: [{sellerId, amount, sellerIssuedCouponId, sellerCouponDiscount, platformCouponDiscount, paymentAmount}], platformIssuedCouponId, platformCouponDiscount, paymentAmount, unavailable: [{issuedCouponId, reason}]}`. sellerOrders는 요청 순서다. 쓸 수 없는 쿠폰이 있어도 200이고 `applicable=false`다(order가 422 `ORDER_COUPON_NOT_APPLICABLE`로 바꾼다).
 
 ## 주문 쿠폰 예약·사용·복원
 `order.order`를 소비 그룹 `promotion`으로 받는다. 결과는 `promotion.issued-coupon` 토픽에 키 orderId로 낸다(한 주문의 결과가 순서대로 가게).
@@ -97,4 +105,6 @@ order의 주문 생성과 shop 주문서가 같은 계산을 쓴다. promotion�
 - issuedCouponIds가 빈 `OrderPlaced`는 받고 넘긴다. order는 쿠폰이 없으면 쿠폰 결과를 기다리지 않는다.
 - 할인 금액은 다시 계산하지 않는다. 정책을 바꾸지 않으므로 주문할 때 조회한 할인이 그대로다. 그사이 쿠폰이 다른 주문에 묶였거나 만료됐는지만 본다.
 - 리스너는 처리 기록으로 같은 이벤트를 한 번만 처리하고, 발급 쿠폰 행을 잠그고 바꾼다. 리스너 이름은 `promotion.<이벤트>`다(예: `promotion.order-placed`).
-- 이미 같은 주문에 묶였거나 쓰였으면 넘긴다(재처리). 한 주문의 이벤트는 순서대로 오므로 `OrderCancelled`가 `OrderPlaced`보다 먼저 오지 않는다.
+- 이미 같은 주문에 묶였거나 쓰였으면 넘긴다(재처리). 요청한 쿠폰이 모두 이 주문에 묶였으면 이벤트도 다시 내지 않는다. 한 주문의 이벤트는 순서대로 오므로 `OrderCancelled`가 `OrderPlaced`보다 먼저 오지 않는다.
+- 예약은 발급 쿠폰 행을 ID 순서로 잠근다. 같은 쿠폰을 쓰는 두 주문이 동시에 와도 먼저 잠근 주문만 묶고, 늦은 주문은 `CouponReservationFailed`다.
+- `CouponReservationFailed`의 issuedCouponIds는 쓸 수 없는 쿠폰(요청 순서)이다.
