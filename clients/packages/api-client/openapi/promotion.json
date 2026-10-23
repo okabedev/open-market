@@ -99,6 +99,33 @@
         }
       }
     },
+    "/v1/coupons/{couponId}/issue" : {
+      "post" : {
+        "tags" : [ "coupon-command-controller" ],
+        "operationId" : "issue",
+        "parameters" : [ {
+          "name" : "couponId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/IssueCouponResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/coupons" : {
       "get" : {
         "tags" : [ "admin-coupon-query-controller" ],
@@ -316,6 +343,15 @@
           }
         }
       },
+      "IssueCouponResponse" : {
+        "type" : "object",
+        "properties" : {
+          "issuedCouponId" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }
+      },
       "CouponView" : {
         "type" : "object",
         "properties" : {
@@ -377,6 +413,10 @@
           "createdAt" : {
             "type" : "string",
             "format" : "date-time"
+          },
+          "issuedCount" : {
+            "type" : "integer",
+            "format" : "int32"
           }
         }
       },

@@ -167,9 +167,12 @@ services:
         condition: service_healthy
       kafka:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
       <<: *spring-env
       PROMOTION_DB_PASSWORD: ${PROMOTION_DB_PASSWORD:?}
+      REDIS_HOST: redis
     healthcheck:
       test: ["CMD", "curl", "-fs", "http://localhost:8106/actuator/health"]
       interval: 5s

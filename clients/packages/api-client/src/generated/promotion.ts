@@ -34,6 +34,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/coupons/{couponId}/issue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["issue"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/coupons": {
         parameters: {
             query?: never;
@@ -125,6 +141,10 @@ export interface components {
             /** Format: uuid */
             couponId?: string;
         };
+        IssueCouponResponse: {
+            /** Format: uuid */
+            issuedCouponId?: string;
+        };
         CouponView: {
             /** Format: uuid */
             couponId?: string;
@@ -155,6 +175,8 @@ export interface components {
             stoppedAt?: string;
             /** Format: date-time */
             createdAt?: string;
+            /** Format: int32 */
+            issuedCount?: number;
         };
         PageViewCouponView: {
             items?: components["schemas"]["CouponView"][];
@@ -242,6 +264,28 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    issue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                couponId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssueCouponResponse"];
+                };
             };
         };
     };

@@ -42,7 +42,8 @@ public class CouponQueryDao {
         coupon.validDays,
         coupon.status.stringValue(),
         coupon.stoppedAt,
-        coupon.createdAt
+        coupon.createdAt,
+        coupon.issuedCount
     };
 
     private final JPAQueryFactory query;
@@ -133,6 +134,7 @@ public class CouponQueryDao {
                 Objects.requireNonNull(row.get(coupon.validDays)),
                 CouponStatus.valueOf(Objects.requireNonNull(row.get(12, String.class))),
                 row.get(coupon.stoppedAt),
-                Objects.requireNonNull(row.get(coupon.createdAt)));
+                Objects.requireNonNull(row.get(coupon.createdAt)),
+                Objects.requireNonNull(row.get(coupon.issuedCount)));
     }
 }

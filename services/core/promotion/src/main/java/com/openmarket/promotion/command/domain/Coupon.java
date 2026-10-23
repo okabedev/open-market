@@ -62,6 +62,10 @@ public class Coupon {
     @Column(name = "valid_days", nullable = false)
     private int validDays;
 
+    // 발급 수. 발급이 조건부 UPDATE(CouponRepository#incrementIssuedCount)로만 올린다. 엔티티는 쓰지 않는다.
+    @Column(name = "issued_count", nullable = false, insertable = false, updatable = false)
+    private int issuedCount;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private CouponStatus status;
