@@ -14,6 +14,7 @@ M5 시작(2026-10-22)에 정한 규칙이다. API와 화면은 각 PR에서 이 
 `fulfillment.shipment`의 `PurchaseConfirmed`를 소비 그룹 `review`로 받아 주문 항목마다 하나 만든다. 주문 항목 ID, 하위 주문 ID, 상품, 상품명, 옵션, 판매자, 구매자, 구매확정 시각을 고정한다.
 - 주문 항목 ID 유니크로 한 번만 생긴다. 같은 이벤트를 다시 받으면 넘긴다.
 - 리뷰를 쓰면 자격에 리뷰 ID를 남긴다. 구매자의 "쓸 수 있는 리뷰" 목록은 리뷰 ID가 없는 자격이다.
+- 리스너 이름은 `review.purchase-confirmed`다. 다른 이벤트 ID로 같은 구매확정이 다시 와도 주문 항목 ID(기본 키)로 하나만 생긴다.
 
 ## 리뷰(`Review`, REV-1)
 | 항목 | 규칙 |
@@ -25,7 +26,18 @@ M5 시작(2026-10-22)에 정한 규칙이다. API와 화면은 각 PR에서 이 
 
 - 주문 항목마다 하나다(유니크). 이미 썼으면 409 `REVIEW_ALREADY_WRITTEN`이다. `Idempotency-Key`가 필요하다.
 - 리뷰를 저장하고, 같은 트랜잭션에서 상품 별점 요약을 바꾸고 `ReviewCreated`와 `RatingSummaryChanged`를 낸다.
+- 작성 자격 행을 잠그고(`SELECT ... FOR UPDATE`) 쓴다. 같은 주문 항목의 작성이 동시에 오면 뒤 요청은 앞 요청이 끝난 뒤 409다. 잠그는 순서는 늘 작성 자격 → 별점 요약이다.
+- 입력 규칙을 어기면 400 `REVIEW_INVALID_INPUT`이다. 이때 작성 자격은 그대로다.
 - 상태: `VISIBLE` ↔ `HIDDEN`. 숨긴 리뷰는 상품 리뷰 목록과 별점 요약에서 빠진다. 작성자에게는 "숨김"으로 보인다.
+
+### API
+| 메서드 | 경로 | 설명 |
+|---|---|---|
+| POST | `/v1/reviews` | 리뷰 작성. 로그인한 회원(작성 자격의 구매자). `Idempotency-Key` 필수. 201 `{reviewId}` |
+| GET | `/v1/products/{productId}/rating-summary` | 공개. 상품 별점 요약 `{productId, ratingCount, ratingAverage}`. 리뷰가 없거나 없는 상품이면 `ratingCount` 0, `ratingAverage` null(상품이 있는지는 보지 않는다) |
+
+- 작성 본문: `orderLineId`, `rating`, `content`, `fileIds`(선택, 없으면 사진 없음). `fileIds`는 회원 업로드 `POST /api/file/v1/files`(`purpose=REVIEW_IMAGE`)로 받은 파일이다([file.md](file.md) "리뷰 사진").
+- 쓸 수 있는 리뷰·상품 리뷰·내 리뷰 목록, 답글, 숨김 API는 다음 PR에서 더한다.
 
 ## 답글(`ReviewReply`, REV-3)
 - 리뷰 상품의 판매자만 단다. 1~1,000자. 리뷰마다 하나이고, 다시 쓰면 고친다(204). 다른 판매자의 리뷰면 404 `REVIEW_NOT_FOUND`다.
@@ -36,8 +48,9 @@ M5 시작(2026-10-22)에 정한 규칙이다. API와 화면은 각 PR에서 이 
 - 상태가 바뀌면 같은 트랜잭션에서 별점 요약을 다시 계산하고 `RatingSummaryChanged`를 낸다.
 
 ## 별점 요약(`RatingSummary`, REV-2)
-- 상품마다 보이는 리뷰 수와 별점 합, 리비전을 둔다. 평균은 합 ÷ 수를 소수 첫째 자리에서 반올림해 보여 준다(리뷰가 없으면 평균 없음).
+- 상품마다 보이는 리뷰 수와 별점 합, 리비전을 둔다. 평균은 합 ÷ 수를 소수 첫째 자리로 반올림(`HALF_UP`)해 보여 준다. 예: 13 ÷ 3 → 4.3, 81 ÷ 20 → 4.1. 리뷰가 없으면 평균 없음이다. 이벤트와 조회 API가 같은 규칙으로 계산한다(테스트가 같은지 확인한다).
 - 리뷰 작성과 숨김·보임은 요약 행을 잠그고 바꾼다(`SELECT ... FOR UPDATE`, 없으면 먼저 만든다). 바꿀 때마다 리비전을 1 올린다.
+  - 요약 행이 없으면 빈 요약(리비전 0)을 `INSERT ... ON CONFLICT DO NOTHING`으로 넣고 잠근다. 같은 상품의 첫 리뷰가 동시에 와도 유니크 충돌 없이 줄을 선다. 같은 상품에 8건을 동시에 써서 수·합이 맞고 리비전 1~8이 한 번씩 나가는 것을 테스트로 확인했다.
 - `RatingSummaryChanged`는 바뀐 뒤의 값(리뷰 수, 별점 합, 평균, 리비전)을 싣는다. search는 리비전이 저장된 것보다 클 때만 반영한다. 다시 받거나 순서가 섞여도 같은 결과다.
 
 ## 이벤트

@@ -37,8 +37,8 @@
 | 재입고 | `RestockClaimUseCase` | catalog | 클레임이 끝나 돌아온 수량(`ClaimCompleted`의 `restockLines`)을 실재고에 더하는 것 |
 | 판매 가능 여부 | `ProductAvailability` | catalog | 상품 단위로 판매 가능한 SKU가 하나라도 있는가(`inStock`). 바뀔 때마다 판매 가능 리비전(`availabilityRevision`)이 1씩 오른다 |
 | 파일 | `StoredFile` | file | 업로드 파일 메타데이터. 상태: `TEMP` → `ATTACHED` → `DETACHED`(소유자에서 빠짐). 24시간 지난 `TEMP`와 7일 지난 `DETACHED`는 삭제 |
-| 파일 소유자 | `FileOwner` | file | 파일이 붙는 대상(상품, 클레임. 리뷰는 M5). 소유자마다 마지막으로 반영한 이벤트 리비전과 판매자를 둔다 |
-| 파일 용도 | `FilePurpose` | file | 업로드 목적. 저장 디렉터리, 만들 변형, 공개 여부가 정해진다. `PRODUCT_IMAGE`(공개), `CLAIM_IMAGE`(비공개). `REVIEW_IMAGE`는 M5 |
+| 파일 소유자 | `FileOwner` | file | 파일이 붙는 대상(상품, 클레임, 리뷰). 소유자마다 마지막으로 반영한 이벤트 리비전과 판매자를 둔다 |
+| 파일 용도 | `FilePurpose` | file | 업로드 목적. 저장 디렉터리, 만들 변형, 공개 여부가 정해진다. `PRODUCT_IMAGE`(공개), `CLAIM_IMAGE`(비공개), `REVIEW_IMAGE`(공개) |
 | 이미지 변형 | `ImageVariant` | file | 공개로 제공하는 썸네일. 폭 300px(`w300`), 800px(`w800`) JPEG. 원본은 제공하지 않는다 |
 
 ## 주문·결제

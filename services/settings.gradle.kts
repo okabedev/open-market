@@ -26,6 +26,7 @@ include(":core:order")
 include(":core:payment")
 include(":core:fulfillment")
 include(":core:promotion")
+include(":core:review")
 
 include(":infra:discovery")
 include(":infra:config")

@@ -96,7 +96,7 @@ export interface operations {
     upload_1: {
         parameters: {
             query: {
-                purpose: "CLAIM_IMAGE";
+                purpose: "CLAIM_IMAGE" | "REVIEW_IMAGE";
             };
             header?: never;
             path?: never;

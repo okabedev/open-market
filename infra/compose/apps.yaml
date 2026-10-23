@@ -179,6 +179,29 @@ services:
       timeout: 3s
       retries: 30
 
+  review:
+    <<: *spring-service
+    build:
+      context: ../../services
+      args:
+        MODULE: core/review
+    image: openmarket/review:local
+    depends_on:
+      config:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    environment:
+      <<: *spring-env
+      REVIEW_DB_PASSWORD: ${REVIEW_DB_PASSWORD:?}
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:8107/actuator/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
   search:
     <<: *spring-service
     build:

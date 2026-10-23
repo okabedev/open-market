@@ -25,4 +25,5 @@ export type {
   components as PromotionComponents,
   paths as PromotionPaths,
 } from "./generated/promotion";
+export type { components as ReviewComponents, paths as ReviewPaths } from "./generated/review";
 export type { components as SearchComponents, paths as SearchPaths } from "./generated/search";

@@ -1,0 +1,117 @@
+{
+  "openapi" : "3.1.0",
+  "info" : {
+    "title" : "OpenAPI definition",
+    "version" : "v0"
+  },
+  "paths" : {
+    "/v1/reviews" : {
+      "post" : {
+        "tags" : [ "review-command-controller" ],
+        "operationId" : "write",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/WriteReviewRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Created",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WriteReviewResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/products/{productId}/rating-summary" : {
+      "get" : {
+        "tags" : [ "rating-summary-query-controller" ],
+        "operationId" : "ratingSummary",
+        "parameters" : [ {
+          "name" : "productId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RatingSummaryView"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "WriteReviewRequest" : {
+        "type" : "object",
+        "properties" : {
+          "orderLineId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "rating" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "content" : {
+            "type" : "string"
+          },
+          "fileIds" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string",
+              "format" : "uuid"
+            }
+          }
+        },
+        "required" : [ "content", "orderLineId" ]
+      },
+      "WriteReviewResponse" : {
+        "type" : "object",
+        "properties" : {
+          "reviewId" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }
+      },
+      "RatingSummaryView" : {
+        "type" : "object",
+        "properties" : {
+          "productId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "ratingCount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "ratingAverage" : {
+            "type" : "number"
+          }
+        }
+      }
+    }
+  }
+}

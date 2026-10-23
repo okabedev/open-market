@@ -39,7 +39,7 @@ flowchart LR
 | payment | 8104 | payment | 토스 결제 승인·취소·환불, 결제 원장([payment.md](payment.md)) | `Payment` |
 | fulfillment | 8105 | fulfillment | 배송, 구매확정, 클레임([fulfillment.md](fulfillment.md)) | `Shipment`, `Claim` |
 | promotion | 8106 | promotion | 쿠폰 정책, 선착순 발급, 할인 계산, 예약·사용·복원([promotion.md](promotion.md)) | `Coupon`, `IssuedCoupon` |
-| review | 8107 | review | 리뷰, 답글, 숨김, 별점 요약([review.md](review.md)) | `Review`, `RatingSummary` |
+| review | 8107 | review | 리뷰, 답글, 숨김, 별점 요약([review.md](review.md)) | `ReviewEligibility`, `Review`, `RatingSummary` |
 | settlement | 8108 | settlement | 정산 대상, 주간 정산 배치, 지급 기록, 수수료율([settlement.md](settlement.md)) | `SettlementItem`, `Settlement` |
 | search | 8109 | search(멱등 기록 등 공통 테이블, 판매량 집계) | Elasticsearch 읽기 모델, 검색, 자동완성([search.md](search.md)) | `SearchProduct`(ES 인덱스 `products`) |
 

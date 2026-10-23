@@ -1,0 +1,17 @@
+# review 실행 설정. 공통 설정은 application.yml에 있다. 설계는 docs/architecture/review.md.
+server:
+  port: 8107
+spring:
+  datasource:
+    password: ${REVIEW_DB_PASSWORD}
+  kafka:
+    consumer:
+      group-id: review
+
+openmarket:
+  # 토큰 없이 여는 서비스 경로(common-security). gateway.yml의 public-paths에도 gateway 기준 경로로 적는다.
+  security:
+    public-paths:
+      # 상품 별점 요약(docs/architecture/review.md "API")
+      - method: GET
+        pattern: /v1/products/*/rating-summary

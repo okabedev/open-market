@@ -22,7 +22,7 @@ public class FileContentQueryService {
     private static final Logger log = LoggerFactory.getLogger(FileContentQueryService.class);
 
     /** 공개 용도. 커맨드 쪽 {@code FilePurpose.isPublic()}과 같다(테스트가 확인한다). */
-    static final Set<String> PUBLIC_PURPOSES = Set.of("PRODUCT_IMAGE");
+    static final Set<String> PUBLIC_PURPOSES = Set.of("PRODUCT_IMAGE", "REVIEW_IMAGE");
 
     /** 관리자가 볼 수 있는 비공개 파일의 소유자 종류. */
     static final Set<String> ADMIN_OWNER_TYPES = Set.of("CLAIM");
@@ -33,7 +33,7 @@ public class FileContentQueryService {
         this.dao = dao;
     }
 
-    /** 공개 경로({@code /files/**}). 공개 용도만 준다. */
+    /** 공개 경로({@code /files/**}). 공개 용도(상품 이미지, 리뷰 사진)만 준다. */
     @Transactional(readOnly = true)
     public FileContentView findPublicVariant(UUID fileId, String variant) {
         return find(fileId, variant, content -> PUBLIC_PURPOSES.contains(content.purpose()));
