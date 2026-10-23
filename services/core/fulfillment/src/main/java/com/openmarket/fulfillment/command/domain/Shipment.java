@@ -45,8 +45,17 @@ public class Shipment {
     @Column(name = "claim_id")
     private @Nullable UUID claimId;
 
+    // 하위 주문 상품 금액(항목 금액의 합).
     @Column(nullable = false)
     private long amount;
+
+    // 판매자 쿠폰 할인과 하위 주문 결제 금액(OrderPaid). 환불은 결제 금액에서 계산한다(docs/architecture/fulfillment.md "환불
+    // 금액").
+    @Column(name = "seller_coupon_discount", nullable = false)
+    private long sellerCouponDiscount;
+
+    @Column(name = "payment_amount", nullable = false)
+    private long paymentAmount;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -97,11 +106,20 @@ public class Shipment {
             UUID sellerId,
             UUID buyerId,
             long amount,
+            long sellerCouponDiscount,
+            long paymentAmount,
             List<ShipmentLine> lines,
             Instant paidAt,
             Instant now) {
         if (lines.isEmpty()) {
             throw new IllegalArgumentException("배송 항목이 없다: sellerOrderId=" + sellerOrderId);
+        }
+        if (paymentAmount < 0
+                || paymentAmount > amount
+                || sellerCouponDiscount < 0
+                || sellerCouponDiscount > amount - paymentAmount) {
+            throw new IllegalArgumentException(
+                    "결제 금액·판매자 쿠폰 할인이 상품 금액과 맞지 않다: sellerOrderId=" + sellerOrderId);
         }
         this.id = Ids.newId();
         this.orderId = orderId;
@@ -109,6 +127,8 @@ public class Shipment {
         this.sellerId = sellerId;
         this.buyerId = buyerId;
         this.amount = amount;
+        this.sellerCouponDiscount = sellerCouponDiscount;
+        this.paymentAmount = paymentAmount;
         this.status = ShipmentStatus.READY;
         this.lines = new ArrayList<>(lines);
         this.paidAt = paidAt;
@@ -116,7 +136,39 @@ public class Shipment {
         this.updatedAt = now;
     }
 
-    /** 결제된 하위 주문의 첫 배송({@code OrderPaid}). 판매자의 발주 확인을 기다린다. */
+    /**
+     * 결제된 하위 주문의 첫 배송({@code OrderPaid}). 판매자의 발주 확인을 기다린다.
+     *
+     * @param amount 상품 금액(원)
+     * @param sellerCouponDiscount 판매자 쿠폰 할인(원)
+     * @param paymentAmount 하위 주문 결제 금액(원). 상품 금액 − 판매자 쿠폰 할인 − 플랫폼 쿠폰 할인 몫
+     * @throws IllegalArgumentException 항목이 없거나 금액이 맞지 않다
+     */
+    public static Shipment ready(
+            UUID orderId,
+            UUID sellerOrderId,
+            UUID sellerId,
+            UUID buyerId,
+            long amount,
+            long sellerCouponDiscount,
+            long paymentAmount,
+            List<ShipmentLine> lines,
+            Instant paidAt,
+            Instant now) {
+        return new Shipment(
+                orderId,
+                sellerOrderId,
+                sellerId,
+                buyerId,
+                amount,
+                sellerCouponDiscount,
+                paymentAmount,
+                lines,
+                paidAt,
+                now);
+    }
+
+    /** 쿠폰을 쓰지 않은 하위 주문의 첫 배송. 결제 금액이 상품 금액과 같다. */
     public static Shipment ready(
             UUID orderId,
             UUID sellerOrderId,
@@ -126,7 +178,8 @@ public class Shipment {
             List<ShipmentLine> lines,
             Instant paidAt,
             Instant now) {
-        return new Shipment(orderId, sellerOrderId, sellerId, buyerId, amount, lines, paidAt, now);
+        return ready(
+                orderId, sellerOrderId, sellerId, buyerId, amount, 0, amount, lines, paidAt, now);
     }
 
     /** 교환 재발송({@link Claim#reship}). 대상 배송과 같은 항목·금액의 새 배송이고 교환 클레임을 가리킨다. */
@@ -138,6 +191,8 @@ public class Shipment {
                         target.sellerId,
                         target.buyerId,
                         target.amount,
+                        target.sellerCouponDiscount,
+                        target.paymentAmount,
                         target.lines.stream().map(ShipmentLine::copy).toList(),
                         target.paidAt,
                         now);
@@ -256,8 +311,18 @@ public class Shipment {
         return buyerId;
     }
 
+    /** 상품 금액(원). */
     public long amount() {
         return amount;
+    }
+
+    public long sellerCouponDiscount() {
+        return sellerCouponDiscount;
+    }
+
+    /** 하위 주문 결제 금액(원). 환불의 기준이다. */
+    public long paymentAmount() {
+        return paymentAmount;
     }
 
     public ShipmentStatus status() {

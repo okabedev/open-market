@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.UUID;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.header.Header;
+import org.jspecify.annotations.Nullable;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
@@ -18,7 +19,7 @@ import org.springframework.stereotype.Component;
  * 같은 토픽의 다른 이벤트는 처리 기록 없이 넘긴다. 페이로드에 배송지가 있지만 fulfillment는 저장하지 않는다.
  *
  * <p>주문 항목 ID·상품명·옵션이 없는 M4 이전 형식의 {@code OrderPaid}는 배송을 만들 수 없다. 다시 시도해도 같으므로 영구 오류로 DLT에
- * 보낸다(docs/architecture/fulfillment.md "이벤트").
+ * 보낸다(docs/architecture/fulfillment.md "이벤트"). 쿠폰 필드가 없는 M5 이전 형식은 할인 0, 결제 금액 = 상품 금액으로 만든다.
  */
 @Component
 class OrderEventsListener {
@@ -69,14 +70,22 @@ class OrderEventsListener {
         }
     }
 
+    /** 쿠폰 필드(M5)는 M5 이전 형식에 없어 비어 있을 수 있다. 플랫폼 쿠폰 할인 몫은 결제 금액에 들어 있어 쓰지 않는다. */
     record SellerOrderMessage(
-            UUID sellerOrderId, UUID sellerId, long amount, List<LineMessage> lines) {
+            UUID sellerOrderId,
+            UUID sellerId,
+            long amount,
+            @Nullable Long sellerCouponDiscount,
+            @Nullable Long paymentAmount,
+            List<LineMessage> lines) {
 
         CreateShipmentsCommand.SellerOrder toCommand() {
             return new CreateShipmentsCommand.SellerOrder(
                     sellerOrderId,
                     sellerId,
                     amount,
+                    sellerCouponDiscount == null ? 0 : sellerCouponDiscount,
+                    paymentAmount == null ? amount : paymentAmount,
                     lines.stream()
                             .map(
                                     line ->

@@ -9,6 +9,7 @@ import com.openmarket.order.command.application.PlaceOrderCommand;
 import com.openmarket.order.command.application.PlaceOrderUseCase;
 import jakarta.validation.Valid;
 import java.security.Principal;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -32,7 +33,9 @@ public class OrderCommandController {
     /**
      * 주문을 {@code PENDING}으로 만든다. {@code Idempotency-Key}가 필요하다. 가격이 바뀌었으면 409 {@code
      * ORDER_PRICE_CHANGED}({@code changes}), 판매 중이 아니면 422 {@code ORDER_SKU_NOT_ON_SALE}({@code
-     * skuIds}), 수량이 모자라면 422 {@code ORDER_INSUFFICIENT_STOCK}({@code skuIds}).
+     * skuIds}), 수량이 모자라면 422 {@code ORDER_INSUFFICIENT_STOCK}({@code skuIds}), 쓸 수 없는 쿠폰이 있으면 422
+     * {@code ORDER_COUPON_NOT_APPLICABLE}({@code coupons}), 결제 금액이 바뀌었으면 409 {@code
+     * ORDER_AMOUNT_CHANGED}.
      */
     @PostMapping("/v1/orders")
     @ResponseStatus(HttpStatus.CREATED)
@@ -57,7 +60,11 @@ public class OrderCommandController {
                                         shipping.recipientPhone(),
                                         shipping.zipCode(),
                                         shipping.baseAddress(),
-                                        shipping.detailAddress()))));
+                                        shipping.detailAddress()),
+                                request.issuedCouponIds() == null
+                                        ? List.of()
+                                        : request.issuedCouponIds(),
+                                request.expectedAmount())));
     }
 
     /**

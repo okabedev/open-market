@@ -12,8 +12,8 @@ import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 
 /**
- * 서비스 간 조회 클라이언트(docs/architecture/order.md "catalog 조회"). 타임아웃과 서킷 브레이커 값은 config-repo order.yml에
- * 있다.
+ * 서비스 간 조회 클라이언트(docs/architecture/order.md "catalog 조회", "promotion 조회"). 타임아웃과 서킷 브레이커 값은
+ * config-repo order.yml에 있다.
  */
 @Configuration(proxyBeanMethods = false)
 @EnableFeignClients(basePackages = "com.openmarket.order")

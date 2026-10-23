@@ -15,14 +15,15 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * catalog 내부 API와 auth 토큰 엔드포인트를 흉내 내는 WireMock 서버. JVM에서 하나만 띄워 테스트 클래스들이 같이 쓴다. 테스트마다 {@link
- * #reset()}으로 스텁을 지운다.
+ * catalog·promotion 내부 API와 auth 토큰 엔드포인트를 흉내 내는 WireMock 서버. JVM에서 하나만 띄워 테스트 클래스들이 같이 쓴다. 테스트마다
+ * {@link #reset()}으로 스텁을 지운다.
  */
 final class CatalogStub {
 
     static final WireMockServer SERVER = new WireMockServer(options().dynamicPort());
 
     static final String SKUS = "/internal/v1/skus";
+    static final String COUPON_DISCOUNTS = "/internal/v1/coupon-discounts";
     static final String TOKEN = "/oauth2/token";
     static final String ACCESS_TOKEN = "service-token";
 
@@ -37,6 +38,7 @@ final class CatalogStub {
     /** Feign 클라이언트와 토큰 요청이 이 서버로 가게 한다. */
     static void register(DynamicPropertyRegistry registry) {
         registry.add("openmarket.order.catalog-url", SERVER::baseUrl);
+        registry.add("openmarket.order.promotion-url", SERVER::baseUrl);
         registry.add(
                 "spring.security.oauth2.client.provider.auth.token-uri",
                 () -> SERVER.baseUrl() + TOKEN);
@@ -66,6 +68,18 @@ final class CatalogStub {
         SERVER.stubFor(
                 com.github.tomakehurst.wiremock.client.WireMock.get(urlPathEqualTo(SKUS))
                         .willReturn(okJson(JSON.writeValueAsString(skus))));
+    }
+
+    /** {@code POST /internal/v1/coupon-discounts}가 주어진 계산 결과를 준다. */
+    static void couponDiscount(Map<String, @Nullable Object> response) {
+        SERVER.stubFor(
+                post(urlPathEqualTo(COUPON_DISCOUNTS))
+                        .willReturn(okJson(JSON.writeValueAsString(response))));
+    }
+
+    static void couponDiscountFail(int status) {
+        SERVER.stubFor(
+                post(urlPathEqualTo(COUPON_DISCOUNTS)).willReturn(aResponse().withStatus(status)));
     }
 
     static void skusFail(int status) {

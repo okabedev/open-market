@@ -145,7 +145,7 @@ public class Claim {
                         ClaimType.CANCEL,
                         shipment,
                         ClaimReason.BUYER_CANCEL,
-                        shipment.amount(),
+                        shipment.paymentAmount(),
                         now);
         claim.status = ClaimStatus.APPROVED;
         claim.approvedAt = now;
@@ -293,7 +293,7 @@ public class Claim {
         if (type == ClaimType.RETURN) {
             long fee = fault == Fault.BUYER ? returnShippingFee : 0;
             this.restock = restock;
-            this.refundAmount = Math.max(0, target.amount() - fee);
+            this.refundAmount = Math.max(0, target.paymentAmount() - fee);
         }
         status = ClaimStatus.APPROVED;
         approvedAt = now;

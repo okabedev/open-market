@@ -185,7 +185,7 @@ class PaymentEventsIntegrationTest {
                                         3)),
                         ShippingAddress.of("홍길동", "010-1234-5678", "06236", "주소", null),
                         Instant.now());
-        order.awaitPayment(Instant.now());
+        order.recordReservation(Order.Reservation.STOCK, Instant.now());
         transaction.executeWithoutResult(status -> orders.save(order));
         for (String type : List.of("OrderPlaced", "OrderAwaitingPayment")) {
             jdbc.sql(

@@ -249,7 +249,7 @@
   - [x] 골격, 쿠폰 정책 생성(관리자·판매자)·중지·조회
   - [x] 선착순 발급(Redis Lua + DB 유니크)과 동시성 테스트(R11)
   - [x] 할인 계산 API, `OrderPlaced` → 쿠폰 예약·실패, `OrderPaid` → 사용, `OrderCancelled` → 복원
-- [ ] order: 주문 쿠폰 적용과 재고·쿠폰 예약 결과 합류(R12). `OrderPaid`·`PurchaseConfirmed`의 쿠폰 필드, fulfillment 환불 금액
+- [x] order: 주문 쿠폰 적용과 재고·쿠폰 예약 결과 합류(R12). `OrderPaid`·`PurchaseConfirmed`의 쿠폰 필드, fulfillment 환불 금액
 - [ ] review: 작성 자격, 리뷰, 답글, 숨김, 별점 요약
   - [ ] 골격, 작성 자격(`PurchaseConfirmed`), 리뷰 작성, 별점 요약. file 리뷰 사진(`REVIEW_IMAGE`)
   - [ ] 판매자 답글, 관리자 숨김, 상품 리뷰·내 리뷰 조회

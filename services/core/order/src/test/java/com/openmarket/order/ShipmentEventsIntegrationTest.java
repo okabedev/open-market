@@ -151,7 +151,7 @@ class ShipmentEventsIntegrationTest {
                                         1)),
                         ShippingAddress.of("홍길동", "010-1234-5678", "06236", "주소", null),
                         Instant.now());
-        order.awaitPayment(Instant.now());
+        order.recordReservation(Order.Reservation.STOCK, Instant.now());
         order.pay(19_900, Instant.now(), Instant.now());
         transaction.executeWithoutResult(status -> orders.save(order));
         return order;

@@ -114,6 +114,7 @@ describe("paymentErrorMessage", () => {
 describe("cancelReasonMessage", () => {
   it("취소 사유를 구매자 문구로 바꾼다", () => {
     expect(cancelReasonMessage("STOCK_UNAVAILABLE")).toContain("재고");
+    expect(cancelReasonMessage("COUPON_UNAVAILABLE")).toContain("쿠폰");
     expect(cancelReasonMessage("PAYMENT_TIMEOUT")).toContain("결제 기한");
     expect(cancelReasonMessage("BUYER_CANCELLED")).toContain("취소한 주문");
     expect(cancelReasonMessage(undefined)).toBe("취소된 주문입니다.");

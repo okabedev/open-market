@@ -1,5 +1,9 @@
 package com.openmarket.order;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.equalToJson;
+import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.openmarket.order.CatalogStub.sku;
 import static com.openmarket.order.OrderTokens.buyer;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -11,9 +15,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.openmarket.common.test.container.PostgresContainerConfiguration;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -107,6 +114,117 @@ class OrderApiIntegrationTest {
     }
 
     @Test
+    @DisplayName("쿠폰을 쓰면 promotion에 하위 주문 금액으로 할인을 묻고, 상세에 할인과 결제 금액을, OrderPlaced에 쓴 쿠폰을 싣는다")
+    void placesOrderWithCoupons() throws Exception {
+        UUID platformCoupon = UUID.randomUUID();
+        UUID sellerCoupon = UUID.randomUUID();
+        CatalogStub.couponDiscount(
+                discount(
+                        true,
+                        platformCoupon,
+                        3_000,
+                        List.of(
+                                sellerOrder(sellerA, 39_800, null, 0, 1_490, 38_310),
+                                sellerOrder(sellerB, 39_900, sellerCoupon, 5_000, 1_510, 33_390)),
+                        List.of()));
+
+        UUID orderId =
+                orderId(
+                        place(
+                                        UUID.randomUUID().toString(),
+                                        List.of(platformCoupon, sellerCoupon),
+                                        71_700L,
+                                        line(shirt, 2, 19_900),
+                                        line(pants, 1, 39_900))
+                                .andExpect(status().isCreated()));
+
+        CatalogStub.SERVER.verify(
+                postRequestedFor(urlPathEqualTo(CatalogStub.COUPON_DISCOUNTS))
+                        .withHeader("Authorization", equalTo("Bearer " + CatalogStub.ACCESS_TOKEN))
+                        .withRequestBody(
+                                equalToJson(
+                                        json.writeValueAsString(
+                                                Map.of(
+                                                        "buyerId",
+                                                        buyerId.toString(),
+                                                        "issuedCouponIds",
+                                                        List.of(
+                                                                platformCoupon.toString(),
+                                                                sellerCoupon.toString()),
+                                                        "sellerOrders",
+                                                        List.of(
+                                                                Map.of(
+                                                                        "sellerId",
+                                                                        sellerA.toString(),
+                                                                        "amount",
+                                                                        39_800),
+                                                                Map.of(
+                                                                        "sellerId",
+                                                                        sellerB.toString(),
+                                                                        "amount",
+                                                                        39_900)))))));
+        mockMvc.perform(get("/v1/orders/{id}", orderId).with(buyer(buyerId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.amount").value(71_700))
+                .andExpect(jsonPath("$.sellerOrders[0].amount").value(39_800))
+                .andExpect(jsonPath("$.sellerOrders[0].sellerCouponDiscount").value(0))
+                .andExpect(jsonPath("$.sellerOrders[0].platformCouponDiscount").value(1_490))
+                .andExpect(jsonPath("$.sellerOrders[0].paymentAmount").value(38_310))
+                .andExpect(jsonPath("$.sellerOrders[1].sellerCouponDiscount").value(5_000))
+                .andExpect(jsonPath("$.sellerOrders[1].paymentAmount").value(33_390));
+        JsonNode placed = json.readTree(outboxPayload(orderId, "OrderPlaced"));
+        assertThat(placed.get("issuedCouponIds").get(0).asString())
+                .isEqualTo(platformCoupon.toString());
+        assertThat(placed.get("issuedCouponIds").get(1).asString())
+                .isEqualTo(sellerCoupon.toString());
+    }
+
+    @Test
+    @DisplayName(
+            "쓸 수 없는 쿠폰이면 422 ORDER_COUPON_NOT_APPLICABLE에 쿠폰마다 이유를 담고, promotion을 부를 수 없으면 503이다")
+    void rejectsUnavailableCoupons() throws Exception {
+        UUID coupon = UUID.randomUUID();
+        CatalogStub.couponDiscount(
+                discount(
+                        false,
+                        null,
+                        0,
+                        List.of(sellerOrder(sellerA, 19_900, null, 0, 0, 19_900)),
+                        List.of(Map.of("issuedCouponId", coupon.toString(), "reason", "EXPIRED"))));
+
+        place(UUID.randomUUID().toString(), List.of(coupon), null, line(shirt, 1, 19_900))
+                .andExpect(status().is(422))
+                .andExpect(jsonPath("$.code").value("ORDER_COUPON_NOT_APPLICABLE"))
+                .andExpect(jsonPath("$.coupons[0].issuedCouponId").value(coupon.toString()))
+                .andExpect(jsonPath("$.coupons[0].reason").value("EXPIRED"));
+
+        CatalogStub.couponDiscountFail(500);
+        place(UUID.randomUUID().toString(), List.of(coupon), null, line(shirt, 1, 19_900))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.code").value("ORDER_PROMOTION_UNAVAILABLE"));
+        assertThat(
+                        jdbc.sql("SELECT count(*) FROM orders WHERE buyer_id = :id")
+                                .param("id", buyerId)
+                                .query(Integer.class)
+                                .single())
+                .isZero();
+    }
+
+    @Test
+    @DisplayName("쿠폰이 없는 주문은 promotion을 부르지 않는다. 결제 금액을 보내면 비교해 다르면 409 ORDER_AMOUNT_CHANGED다")
+    void expectedAmount() throws Exception {
+        place(UUID.randomUUID().toString(), List.of(), 19_000L, line(shirt, 1, 19_900))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("ORDER_AMOUNT_CHANGED"))
+                .andExpect(jsonPath("$.currentAmount").value(19_900));
+        place(UUID.randomUUID().toString(), List.of(), 19_900L, line(shirt, 1, 19_900))
+                .andExpect(status().isCreated());
+
+        CatalogStub.SERVER.verify(
+                0, postRequestedFor(urlPathEqualTo(CatalogStub.COUPON_DISCOUNTS)));
+    }
+
+    @Test
     @DisplayName("같은 Idempotency-Key로 다시 보내면 같은 주문을 돌려주고 주문은 하나다")
     void idempotent() throws Exception {
         String key = UUID.randomUUID().toString();
@@ -183,23 +301,79 @@ class OrderApiIntegrationTest {
     }
 
     private ResultActions place(String key, Map<?, ?>... lines) throws Exception {
-        Map<String, Object> body =
+        return place(key, null, null, lines);
+    }
+
+    private ResultActions place(
+            String key,
+            @Nullable List<UUID> issuedCouponIds,
+            @Nullable Long expectedAmount,
+            Map<?, ?>... lines)
+            throws Exception {
+        Map<String, @Nullable Object> body = new HashMap<>();
+        body.put("lines", List.of(lines));
+        body.put(
+                "shipping",
                 Map.of(
-                        "lines",
-                        List.of(lines),
-                        "shipping",
-                        Map.of(
-                                "recipientName", "홍길동",
-                                "recipientPhone", "010-1234-5678",
-                                "zipCode", "06236",
-                                "baseAddress", "서울 강남구 테헤란로 1",
-                                "detailAddress", "101호"));
+                        "recipientName", "홍길동",
+                        "recipientPhone", "010-1234-5678",
+                        "zipCode", "06236",
+                        "baseAddress", "서울 강남구 테헤란로 1",
+                        "detailAddress", "101호"));
+        if (issuedCouponIds != null) {
+            body.put("issuedCouponIds", issuedCouponIds.stream().map(UUID::toString).toList());
+        }
+        if (expectedAmount != null) {
+            body.put("expectedAmount", expectedAmount);
+        }
         return mockMvc.perform(
                 post("/v1/orders")
                         .with(buyer(buyerId))
                         .header("Idempotency-Key", key)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json.writeValueAsString(body)));
+    }
+
+    /** promotion 할인 계산 응답(docs/architecture/promotion.md "할인 계산 API(내부)"). */
+    private static Map<String, @Nullable Object> discount(
+            boolean applicable,
+            @Nullable UUID platformIssuedCouponId,
+            long platformCouponDiscount,
+            List<Map<String, @Nullable Object>> sellerOrders,
+            List<Map<String, Object>> unavailable) {
+        Map<String, @Nullable Object> response = new HashMap<>();
+        response.put("applicable", applicable);
+        response.put("sellerOrders", sellerOrders);
+        response.put(
+                "platformIssuedCouponId",
+                platformIssuedCouponId == null ? null : platformIssuedCouponId.toString());
+        response.put("platformCouponDiscount", platformCouponDiscount);
+        response.put(
+                "paymentAmount",
+                sellerOrders.stream()
+                        .mapToLong(s -> (long) Objects.requireNonNull(s.get("paymentAmount")))
+                        .sum());
+        response.put("unavailable", unavailable);
+        return response;
+    }
+
+    private static Map<String, @Nullable Object> sellerOrder(
+            UUID sellerId,
+            long amount,
+            @Nullable UUID sellerIssuedCouponId,
+            long sellerCouponDiscount,
+            long platformCouponDiscount,
+            long paymentAmount) {
+        Map<String, @Nullable Object> sellerOrder = new HashMap<>();
+        sellerOrder.put("sellerId", sellerId.toString());
+        sellerOrder.put("amount", amount);
+        sellerOrder.put(
+                "sellerIssuedCouponId",
+                sellerIssuedCouponId == null ? null : sellerIssuedCouponId.toString());
+        sellerOrder.put("sellerCouponDiscount", sellerCouponDiscount);
+        sellerOrder.put("platformCouponDiscount", platformCouponDiscount);
+        sellerOrder.put("paymentAmount", paymentAmount);
+        return sellerOrder;
     }
 
     private static Map<String, Object> line(UUID skuId, int quantity, long expectedPrice) {

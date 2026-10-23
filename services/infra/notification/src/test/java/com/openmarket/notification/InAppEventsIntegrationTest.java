@@ -77,7 +77,7 @@ class InAppEventsIntegrationTest {
                 .containsExactlyInAnyOrder(
                         "ORDER_PAID BUYER 019a2c3d-1a2b-7c3d-8e4f-5a6b7c8d9e0f ORDER"
                                 + " 019a2c3d-4e5f-7a60-8b1c-2d3e4f5a6b70 | 주문이 완료됐습니다. 반팔 티셔츠 외 1건,"
-                                + " 59,700원",
+                                + " 54,700원",
                         "SELLER_ORDER_RECEIVED SELLER 019a2b00-0000-7000-8000-00000000a001"
                                 + " SELLER_ORDER 019a2c3d-4e60-7b71-8c2d-3e4f5a6b7c81 | 새 주문이 들어왔습니다."
                                 + " 반팔 티셔츠, 19,900원. 발주를 확인해 주세요.",

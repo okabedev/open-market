@@ -53,7 +53,7 @@ class CancelOrderByBuyerUseCaseTest {
     @Test
     @DisplayName("결제 전 주문을 BUYER_CANCELLED로 취소하고 OrderCancelled를 낸다. 다시 취소해도 한 번만 낸다")
     void cancelsBeforePayment() {
-        order.awaitPayment(NOW);
+        order.recordReservation(Order.Reservation.STOCK, NOW);
 
         cancel.execute(new CancelOrderByBuyerCommand(buyerId, order.id()));
         cancel.execute(new CancelOrderByBuyerCommand(buyerId, order.id()));

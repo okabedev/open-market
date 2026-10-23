@@ -15,7 +15,7 @@ spring:
   security:
     oauth2:
       client:
-        # catalog 내부 API를 부를 서비스 간 토큰(client_credentials, scope internal). auth.yml의 service-clients와 같은 시크릿이다.
+        # catalog·promotion 내부 API를 부를 서비스 간 토큰(client_credentials, scope internal). auth.yml의 service-clients와 같은 시크릿이다.
         registration:
           order:
             provider: auth

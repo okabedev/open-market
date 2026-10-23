@@ -15,9 +15,17 @@ public record CreateShipmentsCommand(
     /**
      * 하위 주문.
      *
-     * @param amount 하위 주문 금액(원)
+     * @param amount 상품 금액(원)
+     * @param sellerCouponDiscount 판매자 쿠폰 할인(원)
+     * @param paymentAmount 하위 주문 결제 금액(원)
      */
-    public record SellerOrder(UUID sellerOrderId, UUID sellerId, long amount, List<Line> lines) {}
+    public record SellerOrder(
+            UUID sellerOrderId,
+            UUID sellerId,
+            long amount,
+            long sellerCouponDiscount,
+            long paymentAmount,
+            List<Line> lines) {}
 
     /**
      * 주문 항목. 주문 당시 스냅샷이다.

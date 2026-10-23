@@ -7,6 +7,7 @@ public record CancelOrderCommand(UUID orderId, Reason reason) {
 
     public enum Reason {
         STOCK_UNAVAILABLE,
+        COUPON_UNAVAILABLE,
         PAYMENT_TIMEOUT,
         BUYER_CANCELLED
     }

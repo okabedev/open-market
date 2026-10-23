@@ -122,12 +122,14 @@ class OrderEventsIntegrationTest {
         assertThat(
                         jdbc.sql(
                                         "SELECT seller_order_id || ' ' || status || ' ' || amount"
-                                                + " FROM shipment WHERE order_id = :orderId"
-                                                + " ORDER BY amount")
+                                                + " || ' ' || seller_coupon_discount || ' ' ||"
+                                                + " payment_amount FROM shipment WHERE order_id ="
+                                                + " :orderId ORDER BY amount")
                                 .param("orderId", orderId)
                                 .query(String.class)
                                 .list())
-                .containsExactly(first + " READY 19900", second + " READY 39800");
+                .containsExactly(
+                        first + " READY 19900 0 18900", second + " READY 39800 2000 35800");
         assertThat(
                         jdbc.sql(
                                         "SELECT l.product_name || ' ' || coalesce(l.option_value_1,"
@@ -139,6 +141,41 @@ class OrderEventsIntegrationTest {
                                 .query(String.class)
                                 .list())
                 .containsExactly("반팔 티셔츠 화이트 M 1 19900");
+    }
+
+    @Test
+    @DisplayName("쿠폰 필드가 없는 M5 이전 형식의 OrderPaid는 할인 0, 결제 금액 = 상품 금액으로 배송을 만든다")
+    void acceptsPreM5OrderPaid() throws Exception {
+        UUID orderId = UUID.randomUUID();
+        ObjectNode legacy =
+                (ObjectNode)
+                        json.readTree(orderPaid(orderId, UUID.randomUUID(), UUID.randomUUID()));
+        for (var sellerOrder : legacy.get("sellerOrders")) {
+            ((ObjectNode) sellerOrder)
+                    .remove(
+                            List.of(
+                                    "sellerCouponDiscount",
+                                    "platformCouponDiscount",
+                                    "paymentAmount"));
+        }
+
+        send(UUID.randomUUID(), "OrderPaid", json.writeValueAsString(legacy), orderId);
+
+        await().atMost(Duration.ofSeconds(15))
+                .untilAsserted(
+                        () ->
+                                assertThat(
+                                                jdbc.sql(
+                                                                "SELECT amount || ' '"
+                                                                        + " || seller_coupon_discount"
+                                                                        + " || ' ' || payment_amount"
+                                                                        + " FROM shipment WHERE"
+                                                                        + " order_id = :orderId"
+                                                                        + " ORDER BY amount")
+                                                        .param("orderId", orderId)
+                                                        .query(String.class)
+                                                        .list())
+                                        .containsExactly("19900 0 19900", "39800 0 39800"));
     }
 
     @Test

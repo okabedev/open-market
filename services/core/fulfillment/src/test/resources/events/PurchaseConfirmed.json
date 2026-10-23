@@ -5,11 +5,15 @@
   "buyerId": "019a2c3d-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
   "mode": "AUTO",
   "confirmedAt": "2026-10-28T07:00:00Z",
+  "sellerCouponDiscount": 2000,
   "lines": [
     {
       "orderLineId": "019a2c3d-4e60-7b71-8c2d-3e4f5a6b7d01",
       "productId": "019a2b10-0000-7000-8000-0000000000a1",
+      "productName": "반팔 티셔츠",
+      "optionValues": ["화이트", "M"],
       "categoryId": "0199f000-0000-7000-8000-000000000101",
+      "quantity": 1,
       "amount": 19900
     }
   ]

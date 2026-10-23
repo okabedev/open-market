@@ -12,6 +12,7 @@ import com.openmarket.order.command.domain.OrderCancelled;
 import com.openmarket.order.command.domain.OrderItem;
 import com.openmarket.order.command.domain.OrderPaid;
 import com.openmarket.order.command.domain.OrderStatus;
+import com.openmarket.order.command.domain.SellerOrderDiscount;
 import com.openmarket.order.command.domain.SellerOrderProgress;
 import com.openmarket.order.command.domain.ShippingAddress;
 import java.time.Clock;
@@ -26,6 +27,7 @@ import org.junit.jupiter.api.Test;
 class OrderTransitionUseCasesTest {
 
     static final Instant NOW = Instant.parse("2026-10-20T03:00:00Z");
+    static final UUID SELLER = UUID.randomUUID();
 
     final OrderFakes.Orders orders = new OrderFakes.Orders();
     final OrderFakes.RecordingOutbox outbox = new OrderFakes.RecordingOutbox();
@@ -60,8 +62,10 @@ class OrderTransitionUseCasesTest {
     @Test
     @DisplayName("예약이 끝나면 결제 대기가 되고 구매자, 금액, 주문명을 담아 OrderAwaitingPayment를 낸다. 다시 와도 한 번만 낸다")
     void awaitsPayment() {
-        awaitPayment.execute(new AwaitPaymentCommand(order.id()));
-        awaitPayment.execute(new AwaitPaymentCommand(order.id()));
+        awaitPayment.execute(
+                new AwaitPaymentCommand(order.id(), AwaitPaymentCommand.Reservation.STOCK));
+        awaitPayment.execute(
+                new AwaitPaymentCommand(order.id(), AwaitPaymentCommand.Reservation.STOCK));
 
         assertThat(order.status()).isEqualTo(OrderStatus.AWAITING_PAYMENT);
         assertThat(outbox.events)
@@ -83,7 +87,8 @@ class OrderTransitionUseCasesTest {
                 new CancelOrderCommand(order.id(), CancelOrderCommand.Reason.STOCK_UNAVAILABLE));
         cancel.execute(
                 new CancelOrderCommand(order.id(), CancelOrderCommand.Reason.STOCK_UNAVAILABLE));
-        awaitPayment.execute(new AwaitPaymentCommand(order.id()));
+        awaitPayment.execute(
+                new AwaitPaymentCommand(order.id(), AwaitPaymentCommand.Reservation.STOCK));
 
         assertThat(order.status()).isEqualTo(OrderStatus.CANCELLED);
         assertThat(order.cancelReason()).isEqualTo(CancelReason.STOCK_UNAVAILABLE);
@@ -99,6 +104,58 @@ class OrderTransitionUseCasesTest {
     }
 
     @Test
+    @DisplayName("쿠폰 주문은 재고·쿠폰 예약 결과를 둘 다 받은 뒤 결제 금액으로 OrderAwaitingPayment를 한 번 낸다")
+    void joinsReservations() {
+        Order couponOrder = couponOrder();
+
+        awaitPayment.execute(
+                new AwaitPaymentCommand(couponOrder.id(), AwaitPaymentCommand.Reservation.COUPON));
+        assertThat(couponOrder.status()).isEqualTo(OrderStatus.PENDING);
+        assertThat(outbox.events).isEmpty();
+
+        awaitPayment.execute(
+                new AwaitPaymentCommand(couponOrder.id(), AwaitPaymentCommand.Reservation.STOCK));
+        awaitPayment.execute(
+                new AwaitPaymentCommand(couponOrder.id(), AwaitPaymentCommand.Reservation.COUPON));
+
+        assertThat(couponOrder.status()).isEqualTo(OrderStatus.AWAITING_PAYMENT);
+        assertThat(outbox.events)
+                .singleElement()
+                .satisfies(
+                        e ->
+                                assertThat(e.payload())
+                                        .isEqualTo(
+                                                new OrderAwaitingPayment(
+                                                        couponOrder.id(),
+                                                        couponOrder.buyerId(),
+                                                        59_700 - 3_000,
+                                                        "반팔 티셔츠")));
+    }
+
+    @Test
+    @DisplayName("재고 예약이 먼저 성공해도 쿠폰 예약에 실패하면 COUPON_UNAVAILABLE로 취소한다")
+    void cancelsOnCouponReservationFailure() {
+        Order couponOrder = couponOrder();
+        awaitPayment.execute(
+                new AwaitPaymentCommand(couponOrder.id(), AwaitPaymentCommand.Reservation.STOCK));
+
+        cancel.execute(
+                new CancelOrderCommand(
+                        couponOrder.id(), CancelOrderCommand.Reason.COUPON_UNAVAILABLE));
+
+        assertThat(couponOrder.status()).isEqualTo(OrderStatus.CANCELLED);
+        assertThat(outbox.events)
+                .singleElement()
+                .satisfies(
+                        e ->
+                                assertThat(e.payload())
+                                        .isEqualTo(
+                                                new OrderCancelled(
+                                                        couponOrder.id(),
+                                                        CancelReason.COUPON_UNAVAILABLE)));
+    }
+
+    @Test
     @DisplayName("결제가 승인되면 결제 완료가 되고 OrderPaid를 낸다. 장바구니에서 주문한 SKU만 뺀다. 다시 와도 한 번만 한다")
     void pays() {
         UUID ordered = order.lines().getFirst().skuId();
@@ -107,7 +164,8 @@ class OrderTransitionUseCasesTest {
         cart.add(ordered, 1, NOW);
         cart.add(other, 2, NOW);
         carts.save(cart);
-        awaitPayment.execute(new AwaitPaymentCommand(order.id()));
+        awaitPayment.execute(
+                new AwaitPaymentCommand(order.id(), AwaitPaymentCommand.Reservation.STOCK));
         Instant approvedAt = NOW.plusSeconds(90);
 
         pay.execute(new PayOrderCommand(order.id(), 59_700, approvedAt));
@@ -149,7 +207,8 @@ class OrderTransitionUseCasesTest {
     @Test
     @DisplayName("장바구니가 없는 구매자도 결제 완료가 된다")
     void paysWithoutCart() {
-        awaitPayment.execute(new AwaitPaymentCommand(order.id()));
+        awaitPayment.execute(
+                new AwaitPaymentCommand(order.id(), AwaitPaymentCommand.Reservation.STOCK));
 
         pay.execute(new PayOrderCommand(order.id(), 59_700, NOW));
 
@@ -163,7 +222,8 @@ class OrderTransitionUseCasesTest {
         Cart cart = Cart.create(order.buyerId(), NOW);
         cart.add(order.lines().getFirst().skuId(), 1, NOW);
         carts.save(cart);
-        awaitPayment.execute(new AwaitPaymentCommand(order.id()));
+        awaitPayment.execute(
+                new AwaitPaymentCommand(order.id(), AwaitPaymentCommand.Reservation.STOCK));
         cancel.execute(
                 new CancelOrderCommand(order.id(), CancelOrderCommand.Reason.PAYMENT_TIMEOUT));
 
@@ -177,7 +237,8 @@ class OrderTransitionUseCasesTest {
     @Test
     @DisplayName("order가 모르는 주문의 결과는 넘긴다")
     void unknownOrder() {
-        awaitPayment.execute(new AwaitPaymentCommand(UUID.randomUUID()));
+        awaitPayment.execute(
+                new AwaitPaymentCommand(UUID.randomUUID(), AwaitPaymentCommand.Reservation.STOCK));
         cancel.execute(
                 new CancelOrderCommand(
                         UUID.randomUUID(), CancelOrderCommand.Reason.STOCK_UNAVAILABLE));
@@ -189,7 +250,8 @@ class OrderTransitionUseCasesTest {
     @Test
     @DisplayName("배송 이벤트로 하위 주문 진행 상태를 앞으로 바꾸고 이벤트는 내지 않는다. 모르는 주문은 넘긴다")
     void advancesSellerOrder() {
-        awaitPayment.execute(new AwaitPaymentCommand(order.id()));
+        awaitPayment.execute(
+                new AwaitPaymentCommand(order.id(), AwaitPaymentCommand.Reservation.STOCK));
         pay.execute(new PayOrderCommand(order.id(), 59_700, NOW));
         UUID sellerOrderId = order.sellerOrders().getFirst().id();
 
@@ -211,7 +273,8 @@ class OrderTransitionUseCasesTest {
     @Test
     @DisplayName("클레임 이벤트로 하위 주문 클레임을 바꾸고, 발송 전 취소가 끝나면 진행 상태가 CANCELLED다. 이벤트는 내지 않고 모르는 주문은 넘긴다")
     void appliesClaim() {
-        awaitPayment.execute(new AwaitPaymentCommand(order.id()));
+        awaitPayment.execute(
+                new AwaitPaymentCommand(order.id(), AwaitPaymentCommand.Reservation.STOCK));
         pay.execute(new PayOrderCommand(order.id(), 59_700, NOW));
         UUID sellerOrderId = order.sellerOrders().getFirst().id();
         UUID claimId = UUID.randomUUID();
@@ -237,5 +300,28 @@ class OrderTransitionUseCasesTest {
         assertThat(order.sellerOrders().getFirst().progress())
                 .isEqualTo(SellerOrderProgress.CANCELLED);
         assertThat(outbox.types()).containsExactly(OrderAwaitingPayment.TYPE, OrderPaid.TYPE);
+    }
+
+    private Order couponOrder() {
+        Order placed =
+                Order.place(
+                        UUID.randomUUID(),
+                        List.of(
+                                new OrderItem(
+                                        UUID.randomUUID(),
+                                        UUID.randomUUID(),
+                                        "반팔 티셔츠",
+                                        SELLER,
+                                        "길동상회",
+                                        UUID.randomUUID(),
+                                        List.of(),
+                                        List.of(),
+                                        19_900,
+                                        3)),
+                        ShippingAddress.of("홍길동", "010-1234-5678", "06236", "주소", null),
+                        NOW);
+        placed.applyCoupons(
+                UUID.randomUUID(), List.of(new SellerOrderDiscount(SELLER, null, 0, 3_000)));
+        return orders.save(placed);
     }
 }

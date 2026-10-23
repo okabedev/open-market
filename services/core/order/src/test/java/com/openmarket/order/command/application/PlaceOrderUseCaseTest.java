@@ -4,7 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.openmarket.common.core.error.BusinessException;
+import com.openmarket.order.command.application.CouponDiscountPort.CouponDiscount;
+import com.openmarket.order.command.application.CouponDiscountPort.SellerAmount;
+import com.openmarket.order.command.application.CouponDiscountPort.SellerOrderCoupon;
 import com.openmarket.order.command.application.SkuCatalogPort.CatalogSku;
+import com.openmarket.order.command.domain.CouponNotApplicableException;
 import com.openmarket.order.command.domain.Order;
 import com.openmarket.order.command.domain.OrderPlaced;
 import com.openmarket.order.command.domain.OrderStatus;
@@ -19,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.IntStream;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.transaction.support.TransactionOperations;
@@ -37,10 +42,22 @@ class PlaceOrderUseCaseTest {
                 return ids.stream().filter(catalog::containsKey).map(catalog::get).toList();
             };
 
+    final List<List<SellerAmount>> promotionCalls = new ArrayList<>();
+    @Nullable CouponDiscount discount;
+    final CouponDiscountPort promotionPort =
+            (buyer, couponIds, sellerOrders) -> {
+                promotionCalls.add(sellerOrders);
+                if (discount == null) {
+                    throw new IllegalStateException("할인 결과를 두지 않았다");
+                }
+                return discount;
+            };
+
     final PlaceOrderUseCase place =
             new PlaceOrderUseCase(
                     orders,
                     catalogPort,
+                    promotionPort,
                     outbox,
                     TransactionOperations.withoutTransaction(),
                     Clock.fixed(NOW, ZoneOffset.UTC));
@@ -80,6 +97,104 @@ class PlaceOrderUseCaseTest {
                                             new OrderPlaced.Line(pants, 1));
                             assertThat(placed.issuedCouponIds()).isEmpty();
                         });
+        assertThat(promotionCalls).isEmpty();
+    }
+
+    @Test
+    @DisplayName("쿠폰이 있으면 하위 주문 금액으로 할인을 계산해 스냅샷으로 남기고, 주문 금액은 결제 금액이고 OrderPlaced에 쓴 쿠폰을 싣는다")
+    void placesWithCoupons() {
+        UUID platformCoupon = UUID.randomUUID();
+        UUID sellerCoupon = UUID.randomUUID();
+        discount =
+                new CouponDiscount(
+                        true,
+                        List.of(
+                                new SellerOrderCoupon(sellerA, 39_800, null, 0, 2_000, 37_800),
+                                new SellerOrderCoupon(
+                                        sellerB, 39_900, sellerCoupon, 5_000, 1_000, 33_900)),
+                        platformCoupon,
+                        3_000,
+                        71_700,
+                        List.of());
+
+        UUID orderId =
+                place.execute(
+                        command(
+                                List.of(sellerCoupon, platformCoupon),
+                                71_700L,
+                                line(shirt, 2, 19_900),
+                                line(pants, 1, 39_900)));
+
+        assertThat(promotionCalls)
+                .containsExactly(
+                        List.of(
+                                new SellerAmount(sellerA, 39_800),
+                                new SellerAmount(sellerB, 39_900)));
+        Order order = orders.rows.get(orderId);
+        assertThat(order.amount()).isEqualTo(71_700);
+        assertThat(order.sellerOrders())
+                .extracting(s -> s.paymentAmount())
+                .containsExactly(37_800L, 33_900L);
+        assertThat(order.sellerOrders().get(1).sellerIssuedCouponId()).isEqualTo(sellerCoupon);
+        OrderPlaced placed = (OrderPlaced) outbox.events.getFirst().payload();
+        assertThat(placed.issuedCouponIds()).containsExactly(platformCoupon, sellerCoupon);
+    }
+
+    @Test
+    @DisplayName("쓸 수 없는 쿠폰이 있으면 주문을 만들지 않고 422 ORDER_COUPON_NOT_APPLICABLE에 쿠폰마다 이유를 담는다")
+    void couponNotApplicable() {
+        UUID coupon = UUID.randomUUID();
+        discount =
+                new CouponDiscount(
+                        false,
+                        List.of(new SellerOrderCoupon(sellerA, 19_900, null, 0, 0, 19_900)),
+                        null,
+                        0,
+                        19_900,
+                        List.of(new CouponDiscountPort.Unavailable(coupon, "EXPIRED")));
+
+        assertThatThrownBy(
+                        () -> place.execute(command(List.of(coupon), null, line(shirt, 1, 19_900))))
+                .isInstanceOfSatisfying(
+                        BusinessException.class,
+                        e -> {
+                            assertThat(e.getCode()).isEqualTo("ORDER_COUPON_NOT_APPLICABLE");
+                            assertThat(e.getProperties().get("coupons"))
+                                    .isEqualTo(
+                                            List.of(
+                                                    new CouponNotApplicableException.Coupon(
+                                                            coupon, "EXPIRED")));
+                        });
+        assertThat(orders.rows).isEmpty();
+        assertThat(outbox.events).isEmpty();
+    }
+
+    @Test
+    @DisplayName("화면이 보여 준 결제 금액과 다르면 주문을 만들지 않고 409 ORDER_AMOUNT_CHANGED다. 쿠폰이 없어도 비교한다")
+    void amountChanged() {
+        UUID coupon = UUID.randomUUID();
+        discount =
+                new CouponDiscount(
+                        true,
+                        List.of(new SellerOrderCoupon(sellerA, 19_900, coupon, 1_000, 0, 18_900)),
+                        null,
+                        0,
+                        18_900,
+                        List.of());
+
+        assertThatThrownBy(
+                        () ->
+                                place.execute(
+                                        command(List.of(coupon), 19_900L, line(shirt, 1, 19_900))))
+                .extracting("code")
+                .isEqualTo("ORDER_AMOUNT_CHANGED");
+        assertThatThrownBy(() -> place.execute(command(List.of(), 1L, line(shirt, 1, 19_900))))
+                .extracting("code")
+                .isEqualTo("ORDER_AMOUNT_CHANGED");
+        assertThat(orders.rows).isEmpty();
+
+        place.execute(command(List.of(), 19_900L, line(shirt, 1, 19_900)));
+        assertThat(orders.rows).hasSize(1);
     }
 
     @Test
@@ -131,7 +246,17 @@ class PlaceOrderUseCaseTest {
                 new PlaceOrderCommand(
                         buyerId,
                         List.of(line(shirt, 1, 19_900)),
-                        new PlaceOrderCommand.Shipping("홍길동", "010-1234-5678", "123", "주소", null)));
+                        new PlaceOrderCommand.Shipping("홍길동", "010-1234-5678", "123", "주소", null),
+                        List.of(),
+                        null));
+        UUID coupon = UUID.randomUUID();
+        assertInvalid(command(List.of(coupon, coupon), null, line(shirt, 1, 19_900)));
+        assertInvalid(
+                command(
+                        IntStream.range(0, 51).mapToObj(i -> UUID.randomUUID()).toList(),
+                        null,
+                        line(shirt, 1, 19_900)));
+        assertInvalid(command(List.of(), -1L, line(shirt, 1, 19_900)));
         assertThat(catalogCalls).isEmpty();
     }
 
@@ -152,11 +277,20 @@ class PlaceOrderUseCaseTest {
     }
 
     private PlaceOrderCommand command(PlaceOrderCommand.Line... lines) {
+        return command(List.of(), null, lines);
+    }
+
+    private PlaceOrderCommand command(
+            List<UUID> issuedCouponIds,
+            @Nullable Long expectedAmount,
+            PlaceOrderCommand.Line... lines) {
         return new PlaceOrderCommand(
                 buyerId,
                 List.of(lines),
                 new PlaceOrderCommand.Shipping(
-                        "홍길동", "010-1234-5678", "06236", "서울 강남구 테헤란로 1", "101호"));
+                        "홍길동", "010-1234-5678", "06236", "서울 강남구 테헤란로 1", "101호"),
+                issuedCouponIds,
+                expectedAmount);
     }
 
     private static PlaceOrderCommand.Line line(UUID skuId, int quantity, long expectedPrice) {

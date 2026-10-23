@@ -43,6 +43,52 @@ class ClaimTest {
     }
 
     @Test
+    @DisplayName("쿠폰을 쓴 하위 주문의 발송 전 취소는 할인을 뺀 결제 금액 전액을 환불한다")
+    void cancelWithCoupon() {
+        Shipment shipment =
+                Shipment.ready(
+                        UUID.randomUUID(),
+                        UUID.randomUUID(),
+                        UUID.randomUUID(),
+                        UUID.randomUUID(),
+                        49_700,
+                        5_000,
+                        41_700,
+                        List.of(line(skuA, 2, 19_900), line(skuB, 1, 9_900)),
+                        NOW,
+                        NOW);
+
+        Claim claim = Claim.cancel(shipment, NOW);
+
+        assertThat(shipment.amount()).isEqualTo(49_700);
+        assertThat(shipment.sellerCouponDiscount()).isEqualTo(5_000);
+        assertThat(shipment.paymentAmount()).isEqualTo(41_700);
+        assertThat(claim.refundAmount()).isEqualTo(41_700);
+    }
+
+    @Test
+    @DisplayName("결제 금액이 음수이거나 상품 금액보다 크거나, 판매자 쿠폰 할인이 할인 합보다 크면 배송을 만들지 않는다")
+    void rejectsInvalidPaymentAmount() {
+        for (long[] amounts :
+                new long[][] {{49_700, 0, -1}, {49_700, 0, 49_701}, {49_700, 5_000, 46_000}}) {
+            assertThatThrownBy(
+                            () ->
+                                    Shipment.ready(
+                                            UUID.randomUUID(),
+                                            UUID.randomUUID(),
+                                            UUID.randomUUID(),
+                                            UUID.randomUUID(),
+                                            amounts[0],
+                                            amounts[1],
+                                            amounts[2],
+                                            List.of(line(skuA, 1, 49_700)),
+                                            NOW,
+                                            NOW))
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
+    }
+
+    @Test
     @DisplayName("발송 전 취소는 배송을 CANCELLED로 바꾸고 하위 주문 금액 전액을 환불하는 승인된 클레임이다")
     void cancel() {
         Shipment shipment = ready();
