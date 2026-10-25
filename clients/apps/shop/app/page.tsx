@@ -6,12 +6,11 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  Input,
-  Label,
   loginErrorMessage,
 } from "@openmarket/ui";
 import Link from "next/link";
 import { ProductCard } from "@/components/product-card";
+import { SearchBox } from "@/components/search-box";
 import { bff } from "@/lib/bff";
 import { loadCategories } from "@/lib/catalog";
 import { currentSession } from "@/lib/session";
@@ -34,20 +33,9 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
       {error ? <Alert variant="destructive">{error}</Alert> : null}
       <section className="grid gap-2 py-6">
         <h1 className="text-3xl font-bold tracking-tight">여러 판매자의 상품을 한곳에서</h1>
-        <p className="text-muted-foreground">
-          상품을 찾아보세요. 장바구니와 주문은 다음 마일스톤에서 열립니다.
-        </p>
+        <p className="text-muted-foreground">상품을 찾아 장바구니에 담고 한 번에 주문하세요.</p>
         <form action="/products" className="mt-2 flex gap-2" role="search">
-          <Label htmlFor="home-q" className="sr-only">
-            검색어
-          </Label>
-          <Input
-            id="home-q"
-            name="q"
-            type="search"
-            maxLength={100}
-            placeholder="상품 이름, 상호로 찾기"
-          />
+          <SearchBox />
           <Button type="submit">검색</Button>
         </form>
         {categories.length > 0 ? (
