@@ -28,7 +28,7 @@ clients/
 - `packages/api-client`는 서버 전용이다(`server-only`). 클라이언트 컴포넌트에서 import하지 않는다.
 - API 타입은 손으로 쓰지 않고 OpenAPI에서 생성한다. `openapi/*.json`과 `src/generated`는 고치지 않는다. 백엔드 API가 바뀌면 백엔드 테스트로 문서를 고친 뒤 `generate`로 다시 만든다([conventions.md](../docs/architecture/conventions.md) "REST API").
 - 서비스 호출은 로그인 사용자면 `bff.serviceClient("<서비스>")`, 공개 경로만 부르면 `createServiceClient("<서비스>")`를 쓴다. gateway 주소는 서버 환경 변수 `GATEWAY_URL`(기본 `http://localhost:8080`)이다.
-- 상태 변경 요청 중 중복되면 안 되는 것(주문, 결제 승인, 쿠폰 발급, 클레임)은 BFF가 `Idempotency-Key`를 붙인다.
+- 상태 변경 요청 중 중복되면 안 되는 것(주문, 결제 승인, 리뷰, 클레임)은 BFF가 `Idempotency-Key`를 붙인다. 쿠폰 받기는 다시 불러도 같은 발급 쿠폰(200)이라 붙이지 않는다([promotion.md](../docs/architecture/promotion.md) "선착순 발급").
 - 파일 업로드는 BFF Route Handler를 거쳐 file 서비스로 보낸다. 비공개 파일(클레임 사진)은 앱의 `app/api/claim-images/[fileId]/[variant]` Route Handler가 `bff.privateFile`로 받아 넘긴다([file.md](../docs/architecture/file.md) "비공개 파일").
 - 화면 문구는 한국어다.
 

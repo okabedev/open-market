@@ -24,7 +24,10 @@ const SKU_B = "0199f000-0000-7000-8000-0000000000b2";
 const ADDRESS = "0199f000-0000-7000-8000-00000000ad01";
 const ORDER = "0199f000-0000-7000-8000-000000000001";
 
-function form(addressId = ADDRESS): FormData {
+const COUPON_P = "0199f000-0000-7000-8000-0000000c0001";
+const COUPON_A = "0199f000-0000-7000-8000-0000000c00a1";
+
+function form(addressId = ADDRESS, coupons: string[] = [], expectedAmount = "79700"): FormData {
   const data = new FormData();
   for (const [skuId, quantity, price] of [
     [SKU_A, "2", "19900"],
@@ -36,6 +39,10 @@ function form(addressId = ADDRESS): FormData {
   }
   data.set("addressId", addressId);
   data.set("idempotencyKey", "k-1");
+  data.set("expectedAmount", expectedAmount);
+  for (const coupon of coupons) {
+    data.append("issuedCouponId", coupon);
+  }
   return data;
 }
 
@@ -60,7 +67,7 @@ describe("placeOrder", () => {
     });
   });
 
-  it("고른 배송지를 member에서 읽어 주문 본문에 넣고 멱등성 키를 붙인다. 만들면 결제 화면으로 간다", async () => {
+  it("고른 배송지를 member에서 읽어 주문 본문에 넣고, 보여 준 결제 금액과 멱등성 키를 붙인다. 만들면 결제 화면으로 간다", async () => {
     postOrder.mockResolvedValue({
       data: { orderId: ORDER },
       response: new Response(null, { status: 201 }),
@@ -81,9 +88,41 @@ describe("placeOrder", () => {
           baseAddress: "서울 강남구 테헤란로 1",
           detailAddress: "101호",
         },
+        expectedAmount: 79_700,
       },
       headers: { "Idempotency-Key": "k-1" },
     });
+  });
+
+  it("고른 쿠폰과 할인 뒤 결제 금액을 함께 보낸다", async () => {
+    postOrder.mockResolvedValue({
+      data: { orderId: ORDER },
+      response: new Response(null, { status: 201 }),
+    });
+
+    await expect(
+      placeOrder(idleState, form(ADDRESS, [COUPON_P, COUPON_A], "74000")),
+    ).rejects.toThrow(`redirect:/orders/${ORDER}/pay`);
+
+    expect(postOrder.mock.calls[0]?.[1].body).toMatchObject({
+      issuedCouponIds: [COUPON_P, COUPON_A],
+      expectedAmount: 74_000,
+    });
+  });
+
+  it("그사이 쿠폰을 쓸 수 없게 됐거나 금액이 바뀌면 서비스 문구를 보여 주고 주문서를 새로 그린다", async () => {
+    for (const [status, code] of [
+      [422, "ORDER_COUPON_NOT_APPLICABLE"],
+      [409, "ORDER_AMOUNT_CHANGED"],
+    ] as const) {
+      postOrder.mockResolvedValueOnce({
+        error: { detail: "쿠폰을 쓸 수 없습니다.", code },
+        response: new Response(null, { status }),
+      });
+      const state = await placeOrder(idleState, form(ADDRESS, [COUPON_P], "74000"));
+      expect(state).toMatchObject({ status: "error", message: "쿠폰을 쓸 수 없습니다." });
+    }
+    expect(revalidatePath).toHaveBeenCalledWith("/checkout");
   });
 
   it("배송지를 고르지 않았거나 없는 배송지면 주문하지 않는다", async () => {

@@ -14,6 +14,7 @@ export const env = {
   adminPassword: process.env.ADMIN_SEED_PASSWORD ?? "admin-local-1234",
   sellerClientSecret: process.env.SELLER_CLIENT_SECRET ?? "seller-local-secret",
   shopClientSecret: process.env.SHOP_CLIENT_SECRET ?? "shop-local-secret",
+  adminClientSecret: process.env.ADMIN_CLIENT_SECRET ?? "admin-local-secret",
 };
 
 /** 실행마다 겹치지 않는 값. 같은 스택에서 다시 돌려도 이메일과 상호가 겹치지 않는다. */
