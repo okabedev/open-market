@@ -4,16 +4,25 @@ export const SORTS = {
   LATEST: "최신순",
   PRICE_ASC: "낮은 가격순",
   PRICE_DESC: "높은 가격순",
+  RATING: "별점순",
+  SALES: "판매량순",
 } as const;
+
+/** 별점 필터(평균 별점 하한). 리뷰가 없는 상품은 빠진다. */
+export const MIN_RATINGS = [4, 3, 2, 1] as const;
 
 export type Sort = keyof typeof SORTS;
 
-/** 상품 검색 조건. URL 검색 조건(`/products?q=&categoryId=&minPrice=&maxPrice=&sort=&cursor=`)과 같다. */
+/**
+ * 상품 검색 조건. URL 검색 조건(`/products?q=&categoryId=&minPrice=&maxPrice=&minRating=&sort=&cursor=`)과 같다.
+ */
 export type SearchQuery = {
   q?: string;
   categoryId?: string;
   minPrice?: number;
   maxPrice?: number;
+  /** 평균 별점 하한(1~5) */
+  minRating?: number;
   sort: Sort;
   cursor?: string;
 };
@@ -33,6 +42,11 @@ function price(value: string | string[] | undefined): number | undefined {
   return Number(text);
 }
 
+function rating(value: string | string[] | undefined): number | undefined {
+  const text = single(value)?.trim();
+  return text && /^[1-5]$/.test(text) ? Number(text) : undefined;
+}
+
 /** URL 검색 조건을 읽는다. 빈 값과 틀린 값은 버린다(검색 API가 400을 주지 않게). */
 export function searchQuery(params: Record<string, string | string[] | undefined>): SearchQuery {
   const q = single(params.q)?.trim().slice(0, MAX_KEYWORD);
@@ -41,11 +55,13 @@ export function searchQuery(params: Record<string, string | string[] | undefined
   const cursor = single(params.cursor);
   const minPrice = price(params.minPrice);
   const maxPrice = price(params.maxPrice);
+  const minRating = rating(params.minRating);
   return {
     ...(q ? { q } : {}),
     ...(categoryId && UUID.test(categoryId) ? { categoryId } : {}),
     ...(minPrice !== undefined ? { minPrice } : {}),
     ...(maxPrice !== undefined ? { maxPrice } : {}),
+    ...(minRating !== undefined ? { minRating } : {}),
     sort: sort && sort in SORTS ? (sort as Sort) : "RELEVANCE",
     ...(cursor ? { cursor } : {}),
   };
@@ -57,7 +73,15 @@ export function searchQuery(params: Record<string, string | string[] | undefined
 export function searchHref(current: SearchQuery, changes: Partial<SearchQuery>): string {
   const next: Partial<SearchQuery> = { ...current, cursor: undefined, ...changes };
   const params = new URLSearchParams();
-  for (const name of ["q", "categoryId", "minPrice", "maxPrice", "sort", "cursor"] as const) {
+  for (const name of [
+    "q",
+    "categoryId",
+    "minPrice",
+    "maxPrice",
+    "minRating",
+    "sort",
+    "cursor",
+  ] as const) {
     const value = next[name];
     if (value === undefined || value === "" || (name === "sort" && value === "RELEVANCE")) {
       continue;

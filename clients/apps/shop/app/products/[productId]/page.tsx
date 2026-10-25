@@ -15,6 +15,7 @@ import { notFound } from "next/navigation";
 import { randomUUID } from "node:crypto";
 import { addToCart } from "@/app/cart/actions";
 import { buyNow } from "@/app/checkout/actions";
+import { ProductReviews } from "@/components/product-reviews";
 import { QuantityForm } from "@/components/quantity-form";
 import { bff } from "@/lib/bff";
 import { currentSession } from "@/lib/session";
@@ -22,14 +23,14 @@ import { currentSession } from "@/lib/session";
 /**
  * 구매자 상품 상세. 판매 중·판매 중지 상품만 보이고(제재·등록 중은 404), 남은 수량 대신 옵션별 품절 여부를 보여 준다. 로그인하면 판매
  * 중인 상품의 품절 아닌 옵션을 장바구니에 담거나 바로 구매한다(재고는 주문할 때 예약으로 정한다). 담으면 `?added=<SKU ID>`로 돌아와
- * 안내하고, 바로 구매는 그 SKU 하나로 주문서를 연다.
+ * 안내하고, 바로 구매는 그 SKU 하나로 주문서를 연다. 아래에 별점 요약과 리뷰가 있다(`?reviewCursor=`로 다음 리뷰).
  */
 export default async function ProductPage({
   params,
   searchParams,
 }: PageProps<"/products/[productId]">) {
   const { productId } = await params;
-  const { added } = await searchParams;
+  const { added, reviewCursor } = await searchParams;
   const session = await currentSession();
   const catalog = await bff.publicClient("catalog");
   const { data: product, response } = await catalog.GET("/v1/products/{productId}", {
@@ -171,6 +172,10 @@ export default async function ProductPage({
         <h2 className="text-lg font-semibold">상품 설명</h2>
         <p className="whitespace-pre-wrap text-sm leading-relaxed">{product.description}</p>
       </section>
+      <ProductReviews
+        productId={productId}
+        {...(typeof reviewCursor === "string" ? { cursor: reviewCursor } : {})}
+      />
     </article>
   );
 }

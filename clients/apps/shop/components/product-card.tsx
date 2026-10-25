@@ -1,5 +1,6 @@
 import { Badge, formatPrice, ProductImage } from "@openmarket/ui";
 import Link from "next/link";
+import { ratingLabel } from "@/lib/reviews";
 
 type ProductCardProps = {
   productId?: string;
@@ -8,9 +9,11 @@ type ProductCardProps = {
   minPrice?: number;
   inStock?: boolean;
   thumbnailFileId?: string;
+  ratingAverage?: number;
+  ratingCount?: number;
 };
 
-/** 검색 결과 상품 하나. 품절이면 표시만 하고 링크는 둔다(상세에서 옵션별로 볼 수 있다). */
+/** 검색 결과 상품 하나. 품절이면 표시만 하고 링크는 둔다(상세에서 옵션별로 볼 수 있다). 리뷰가 있으면 평균 별점과 리뷰 수를 보인다. */
 export function ProductCard({
   productId,
   name,
@@ -18,6 +21,8 @@ export function ProductCard({
   minPrice,
   inStock,
   thumbnailFileId,
+  ratingAverage,
+  ratingCount,
 }: ProductCardProps) {
   return (
     <Link
@@ -37,6 +42,14 @@ export function ProductCard({
           <span className="font-semibold">{formatPrice(minPrice)}</span>
           {inStock === false ? <Badge variant="secondary">품절</Badge> : null}
         </div>
+        {ratingCount ? (
+          <span className="text-xs text-muted-foreground">
+            <span aria-hidden className="text-primary">
+              ★{" "}
+            </span>
+            {ratingLabel(ratingAverage, ratingCount)}
+          </span>
+        ) : null}
       </div>
     </Link>
   );

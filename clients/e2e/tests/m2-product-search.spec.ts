@@ -39,7 +39,8 @@ test("M2: 판매자가 등록한 상품이 몇 초 안에 구매자 검색에 �
     });
 
     await buyer.goto(env.shop);
-    await buyer.getByRole("searchbox", { name: "검색어" }).fill(`이어폰 ${tag}`);
+    // 자동완성 목록(datalist)이 붙은 검색창은 combobox다(M5).
+    await buyer.getByRole("combobox", { name: "검색어" }).fill(`이어폰 ${tag}`);
     await buyer.getByRole("button", { name: "검색" }).click();
     await buyer.getByRole("link", { name: new RegExp(name) }).click();
     await expect(buyer.getByRole("heading", { name })).toBeVisible();

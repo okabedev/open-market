@@ -37,6 +37,17 @@ describe("searchQuery", () => {
     ).toEqual({ sort: "RELEVANCE" });
   });
 
+  it("별점순·판매량순 정렬과 별점 하한(1~5 정수)을 읽는다. 틀린 별점은 버린다", () => {
+    expect(searchQuery({ sort: "RATING", minRating: "4" })).toEqual({
+      sort: "RATING",
+      minRating: 4,
+    });
+    expect(searchQuery({ sort: "SALES" })).toEqual({ sort: "SALES" });
+    for (const minRating of ["0", "6", "4.5", "x", ""]) {
+      expect(searchQuery({ minRating })).toEqual({ sort: "RELEVANCE" });
+    }
+  });
+
   it("검색어는 100자까지만 쓴다", () => {
     expect(searchQuery({ q: "가".repeat(150) }).q).toHaveLength(100);
   });
@@ -54,6 +65,12 @@ describe("searchHref", () => {
   it("다음 쪽은 같은 조건에 커서만 바꾼다", () => {
     expect(searchHref(current, { cursor: "c2" })).toBe(
       `/products?q=%ED%8B%B0%EC%85%94%EC%B8%A0&categoryId=${CATEGORY}&sort=LATEST&cursor=c2`,
+    );
+  });
+
+  it("별점 하한은 가격 뒤, 정렬 앞에 적는다", () => {
+    expect(searchHref(current, { minRating: 4, sort: "RATING" })).toBe(
+      `/products?q=%ED%8B%B0%EC%85%94%EC%B8%A0&categoryId=${CATEGORY}&minRating=4&sort=RATING`,
     );
   });
 
