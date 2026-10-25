@@ -5,7 +5,72 @@
     "version" : "v0"
   },
   "paths" : {
+    "/v1/seller/reviews/{reviewId}/reply" : {
+      "put" : {
+        "tags" : [ "seller-review-command-controller" ],
+        "operationId" : "reply",
+        "parameters" : [ {
+          "name" : "reviewId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/WriteReviewReplyRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        }
+      }
+    },
     "/v1/reviews" : {
+      "get" : {
+        "tags" : [ "review-query-controller" ],
+        "operationId" : "myReviews",
+        "parameters" : [ {
+          "name" : "cursor",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "size",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 20,
+            "maximum" : 50,
+            "minimum" : 1
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CursorPageViewReviewView"
+                }
+              }
+            }
+          }
+        }
+      },
       "post" : {
         "tags" : [ "review-command-controller" ],
         "operationId" : "write",
@@ -26,6 +91,185 @@
               "application/json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/WriteReviewResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/reviews/{reviewId}/show" : {
+      "post" : {
+        "tags" : [ "admin-review-command-controller" ],
+        "operationId" : "show",
+        "parameters" : [ {
+          "name" : "reviewId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ChangeReviewVisibilityRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        }
+      }
+    },
+    "/v1/admin/reviews/{reviewId}/hide" : {
+      "post" : {
+        "tags" : [ "admin-review-command-controller" ],
+        "operationId" : "hide",
+        "parameters" : [ {
+          "name" : "reviewId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ChangeReviewVisibilityRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        }
+      }
+    },
+    "/v1/seller/reviews" : {
+      "get" : {
+        "tags" : [ "seller-review-query-controller" ],
+        "operationId" : "list",
+        "parameters" : [ {
+          "name" : "cursor",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "size",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 20,
+            "maximum" : 50,
+            "minimum" : 1
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CursorPageViewReviewView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/reviews/writable" : {
+      "get" : {
+        "tags" : [ "review-query-controller" ],
+        "operationId" : "writable",
+        "parameters" : [ {
+          "name" : "cursor",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "size",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 20,
+            "maximum" : 50,
+            "minimum" : 1
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CursorPageViewWritableReviewView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/products/{productId}/reviews" : {
+      "get" : {
+        "tags" : [ "review-query-controller" ],
+        "operationId" : "productReviews",
+        "parameters" : [ {
+          "name" : "productId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "cursor",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "size",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 20,
+            "maximum" : 50,
+            "minimum" : 1
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CursorPageViewProductReviewView"
                 }
               }
             }
@@ -59,10 +303,83 @@
           }
         }
       }
+    },
+    "/v1/admin/reviews" : {
+      "get" : {
+        "tags" : [ "admin-review-query-controller" ],
+        "operationId" : "list_1",
+        "parameters" : [ {
+          "name" : "status",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "enum" : [ "VISIBLE", "HIDDEN" ]
+          }
+        }, {
+          "name" : "productId",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "sellerId",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "page",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 0,
+            "minimum" : 0
+          }
+        }, {
+          "name" : "size",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 20,
+            "maximum" : 100,
+            "minimum" : 1
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PageViewReviewView"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components" : {
     "schemas" : {
+      "WriteReviewReplyRequest" : {
+        "type" : "object",
+        "properties" : {
+          "content" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "content" ]
+      },
       "WriteReviewRequest" : {
         "type" : "object",
         "properties" : {
@@ -96,6 +413,210 @@
           }
         }
       },
+      "ChangeReviewVisibilityRequest" : {
+        "type" : "object",
+        "properties" : {
+          "reason" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "reason" ]
+      },
+      "CursorPageViewReviewView" : {
+        "type" : "object",
+        "properties" : {
+          "items" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ReviewView"
+            }
+          },
+          "totalCount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "nextCursor" : {
+            "type" : "string"
+          }
+        }
+      },
+      "ReviewReplyView" : {
+        "type" : "object",
+        "properties" : {
+          "content" : {
+            "type" : "string"
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "updatedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "ReviewView" : {
+        "type" : "object",
+        "properties" : {
+          "reviewId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "orderLineId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "productId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "productName" : {
+            "type" : "string"
+          },
+          "optionValues" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "sellerId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "buyerId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "rating" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "content" : {
+            "type" : "string"
+          },
+          "fileIds" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string",
+              "format" : "uuid"
+            }
+          },
+          "status" : {
+            "type" : "string",
+            "enum" : [ "VISIBLE", "HIDDEN" ]
+          },
+          "reply" : {
+            "$ref" : "#/components/schemas/ReviewReplyView"
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "CursorPageViewWritableReviewView" : {
+        "type" : "object",
+        "properties" : {
+          "items" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/WritableReviewView"
+            }
+          },
+          "totalCount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "nextCursor" : {
+            "type" : "string"
+          }
+        }
+      },
+      "WritableReviewView" : {
+        "type" : "object",
+        "properties" : {
+          "orderLineId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "orderId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "productId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "productName" : {
+            "type" : "string"
+          },
+          "optionValues" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "confirmedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "CursorPageViewProductReviewView" : {
+        "type" : "object",
+        "properties" : {
+          "items" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ProductReviewView"
+            }
+          },
+          "totalCount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "nextCursor" : {
+            "type" : "string"
+          }
+        }
+      },
+      "ProductReviewView" : {
+        "type" : "object",
+        "properties" : {
+          "reviewId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "optionValues" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "rating" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "content" : {
+            "type" : "string"
+          },
+          "fileIds" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string",
+              "format" : "uuid"
+            }
+          },
+          "reply" : {
+            "$ref" : "#/components/schemas/ReviewReplyView"
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
       "RatingSummaryView" : {
         "type" : "object",
         "properties" : {
@@ -109,6 +630,29 @@
           },
           "ratingAverage" : {
             "type" : "number"
+          }
+        }
+      },
+      "PageViewReviewView" : {
+        "type" : "object",
+        "properties" : {
+          "items" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ReviewView"
+            }
+          },
+          "totalCount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "page" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "size" : {
+            "type" : "integer",
+            "format" : "int32"
           }
         }
       }

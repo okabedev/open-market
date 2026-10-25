@@ -50,3 +50,5 @@ openmarket:
     public-paths:
       - method: GET
         pattern: /v1/products/*/rating-summary
+      - method: GET
+        pattern: /v1/products/*/reviews
