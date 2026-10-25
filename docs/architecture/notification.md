@@ -67,9 +67,12 @@ API(조회 방식)
 | `CLAIM_COMPLETED` | `BUYER` | `ClaimCompleted` | `ORDER` | 보냄 |
 | `SELLER_REJECTED` | `BUYER` | `SellerRejected` | `SELLER_APPLICATION` | 보냄 |
 | `SELLER_ORDER_RECEIVED` | `SELLER` | `OrderPaid`(하위 주문마다) | `SELLER_ORDER` | |
-| `CLAIM_REQUESTED` | `SELLER` | `ClaimRequested`(취소 포함) | `CLAIM` | |
+| `CLAIM_REQUESTED` | `SELLER` | `ClaimRequested`(취소 포함) | `SELLER_ORDER` | |
 | `SELLER_APPROVED` | `SELLER` | `SellerApproved` | 없음 | 보냄 |
 | `PRODUCT_BANNED` | `SELLER` | `ProductBanned` | `PRODUCT` | 보냄 |
+| `REVIEW_CREATED` | `SELLER` | `ReviewCreated` | `REVIEW` | |
+| `SETTLEMENT_CONFIRMED` | `SELLER` | `SettlementConfirmed` | `SETTLEMENT` | 보냄(NTF-1 정산 확정) |
+| `SETTLEMENT_PAID_OUT` | `SELLER` | `SettlementPaidOut` | `SETTLEMENT` | 보냄 |
 | `CLAIM_MEDIATION_REQUESTED` | `ADMIN` | `ClaimMediationRequested` | `CLAIM` | |
 | `REFUND_FAILED` | `ADMIN` | `RefundFailed` | `REFUND` | |
 
@@ -79,15 +82,14 @@ API(조회 방식)
 - 중복 방지는 이메일과 같다. 이벤트 하나가 여러 알림을 만들 수 있어(`OrderPaid`) 유니크 제약은 `(원인 이벤트, 채널, 받는 쪽, 받는 사람)`이다.
 - `PaymentFailed`, `PaymentCancelled`는 아직 알리지 않는다. 구매자가 결제 화면에서 바로 결과를 보고, 이벤트에 구매자 ID가 없다.
 
-M5에서 더할 종류(2026-10-22 설계. notification PR에서 위 표에 합친다)
-| 종류 | 받는 쪽 | 원인 이벤트 | 이동 대상 | 이메일 |
-|---|---|---|---|---|
-| `REVIEW_CREATED` | `SELLER` | `ReviewCreated` | `REVIEW` | |
-| `SETTLEMENT_CONFIRMED` | `SELLER` | `SettlementConfirmed` | `SETTLEMENT` | 보냄(NTF-1 정산 확정) |
-| `SETTLEMENT_PAID_OUT` | `SELLER` | `SettlementPaidOut` | `SETTLEMENT` | 보냄 |
-- 새 리뷰는 판매자 클레임 신청처럼 자주 오고 판매자 화면에서 답하는 것이라 인앱만이다. 인앱 문구에 리뷰 본문은 넣지 않는다(상품명과 별점만).
-- `CLAIM_REQUESTED`의 이동 대상을 `CLAIM`(클레임 진행 중 탭)에서 `SELLER_ORDER`(하위 주문 상세)로 바꾼다. `ClaimRequested`에 이미 sellerOrderId가 있다(M4 회고에서 넘어옴).
-- 알림을 더하면 notification 메모리를 다시 잰다(M4 peak 564MB/640MB, [risks.md](risks.md) R6).
+M5에서 더한 것(2026-10-22 설계, 2026-10-25 구현)
+- 리스너는 `notification.review-created`(review.review), `notification.settlement-confirmed`, `notification.settlement-paid-out`(settlement.settlement)이다.
+- 새 리뷰는 판매자 클레임 신청처럼 자주 오고 판매자 화면에서 답하는 것이라 인앱만이다. 문구에 리뷰 본문은 넣지 않는다(상품명과 별점만).
+- 정산 확정 문구는 기간을 한국 날짜로 넣는다. 기간 끝(`periodEnd`)은 기간에 들지 않으므로 그 직전 날을 끝 날로 쓴다. 예: `10월 26일~11월 1일 판매분 정산이 확정됐습니다. 정산 금액 43,417원`.
+- `CLAIM_REQUESTED`는 하위 주문 상세(`SELLER_ORDER`, `ClaimRequested`의 sellerOrderId)로 간다. 클레임은 하위 주문 상세에서 처리한다. 그 전에 만든 알림은 `CLAIM`(클레임 ID)으로 남아 있어 seller는 계속 클레임 진행 중 목록으로 보낸다(M4 회고에서 넘어옴).
+- 금액(2026-10-25 결정): 구매자 주문 완료는 주문 금액(= 결제 금액, 할인 뒤)이고, 판매자 새 주문은 하위 주문의 상품 금액(할인 전)이다. 판매자 주문 화면도 상품 금액을 보이고 할인 필드가 없어 같은 값을 쓴다.
+- `REVIEW`, `SETTLEMENT` 화면은 seller 화면 PR에서 연결한다. 그때까지 seller는 읽음만 하고, 이메일 링크는 앱 첫 화면이다.
+- notification 메모리(M4 peak 564MB/640MB, 중간 측정 470MB)는 리스너 두 개만 늘어 대기 상태로는 차이를 보기 어렵다. M5 E2E PR에서 시나리오를 돌린 뒤 서비스 15개와 함께 다시 잰다([risks.md](risks.md) R6).
 
 화면(세 앱 같음, `packages/ui`의 `NotificationBell`, `NotificationList`). 조회 방식과 관리자 역할 대상 알림의 근거는 [ADR 0019](../adr/0019-in-app-notification-polling.md)
 - 머리글 "알림" 링크에 안 읽은 수를 보인다(10개부터 "9+"). 페이지를 새로 열면 서버(레이아웃)가 읽는다. 클라이언트 이동은 레이아웃을 다시 그리지 않으므로 경로가 바뀔 때, 그리고 머무는 동안 60초마다 앱의 BFF `GET /api/notifications/unread-count`로 다시 읽는다. 알림을 읽는 Server Action은 레이아웃을 재검증한다. notification에 닿지 못하면 0으로 보여 화면이 깨지지 않는다.
@@ -99,7 +101,8 @@ M5에서 더할 종류(2026-10-22 설계. notification PR에서 위 표에 합�
   | shop | `ORDER` | 주문 상세 |
   | shop | `SELLER_APPLICATION` | 입점 신청 |
   | seller | `SELLER_ORDER` | 하위 주문 상세 |
-  | seller | `CLAIM` | 주문 목록의 클레임 진행 중 탭(알림에는 클레임 ID만 있다) |
+  | seller | `CLAIM` | 주문 목록의 클레임 진행 중 탭(M5 전에 만든 클레임 신청 알림. 클레임 ID만 있다) |
+  | seller | `REVIEW`, `SETTLEMENT` | 아직 없음(seller 화면 PR) |
   | seller | `PRODUCT` | 상품 상세 |
   | admin | `CLAIM` | 클레임 중재 |
   | admin | `REFUND` | 결제 실패 |

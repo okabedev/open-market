@@ -6,15 +6,15 @@ type Target = Pick<
 >;
 
 /**
- * seller(판매자) 알림이 열 화면(docs/architecture/notification.md "인앱 알림"). 이 앱에 화면이 없는 대상은 null이고 읽음 표시만
- * 한다.
+ * seller(판매자) 알림이 열 화면(docs/architecture/notification.md "인앱 알림"). 이 앱에 화면이 없는 대상(리뷰·정산은 seller
+ * 화면 PR에서 연결)은 null이고 읽음 표시만 한다.
  */
 export function notificationHref({ targetType, targetId: id }: Target): string | null {
   switch (targetType) {
     case "SELLER_ORDER":
       return id ? `/orders/${id}` : null;
     case "CLAIM":
-      // 알림은 클레임 ID만 갖는다. 클레임은 하위 주문 상세에서 처리하므로 클레임 진행 중 목록으로 간다.
+      // M5부터 클레임 신청 알림은 SELLER_ORDER로 온다. 그 전에 만든 알림은 클레임 ID만 있어 클레임 진행 중 목록으로 간다.
       return "/orders?status=claims";
     case "PRODUCT":
       return id ? `/products/${id}` : null;

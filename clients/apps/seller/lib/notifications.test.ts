@@ -9,6 +9,8 @@ describe("notificationHref", () => {
     expect(notificationHref({ targetType: "CLAIM", targetId: ID })).toBe("/orders?status=claims");
     expect(notificationHref({ targetType: "PRODUCT", targetId: ID })).toBe(`/products/${ID}`);
     expect(notificationHref({ targetType: "ORDER", targetId: ID })).toBeNull();
+    expect(notificationHref({ targetType: "REVIEW", targetId: ID })).toBeNull();
+    expect(notificationHref({ targetType: "SETTLEMENT", targetId: ID })).toBeNull();
   });
 });
 

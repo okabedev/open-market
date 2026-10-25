@@ -64,6 +64,28 @@ class InAppMessagesTest {
     }
 
     @Test
+    @DisplayName("새 리뷰는 상품명과 별점만 넣는다. 정산은 기간(한국 날짜, 끝 날 포함)과 금액을 넣는다")
+    void reviewAndSettlementMessages() {
+        assertThat(
+                        InAppMessages.compose(
+                                NotificationKind.REVIEW_CREATED,
+                                Map.of("productName", "반팔 티셔츠", "rating", "5")))
+                .isEqualTo("반팔 티셔츠에 새 리뷰가 등록됐습니다. 별점 5점");
+        assertThat(
+                        InAppMessages.compose(
+                                NotificationKind.SETTLEMENT_CONFIRMED,
+                                Map.of(
+                                        "periodStart", "2026-10-25T15:00:00Z",
+                                        "periodEnd", "2026-11-01T15:00:00Z",
+                                        "amount", "43417")))
+                .isEqualTo("10월 26일~11월 1일 판매분 정산이 확정됐습니다. 정산 금액 43,417원");
+        assertThat(
+                        InAppMessages.compose(
+                                NotificationKind.SETTLEMENT_PAID_OUT, Map.of("amount", "43417")))
+                .isEqualTo("정산 금액 43,417원이 지급됐습니다.");
+    }
+
+    @Test
     @DisplayName("관리자가 쓴 사유는 200자까지만 넣는다")
     void truncatesReason() {
         String message =
@@ -90,6 +112,9 @@ class InAppMessagesTest {
                                 "reason", "가".repeat(500),
                                 "storeName", "가".repeat(100)));
         params.put("code", "NOT_CANCELABLE_AMOUNT");
+        params.put("rating", "5");
+        params.put("periodStart", "2026-10-25T15:00:00Z");
+        params.put("periodEnd", "2026-11-01T15:00:00Z");
         for (NotificationKind kind :
                 EnumSet.complementOf(EnumSet.of(NotificationKind.EMAIL_VERIFICATION))) {
             assertThat(InAppMessages.compose(kind, params))

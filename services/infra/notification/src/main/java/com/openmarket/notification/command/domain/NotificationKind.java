@@ -29,6 +29,12 @@ public enum NotificationKind {
     SELLER_APPROVED(true),
     /** 판매자: 상품 제재. {@code ProductBanned} */
     PRODUCT_BANNED(true),
+    /** 판매자: 새 리뷰. {@code ReviewCreated}. 판매자 화면에서 답하므로 인앱만이다 */
+    REVIEW_CREATED(false),
+    /** 판매자: 정산 확정(NTF-1). {@code SettlementConfirmed} */
+    SETTLEMENT_CONFIRMED(true),
+    /** 판매자: 정산 지급. {@code SettlementPaidOut} */
+    SETTLEMENT_PAID_OUT(true),
     /** 관리자: 중재 요청. {@code ClaimMediationRequested} */
     CLAIM_MEDIATION_REQUESTED(false),
     /** 관리자: 환불 실패. {@code RefundFailed} */
