@@ -202,6 +202,31 @@ services:
       timeout: 3s
       retries: 30
 
+  settlement:
+    <<: *spring-service
+    build:
+      context: ../../services
+      args:
+        MODULE: core/settlement
+    image: openmarket/settlement:local
+    depends_on:
+      config:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    environment:
+      <<: *spring-env
+      SETTLEMENT_DB_PASSWORD: ${SETTLEMENT_DB_PASSWORD:?}
+      # 정산 기간 길이. E2E가 줄일 때만 넘긴다(config-repo settlement.yml 기본 7d).
+      SETTLEMENT_PERIOD_LENGTH:
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:8108/actuator/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
   search:
     <<: *spring-service
     build:

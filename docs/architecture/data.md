@@ -12,6 +12,13 @@
   - `debezium` 스키마의 `heartbeat` 테이블은 커넥터가 10초마다 고친다. outbox에 쓰기가 없어도 복제 슬롯이 앞으로 가게 한다([messaging.md](messaging.md#발행-transactional-outbox--debezium)).
 - 복제 슬롯이 WAL을 붙잡아 디스크가 차지 않도록 `max_slot_wal_keep_size=1GB`를 둔다. 이 값을 넘으면 슬롯이 무효가 되어 커넥터를 다시 스냅샷해야 한다([risks.md](risks.md) R5).
 
+### 연결 수
+- 인스턴스 하나를 모든 서비스가 나눠 쓰므로 연결 수를 서비스 합계로 관리한다([ADR 0002](../adr/0002-single-postgres-schema-per-service.md)).
+- Postgres는 기본값 `max_connections` 100(superuser 예약 3)이다. DB를 쓰는 서비스 12개(member, catalog, order, payment, fulfillment, promotion, review, settlement, search, auth, file, notification)가 Hikari 기본값(풀 10)이면 합계 120으로 넘친다. settlement를 더한 날(2026-10-25) `apps` profile에서 마지막에 뜬 search가 연결을 받지 못해 뜨지 않았다.
+- 그래서 공통 `infra/config-repo/application.yml`에서 서비스마다 `spring.datasource.hikari.maximum-pool-size` 5로 둔다. 합계 60이고 Debezium 복제 연결, 운영 psql, 서비스를 하나 더 띄우는 경우의 여유가 남는다.
+- `max_connections`를 올리지 않는 것은 연결마다 Postgres 메모리가 늘어 로컬 메모리 예산([risks.md](risks.md) R6)에 불리하기 때문이다. 부하 테스트(M6)에서 풀을 기다리는 서비스가 보이면 그 서비스의 `<service>.yml`에서만 늘리고 이 합계를 고친다.
+- 테스트(Testcontainers)는 서비스마다 컨테이너가 따로라 이 예산과 상관없다.
+
 서비스 설정에서 아래 값을 지정한다. 공통 라이브러리와 서비스의 SQL은 스키마 이름을 쓰지 않는다.
 - `spring.datasource.hikari.schema`: 연결의 `search_path`. 공통 라이브러리의 JDBC 쿼리(outbox, 멱등 기록, ShedLock)와 서비스의 네이티브 쿼리는 스키마 이름 없이 테이블을 부르므로 꼭 필요하다
 - `spring.jpa.properties.hibernate.default_schema`: Hibernate는 이 값을 테이블 이름 앞에 그대로 붙인다. `order`는 SQL 예약어라서 `order.yml`에서 따옴표로 감싼 `'"order"'`로 덮는다. 감싸지 않으면 모든 JPA 쿼리가 문법 오류다

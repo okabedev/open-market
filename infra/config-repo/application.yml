@@ -12,6 +12,8 @@ spring:
     hikari:
       # 공통 라이브러리의 JDBC 쿼리는 스키마 이름을 쓰지 않으므로 연결의 search_path를 서비스 스키마로 둔다.
       schema: ${spring.application.name}
+      # 연결 수 예산(docs/architecture/data.md "연결 수"). Postgres max_connections 100을 서비스 12개가 나눠 쓴다.
+      maximum-pool-size: 5
   flyway:
     schemas: ${spring.application.name}
     default-schema: ${spring.application.name}
