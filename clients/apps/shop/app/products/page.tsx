@@ -1,15 +1,16 @@
-import { Alert, Button, cn, Input, Label } from "@openmarket/ui";
+import { Alert, Button, cn, Input } from "@openmarket/ui";
 import Link from "next/link";
 import { ProductCard } from "@/components/product-card";
+import { SearchBox } from "@/components/search-box";
 import { bff } from "@/lib/bff";
 import { loadCategories } from "@/lib/catalog";
-import { searchHref, searchQuery, SORTS, type Sort } from "@/lib/search";
+import { MIN_RATINGS, searchHref, searchQuery, SORTS, type Sort } from "@/lib/search";
 
 const PAGE_SIZE = 24;
 
 /**
- * 상품 검색(SRC-1, SRC-3). 판매 중인 상품만 나오고 품절 상품은 뒤로 간다. 조건은 모두 URL 검색 조건이라 JS 없이 동작한다. 다음 쪽은 커서로
- * 넘긴다.
+ * 상품 검색(SRC-1~3). 판매 중인 상품만 나오고 품절 상품은 뒤로 간다. 조건(별점 하한, 별점순·판매량순 포함)은 모두 URL 검색 조건이라 JS
+ * 없이 동작한다. 검색창은 입력하는 동안 자동완성을 보여 준다. 다음 쪽은 커서로 넘긴다.
  */
 export default async function ProductsPage({ searchParams }: PageProps<"/products">) {
   const query = searchQuery(await searchParams);
@@ -24,6 +25,7 @@ export default async function ProductsPage({ searchParams }: PageProps<"/product
             ...(query.categoryId ? { categoryId: query.categoryId } : {}),
             ...(query.minPrice !== undefined ? { minPrice: query.minPrice } : {}),
             ...(query.maxPrice !== undefined ? { maxPrice: query.maxPrice } : {}),
+            ...(query.minRating !== undefined ? { minRating: query.minRating } : {}),
             sort: query.sort,
             ...(query.cursor ? { cursor: query.cursor } : {}),
             size: PAGE_SIZE,
@@ -44,19 +46,12 @@ export default async function ProductsPage({ searchParams }: PageProps<"/product
   return (
     <div className="grid gap-6">
       <form action="/products" className="flex gap-2" role="search">
-        <Label htmlFor="q" className="sr-only">
-          검색어
-        </Label>
-        <Input
-          id="q"
-          name="q"
-          type="search"
-          maxLength={100}
-          defaultValue={query.q}
-          placeholder="상품 이름, 상호로 찾기"
-        />
+        <SearchBox defaultValue={query.q} />
         {query.categoryId ? (
           <input type="hidden" name="categoryId" value={query.categoryId} />
+        ) : null}
+        {query.minRating !== undefined ? (
+          <input type="hidden" name="minRating" value={query.minRating} />
         ) : null}
         {query.sort !== "RELEVANCE" ? <input type="hidden" name="sort" value={query.sort} /> : null}
         <Button type="submit">검색</Button>
@@ -101,6 +96,9 @@ export default async function ProductsPage({ searchParams }: PageProps<"/product
             {query.categoryId ? (
               <input type="hidden" name="categoryId" value={query.categoryId} />
             ) : null}
+            {query.minRating !== undefined ? (
+              <input type="hidden" name="minRating" value={query.minRating} />
+            ) : null}
             {query.sort !== "RELEVANCE" ? (
               <input type="hidden" name="sort" value={query.sort} />
             ) : null}
@@ -129,6 +127,24 @@ export default async function ProductsPage({ searchParams }: PageProps<"/product
               적용
             </Button>
           </form>
+          <nav aria-label="별점" className="grid gap-1">
+            <h2 className="mb-1 font-semibold">별점</h2>
+            <FilterLink
+              href={searchHref(query, { minRating: undefined })}
+              active={query.minRating === undefined}
+            >
+              전체
+            </FilterLink>
+            {MIN_RATINGS.map((minRating) => (
+              <FilterLink
+                key={minRating}
+                href={searchHref(query, { minRating })}
+                active={query.minRating === minRating}
+              >
+                {`★ ${minRating}점 이상`}
+              </FilterLink>
+            ))}
+          </nav>
         </aside>
 
         <section className="grid content-start gap-4" aria-label="검색 결과">

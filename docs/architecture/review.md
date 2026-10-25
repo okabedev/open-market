@@ -45,7 +45,7 @@ M5 시작(2026-10-22)에 정한 규칙이다. API와 화면은 각 PR에서 이 
 
 - 작성 본문: `orderLineId`, `rating`, `content`, `fileIds`(선택, 없으면 사진 없음). `fileIds`는 회원 업로드 `POST /api/file/v1/files`(`purpose=REVIEW_IMAGE`)로 받은 파일이다([file.md](file.md) "리뷰 사진").
 - 목록은 작성 최근 순이고 시각이 같으면 리뷰 ID 역순이다. 커서 목록은 `?cursor=&size=`(기본 20, 최대 50)이고 `{items, totalCount, nextCursor}`다. 틀린 커서는 400 `REVIEW_INVALID_CURSOR`다([conventions.md](conventions.md) "REST API").
-- 공개 상품 리뷰는 작성자를 싣지 않는다(`reviewId`, `optionValues`, `rating`, `content`, `fileIds`, `reply`, `createdAt`). 내·판매자·관리자 목록은 주문 항목, 상품, 판매자, 구매자 ID와 `status`를 더 싣는다. 리뷰 서비스는 구매자 이름을 갖지 않는다.
+- 공개 상품 리뷰는 작성자를 싣지 않는다(`reviewId`, `optionValues`, `rating`, `content`, `fileIds`, `reply`, `createdAt`). 내·판매자·관리자 목록은 주문 항목, 상품, 판매자, 구매자 ID와 `status`를 더 싣는다. 리뷰 서비스는 구매자 이름을 갖지 않는다. shop 상품 상세도 작성자를 보이지 않고 별점, 고른 옵션, 날짜, 본문, 사진, 판매자 답글만 보인다(2026-10-26 결정).
 - 사진은 `fileIds`만 준다. 화면이 `/files/{fileId}/w300`, `/files/{fileId}/w800`으로 받는다(catalog 상품 이미지와 같다). `reply`는 `{content, createdAt, updatedAt}`이고 없으면 null이다.
 - 답글은 목록 쿼리에서 함께 읽고, 사진은 그 쪽의 리뷰 ID로 한 번 더 읽는다(쪽마다 쿼리 2개 + 개수 1개).
 - 상품 리뷰 목록은 부분 인덱스 `review_product_idx`(`WHERE status = 'VISIBLE'`)를 쓴다. 상태를 바인딩 값으로 비교하면 일반 실행 계획에서 부분 인덱스를 못 쓰고 `review_created_idx`로 전체를 훑으므로(`EXPLAIN`으로 확인) SQL 상수로 비교한다.
