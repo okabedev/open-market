@@ -40,6 +40,8 @@ M5 시작(2026-10-22)에 정한 규칙이다. API와 화면은 각 PR에서 이 
 | GET | `/v1/seller/coupons?status=&page=&size=` | 자기 쿠폰 목록. 쪽 번호, 최근 생성 순 |
 | GET | `/v1/coupons?sellerId=` | 공개. 지금 내려받을 수 있는 쿠폰(`ISSUING`이고 발급 기간 안). `sellerId`가 없으면 플랫폼 쿠폰, 있으면 그 판매자 쿠폰. 발급 기간이 먼저 끝나는 순, 최대 100개(페이징 없음) |
 | GET | `/v1/coupons/{couponId}` | 공개. 쿠폰 한 건. 상태와 상관없이 보인다 |
+| GET | `/v1/issued-coupons?usable=&cursor=&size=` | 구매자 내 쿠폰. 최근 발급 순 커서 목록(아래 "내 쿠폰") |
+| POST | `/v1/coupon-discounts` | 구매자 주문서 할인 미리보기(아래 "할인 미리보기") |
 
 - 생성 본문: `name`, `discountType`(`FIXED`/`RATE`), `discountValue`, `maxDiscount`(정률만, 선택), `minOrderAmount`, `quantity`, `issueStartAt`, `issueEndAt`, `validDays`. 위 표의 규칙을 어기면 400 `PROMOTION_INVALID_INPUT`이다.
 - 없는 쿠폰, 판매자에게 다른 판매자의 쿠폰이나 플랫폼 쿠폰은 404 `PROMOTION_COUPON_NOT_FOUND`다.
@@ -55,6 +57,20 @@ M5 시작(2026-10-22)에 정한 규칙이다. API와 화면은 각 PR에서 이 
 
 - 만료는 상태가 아니다. 만료 시각이 지난 `AVAILABLE`은 쓸 수 없고 목록에 "만료"로 보인다. 결제 전 취소로 복원했을 때 만료 시각이 지났으면 그대로 만료다(PRM-3 "유효기간이 남은 쿠폰은 복원").
 - 쿠폰 정책과 회원의 쌍은 하나다(유니크 `(coupon_id, member_id)`). 복원해도 새 쿠폰을 만들지 않는다.
+
+### 내 쿠폰
+`GET /v1/issued-coupons?usable=&cursor=&size=`(shop 내 쿠폰, 주문서 쿠폰 고르기)
+- 로그인한 회원의 발급 쿠폰을 최근 발급 순(발급 시각, ID)으로 준다. 커서 목록이고(`size` 1~100, 기본 20) 틀린 커서는 400 `PROMOTION_INVALID_CURSOR`다. 인덱스 `issued_coupon_owner_idx`(member_id, issued_at)를 쓴다.
+- 항목: `{issuedCouponId, couponId, issuer, sellerId, name, discountType, discountValue, maxDiscount, minOrderAmount, state, issuedAt, expiresAt}`. 정책은 쿠폰 행과 이어 읽는다(N+1 없음).
+- `state`는 화면 상태다: `USABLE`(`AVAILABLE`이고 만료 시각 전), `RESERVED`, `USED`, `EXPIRED`(`AVAILABLE`이지만 만료 시각이 지남). 만료는 도메인 상태가 아니라 조회할 때 정한다.
+- `usable=true`면 `USABLE`만 준다. 주문서는 이것을 받아 주문의 판매자와 최소 주문 금액으로 고를 수 있는 쿠폰을 거르고, 고른 뒤 아래 미리보기로 금액을 확인한다.
+- 판매자 쿠폰에는 상호가 없다(promotion은 상호를 갖지 않는다). 화면은 장바구니·주문서의 판매자로 이름을 붙인다.
+
+### 할인 미리보기
+`POST /v1/coupon-discounts`(shop 주문서)
+- 요청: `{issuedCouponIds, sellerOrders: [{sellerId, amount}]}`. 구매자는 토큰의 `sub`다. 응답과 검증(400 `PROMOTION_INVALID_INPUT`)은 내부 API와 같고, 같은 유스케이스(`CalculateCouponDiscountUseCase`)로 계산한다(아래 "할인 계산 API(내부)").
+- 주문서는 결과의 `paymentAmount`를 주문 생성의 `expectedAmount`로 보낸다. 미리보기와 주문 사이에 쿠폰을 다른 주문에 쓰면 주문 생성이 422 `ORDER_COUPON_NOT_APPLICABLE`이다.
+- 쿠폰을 묶지 않는 조회라 `Idempotency-Key`를 받지 않는다.
 
 ### 선착순 발급
 구매자가 `POST /v1/coupons/{couponId}/issue`로 내려받는다. 새로 받으면 201, 이미 받았으면 200이고 둘 다 `{issuedCouponId}`다(다시 눌러도 같은 결과).
