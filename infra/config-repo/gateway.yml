@@ -156,9 +156,11 @@ openmarket:
         pattern: /api/catalog/v1/categories
       - method: GET
         pattern: /api/catalog/v1/products/**
-      # 구매자 상품 검색. search 쪽 public-paths(config-repo search.yml)에도 있다.
+      # 구매자 상품 검색과 자동완성. search 쪽 public-paths(config-repo search.yml)에도 있다.
       - method: GET
         pattern: /api/search/v1/products
+      - method: GET
+        pattern: /api/search/v1/suggestions
       # 내려받을 수 있는 쿠폰 목록과 쿠폰 한 건. promotion 쪽 public-paths(config-repo promotion.yml)에도 있다.
       - method: GET
         pattern: /api/promotion/v1/coupons
