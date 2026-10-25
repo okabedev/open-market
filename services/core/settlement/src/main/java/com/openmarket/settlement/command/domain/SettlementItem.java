@@ -59,7 +59,7 @@ public class SettlementItem {
     @Column(name = "settlement_amount", nullable = false)
     private long settlementAmount;
 
-    // 확정한 정산. 정산 확정 PR에서 채운다
+    // 확정한 정산. 확정되지 않았으면 null
     @Column(name = "settlement_id")
     private @Nullable UUID settlementId;
 
@@ -121,6 +121,15 @@ public class SettlementItem {
 
     public boolean isSettled() {
         return settlementId != null;
+    }
+
+    /** 정산에 넣는다. {@link Settlement#confirm}만 부른다. */
+    void settle(UUID settlementId, Instant now) {
+        if (this.settlementId != null) {
+            throw new IllegalStateException("이미 정산된 대상이다: " + id);
+        }
+        this.settlementId = settlementId;
+        this.updatedAt = now;
     }
 
     public UUID id() {

@@ -16,3 +16,7 @@ openmarket:
     period:
       anchor: 2026-01-05T00:00:00+09:00
       length: ${SETTLEMENT_PERIOD_LENGTH:7d}
+    # 정산 작업: 매주 월요일 03:00(한국 시간). 끝난 지 마감 지연이 지난 기간을 확정한다. E2E는 마감 지연을 줄이고 관리자 즉시 실행을 쓴다.
+    job:
+      cron: "0 0 3 * * MON"
+      close-delay: ${SETTLEMENT_CLOSE_DELAY:3h}
