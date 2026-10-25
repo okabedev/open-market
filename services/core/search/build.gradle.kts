@@ -11,7 +11,7 @@ dependencies {
 
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
     implementation("org.springframework.boot:spring-boot-starter-validation")
-    // 자기 테이블은 없고 공통 테이블(멱등 기록 등)만 JDBC로 쓴다.
+    // 판매량 테이블(product_sales)과 공통 테이블(멱등 기록 등)을 JDBC로 쓴다. 검색 상품은 Elasticsearch에 있다.
     implementation("org.springframework.boot:spring-boot-starter-jdbc")
     implementation("org.springframework.boot:spring-boot-starter-flyway")
     implementation("org.springframework.boot:spring-boot-starter-elasticsearch")

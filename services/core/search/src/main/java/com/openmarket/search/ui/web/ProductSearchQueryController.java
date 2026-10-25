@@ -34,9 +34,10 @@ public class ProductSearchQueryController {
             @RequestParam(required = false) @Nullable UUID categoryId,
             @RequestParam(required = false) @Min(0) @Nullable Long minPrice,
             @RequestParam(required = false) @Min(0) @Nullable Long maxPrice,
+            @RequestParam(required = false) @Min(1) @Max(5) @Nullable Integer minRating,
             @RequestParam(defaultValue = "RELEVANCE") ProductSearchSort sort,
             @RequestParam(required = false) @Nullable String cursor,
             @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
-        return search.search(q, categoryId, minPrice, maxPrice, sort, cursor, size);
+        return search.search(q, categoryId, minPrice, maxPrice, minRating, sort, cursor, size);
     }
 }

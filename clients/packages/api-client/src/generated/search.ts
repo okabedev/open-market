@@ -34,6 +34,9 @@ export interface components {
             thumbnailFileId?: string;
             /** Format: date-time */
             publishedAt?: string;
+            ratingAverage?: number;
+            /** Format: int64 */
+            ratingCount?: number;
         };
         ProductSearchResultView: {
             items?: components["schemas"]["ProductSearchItemView"][];
@@ -57,7 +60,8 @@ export interface operations {
                 categoryId?: string;
                 minPrice?: number;
                 maxPrice?: number;
-                sort?: "RELEVANCE" | "LATEST" | "PRICE_ASC" | "PRICE_DESC";
+                minRating?: number;
+                sort?: "RELEVANCE" | "LATEST" | "PRICE_ASC" | "PRICE_DESC" | "RATING" | "SALES";
                 cursor?: string;
                 size?: number;
             };

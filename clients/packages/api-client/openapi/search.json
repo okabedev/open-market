@@ -45,13 +45,23 @@
             "minimum" : 0
           }
         }, {
+          "name" : "minRating",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "maximum" : 5,
+            "minimum" : 1
+          }
+        }, {
           "name" : "sort",
           "in" : "query",
           "required" : false,
           "schema" : {
             "type" : "string",
             "default" : "RELEVANCE",
-            "enum" : [ "RELEVANCE", "LATEST", "PRICE_ASC", "PRICE_DESC" ]
+            "enum" : [ "RELEVANCE", "LATEST", "PRICE_ASC", "PRICE_DESC", "RATING", "SALES" ]
           }
         }, {
           "name" : "cursor",
@@ -116,6 +126,13 @@
           "publishedAt" : {
             "type" : "string",
             "format" : "date-time"
+          },
+          "ratingAverage" : {
+            "type" : "number"
+          },
+          "ratingCount" : {
+            "type" : "integer",
+            "format" : "int64"
           }
         }
       },

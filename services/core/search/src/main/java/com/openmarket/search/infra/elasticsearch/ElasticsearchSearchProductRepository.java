@@ -114,7 +114,17 @@ class ElasticsearchSearchProductRepository implements SearchProductRepository {
                 content,
                 source.inStock(),
                 source.availabilityRevision(),
+                new SearchProduct.Rating(
+                        source.ratingAverage(),
+                        orZero(source.ratingCount()),
+                        orZero(source.ratingRevision())),
+                new SearchProduct.Sales(
+                        orZero(source.salesCount()), orZero(source.salesRevision())),
                 version);
+    }
+
+    private static long orZero(@Nullable Long value) {
+        return value == null ? 0 : value;
     }
 
     private static SearchProductDocument toDocument(SearchProduct product) {
@@ -138,6 +148,11 @@ class ElasticsearchSearchProductRepository implements SearchProductRepository {
                 content == null ? null : content.minPrice(),
                 content == null ? null : content.publishedAt(),
                 product.inStock(),
-                product.availabilityRevision());
+                product.availabilityRevision(),
+                product.rating().average(),
+                product.rating().count(),
+                product.rating().revision(),
+                product.sales().count(),
+                product.sales().revision());
     }
 }
