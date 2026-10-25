@@ -8,8 +8,8 @@ import { text } from "@/lib/contact";
 
 /**
  * 주문을 만든다(ORD-2). 줄(SKU, 수량, 기대 가격)은 주문서가 숨은 값으로 보낸다. 배송지는 ID만 받고 member에서 읽어 넣는다. 주문서를 그릴
- * 때 만든 멱등성 키를 보내 두 번 눌러도 주문은 하나다. 만들면 결제 화면으로 간다. 거절되면(가격 변경, 재고 부족 등) 주문서를 새로 그린다.
- * 새 가격과 새 키가 나온다.
+ * 때 만든 멱등성 키를 보내 두 번 눌러도 주문은 하나다. 고른 쿠폰과 주문서가 보여 준 결제 금액(할인 뒤)도 보낸다. 만들면 결제 화면으로
+ * 간다. 거절되면(가격 변경, 재고 부족, 쿠폰을 쓸 수 없음, 금액 변경 등) 주문서를 새로 그린다. 새 가격·할인과 새 키가 나온다.
  */
 export async function placeOrder(_: FormState, form: FormData): Promise<FormState> {
   const addressId = text(form, "addressId");
@@ -33,6 +33,8 @@ export async function placeOrder(_: FormState, form: FormData): Promise<FormStat
     quantity: quantities[index] ?? 0,
     expectedPrice: prices[index] ?? 0,
   }));
+  const issuedCouponIds = form.getAll("issuedCouponId").map(String).filter(Boolean);
+  const expectedAmount = Number(text(form, "expectedAmount"));
   const order = await bff.serviceClient("order");
   const { data, error, response } = await order.POST("/v1/orders", {
     body: {
@@ -44,6 +46,9 @@ export async function placeOrder(_: FormState, form: FormData): Promise<FormStat
         baseAddress: address.baseAddress ?? "",
         ...(address.detailAddress ? { detailAddress: address.detailAddress } : {}),
       },
+      ...(issuedCouponIds.length > 0 ? { issuedCouponIds } : {}),
+      // 주문서가 보여 준 결제 금액(쿠폰 할인 뒤). 다르면 409 ORDER_AMOUNT_CHANGED로 주문서를 새로 그린다.
+      ...(Number.isSafeInteger(expectedAmount) && expectedAmount >= 0 ? { expectedAmount } : {}),
     },
     headers: { "Idempotency-Key": text(form, "idempotencyKey") },
   });

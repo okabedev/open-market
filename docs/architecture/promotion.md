@@ -72,6 +72,11 @@ M5 시작(2026-10-22)에 정한 규칙이다. API와 화면은 각 PR에서 이 
 - 주문서는 결과의 `paymentAmount`를 주문 생성의 `expectedAmount`로 보낸다. 미리보기와 주문 사이에 쿠폰을 다른 주문에 쓰면 주문 생성이 422 `ORDER_COUPON_NOT_APPLICABLE`이다.
 - 쿠폰을 묶지 않는 조회라 `Idempotency-Key`를 받지 않는다.
 
+### 화면(shop)
+- 쿠폰 받기 `/coupons`(플랫폼 쿠폰)와 상품 상세(그 판매자 쿠폰)가 `GET /v1/coupons`를 보이고 "받기"는 Server Action이 발급을 부른다. 결과는 `?notice=`(받음, 소진, 발급 중 아님, 한도 초과, 실패)로 보인다. 로그인했으면 이미 받은 쿠폰은 "받음"이다(내 쿠폰의 couponId).
+- 내 쿠폰 `/my/coupons`는 `state`를 "사용 가능", "주문에 사용 중", "사용함", "기간 만료"로 보인다.
+- 주문서는 `usable=true`로 받은 쿠폰 중 플랫폼 쿠폰과 주문의 판매자 쿠폰을 고르게 한다(판매자마다 한 장, 플랫폼 한 장, GET 폼 `?sellerCoupon=&platformCoupon=`). 고르면 할인 미리보기로 할인과 결제 금액을 보이고, 쓸 수 없는 쿠폰은 이유를 보이고 쿠폰 없이 계산한다. 주문할 때 고른 쿠폰과 그 결제 금액(`expectedAmount`)을 보낸다.
+
 ### 선착순 발급
 구매자가 `POST /v1/coupons/{couponId}/issue`로 내려받는다. 새로 받으면 201, 이미 받았으면 200이고 둘 다 `{issuedCouponId}`다(다시 눌러도 같은 결과).
 1. 쿠폰이 `ISSUING`이고 발급 기간 안이어야 한다. 아니면 409 `PROMOTION_COUPON_NOT_ISSUING`이다. 없는 쿠폰은 404 `PROMOTION_COUPON_NOT_FOUND`다.

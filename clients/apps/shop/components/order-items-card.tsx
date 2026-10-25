@@ -14,7 +14,7 @@ type SellerOrder = OrderComponents["schemas"]["OrderSellerOrderView"];
 
 /**
  * 주문 상품을 판매자(하위 주문)별로 묶어 보여 주고 결제 금액을 더한다. 결제 완료 화면과 주문 상세가 쓴다. `orderId`를 주면(결제된 주문의
- * 상세) 하위 주문마다 진행 상태와 배송 조회 링크를 붙인다.
+ * 상세) 하위 주문마다 진행 상태와 배송 조회 링크를 붙인다. 쿠폰을 썼으면 상품 금액과 판매자·오픈 마켓 쿠폰 할인을 함께 보인다.
  */
 export function OrderItemsCard({
   sellerOrders,
@@ -25,13 +25,20 @@ export function OrderItemsCard({
   amount: number | undefined;
   orderId?: string;
 }) {
+  const orders = sellerOrders ?? [];
+  const subtotal = orders.reduce((sum, order) => sum + (order.amount ?? 0), 0);
+  const sellerDiscount = orders.reduce((sum, order) => sum + (order.sellerCouponDiscount ?? 0), 0);
+  const platformDiscount = orders.reduce(
+    (sum, order) => sum + (order.platformCouponDiscount ?? 0),
+    0,
+  );
   return (
     <Card>
       <CardHeader>
         <CardTitle className="text-base">주문 상품</CardTitle>
       </CardHeader>
       <CardContent className="grid gap-4 text-sm">
-        {(sellerOrders ?? []).map((sellerOrder) => (
+        {orders.map((sellerOrder) => (
           <section key={sellerOrder.sellerOrderId} className="grid gap-1">
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="font-medium">{sellerOrder.storeName}</h2>
@@ -65,6 +72,26 @@ export function OrderItemsCard({
             </ul>
           </section>
         ))}
+        {sellerDiscount > 0 || platformDiscount > 0 ? (
+          <div className="grid gap-1 border-t pt-3">
+            <p className="flex justify-between">
+              <span>상품 금액</span>
+              <span>{formatPrice(subtotal)}</span>
+            </p>
+            {sellerDiscount > 0 ? (
+              <p className="flex justify-between">
+                <span>판매자 쿠폰 할인</span>
+                <span>-{formatPrice(sellerDiscount)}</span>
+              </p>
+            ) : null}
+            {platformDiscount > 0 ? (
+              <p className="flex justify-between">
+                <span>오픈 마켓 쿠폰 할인</span>
+                <span>-{formatPrice(platformDiscount)}</span>
+              </p>
+            ) : null}
+          </div>
+        ) : null}
         <p className="flex justify-between border-t pt-3 text-base font-semibold">
           <span>결제 금액</span>
           <span>{formatPrice(amount)}</span>

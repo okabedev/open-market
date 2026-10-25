@@ -11,10 +11,13 @@ import {
 const A = "0199f000-0000-7000-8000-0000000000a1";
 const B = "0199f000-0000-7000-8000-0000000000b2";
 const C = "0199f000-0000-7000-8000-0000000000c3";
+const SELLER_1 = "0199f000-0000-7000-8000-00000000a001";
+const SELLER_2 = "0199f000-0000-7000-8000-00000000a002";
 
 describe("checkoutLines", () => {
   const sellers = [
     {
+      sellerId: SELLER_1,
       storeName: "길동상회",
       items: [
         {
@@ -36,6 +39,7 @@ describe("checkoutLines", () => {
       ],
     },
     {
+      sellerId: SELLER_2,
       storeName: "춘향상점",
       items: [
         {
@@ -56,6 +60,7 @@ describe("checkoutLines", () => {
     expect(lines).toEqual([
       {
         skuId: A,
+        sellerId: SELLER_1,
         storeName: "길동상회",
         productName: "반팔 티셔츠",
         options: "M",
@@ -65,6 +70,7 @@ describe("checkoutLines", () => {
       },
       {
         skuId: C,
+        sellerId: SELLER_2,
         storeName: "춘향상점",
         productName: "청바지",
         options: "",
@@ -147,6 +153,7 @@ describe("buyNowLine", () => {
   const product = {
     status: "ON_SALE",
     name: "반팔 티셔츠",
+    sellerId: SELLER_1,
     storeName: "길동상회",
     skus: [
       { skuId: A, optionValues: ["M"], price: 19_900, inStock: true },
@@ -157,6 +164,7 @@ describe("buyNowLine", () => {
   it("판매 중이고 품절 아닌 SKU 하나를 수량만큼 주문서 줄로 만든다", () => {
     expect(buyNowLine(product, A, "2")).toEqual({
       skuId: A,
+      sellerId: SELLER_1,
       storeName: "길동상회",
       productName: "반팔 티셔츠",
       options: "M",

@@ -12,6 +12,8 @@ type CartItem = {
 /** 주문서의 한 줄. 기대 가격은 장바구니가 보여 준 지금 가격이다. order가 주문할 때 다시 비교한다(ORD-2). */
 export type CheckoutLine = {
   skuId: string;
+  /** 쿠폰 할인 미리보기가 판매자별 상품 금액을 묶는 데 쓴다 */
+  sellerId: string;
   storeName: string;
   productName: string;
   options: string;
@@ -22,7 +24,7 @@ export type CheckoutLine = {
 
 /** 장바구니에서 고른 SKU 중 지금 살 수 있는 줄(`AVAILABLE`)만 장바구니 순서대로 고른다. */
 export function checkoutLines(
-  sellers: readonly { storeName?: string; items?: readonly CartItem[] }[],
+  sellers: readonly { sellerId?: string; storeName?: string; items?: readonly CartItem[] }[],
   skuIds: readonly string[],
 ): CheckoutLine[] {
   const selected = new Set(skuIds);
@@ -34,6 +36,7 @@ export function checkoutLines(
         const quantity = item.quantity ?? 0;
         return {
           skuId: item.skuId ?? "",
+          sellerId: seller.sellerId ?? "",
           storeName: seller.storeName ?? "",
           productName: item.productName ?? "",
           options: (item.optionValues ?? []).join(" / "),
@@ -48,6 +51,7 @@ export function checkoutLines(
 type BuyNowProduct = {
   status?: string;
   name?: string;
+  sellerId?: string;
   storeName?: string;
   skus?: readonly { skuId?: string; optionValues?: string[]; price?: number; inStock?: boolean }[];
 };
@@ -75,6 +79,7 @@ export function buyNowLine(
   const price = sku.price ?? 0;
   return {
     skuId,
+    sellerId: product.sellerId ?? "",
     storeName: product.storeName ?? "",
     productName: product.name ?? "",
     options: (sku.optionValues ?? []).join(" / "),

@@ -15,6 +15,7 @@ import { notFound } from "next/navigation";
 import { randomUUID } from "node:crypto";
 import { addToCart } from "@/app/cart/actions";
 import { buyNow } from "@/app/checkout/actions";
+import { CouponList } from "@/components/coupon-list";
 import { ProductReviews } from "@/components/product-reviews";
 import { QuantityForm } from "@/components/quantity-form";
 import { bff } from "@/lib/bff";
@@ -23,14 +24,15 @@ import { currentSession } from "@/lib/session";
 /**
  * 구매자 상품 상세. 판매 중·판매 중지 상품만 보이고(제재·등록 중은 404), 남은 수량 대신 옵션별 품절 여부를 보여 준다. 로그인하면 판매
  * 중인 상품의 품절 아닌 옵션을 장바구니에 담거나 바로 구매한다(재고는 주문할 때 예약으로 정한다). 담으면 `?added=<SKU ID>`로 돌아와
- * 안내하고, 바로 구매는 그 SKU 하나로 주문서를 연다. 아래에 별점 요약과 리뷰가 있다(`?reviewCursor=`로 다음 리뷰).
+ * 안내하고, 바로 구매는 그 SKU 하나로 주문서를 연다. 그 판매자의 받을 수 있는 쿠폰이 있으면 받기를 보인다(`?notice=`로 결과). 아래에
+ * 별점 요약과 리뷰가 있다(`?reviewCursor=`로 다음 리뷰).
  */
 export default async function ProductPage({
   params,
   searchParams,
 }: PageProps<"/products/[productId]">) {
   const { productId } = await params;
-  const { added, reviewCursor } = await searchParams;
+  const { added, reviewCursor, notice } = await searchParams;
   const session = await currentSession();
   const catalog = await bff.publicClient("catalog");
   const { data: product, response } = await catalog.GET("/v1/products/{productId}", {
@@ -168,6 +170,7 @@ export default async function ProductPage({
           )}
         </div>
       </div>
+      {stopped ? null : <SellerCoupons product={product} notice={notice} />}
       <section className="grid gap-2">
         <h2 className="text-lg font-semibold">상품 설명</h2>
         <p className="whitespace-pre-wrap text-sm leading-relaxed">{product.description}</p>
@@ -177,5 +180,34 @@ export default async function ProductPage({
         {...(typeof reviewCursor === "string" ? { cursor: reviewCursor } : {})}
       />
     </article>
+  );
+}
+
+/** 그 판매자의 지금 받을 수 있는 쿠폰. 없거나 불러오지 못하면 칸을 그리지 않는다(상품 상세는 그대로). */
+async function SellerCoupons({
+  product,
+  notice,
+}: {
+  product: { productId?: string; sellerId?: string; storeName?: string };
+  notice: string | string[] | undefined;
+}) {
+  if (!product.sellerId) {
+    return null;
+  }
+  const promotion = await bff.publicClient("promotion");
+  const result = await promotion
+    .GET("/v1/coupons", { params: { query: { sellerId: product.sellerId } } })
+    .catch(() => null);
+  const coupons = result?.response.ok ? (result.data?.items ?? []) : [];
+  if (coupons.length === 0 && !notice) {
+    return null;
+  }
+  return (
+    <section id="coupons" className="grid gap-2" aria-labelledby="coupons-heading">
+      <h2 id="coupons-heading" className="text-lg font-semibold">
+        {product.storeName} 쿠폰
+      </h2>
+      <CouponList coupons={coupons} returnTo={`/products/${product.productId}`} notice={notice} />
+    </section>
   );
 }

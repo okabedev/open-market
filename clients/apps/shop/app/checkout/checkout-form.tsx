@@ -16,18 +16,31 @@ export type CheckoutAddress = {
 type CheckoutFormProps = {
   lines: CheckoutLine[];
   addresses: CheckoutAddress[];
+  /** 결제 금액(쿠폰 할인 뒤). 주문의 `expectedAmount`로 보낸다 */
   amount: number;
+  /** 할인 미리보기로 확인한 쿠폰 */
+  issuedCouponIds: string[];
   /** 주문서를 그릴 때 한 번 만든다. 두 번 눌러도 주문은 하나다 */
   idempotencyKey: string;
 };
 
-/** 주문서의 배송지 선택과 주문 버튼. 줄은 숨은 값으로 함께 보낸다. */
-export function CheckoutForm({ lines, addresses, amount, idempotencyKey }: CheckoutFormProps) {
+/** 주문서의 배송지 선택과 주문 버튼. 줄, 쿠폰, 결제 금액은 숨은 값으로 함께 보낸다. */
+export function CheckoutForm({
+  lines,
+  addresses,
+  amount,
+  issuedCouponIds,
+  idempotencyKey,
+}: CheckoutFormProps) {
   const [state, action] = useActionState(placeOrder, idleState);
   const addressError = state.fieldErrors?.addressId;
   return (
     <form action={action} className="grid gap-4">
       <input type="hidden" name="idempotencyKey" value={idempotencyKey} />
+      <input type="hidden" name="expectedAmount" value={amount} />
+      {issuedCouponIds.map((id) => (
+        <input key={id} type="hidden" name="issuedCouponId" value={id} />
+      ))}
       {lines.map((line) => (
         <span key={line.skuId} hidden>
           <input type="hidden" name="skuId" value={line.skuId} />
