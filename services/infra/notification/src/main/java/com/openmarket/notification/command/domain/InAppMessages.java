@@ -1,5 +1,8 @@
 package com.openmarket.notification.command.domain;
 
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Map;
 import java.util.Objects;
 
@@ -10,6 +13,9 @@ import java.util.Objects;
 public final class InAppMessages {
 
     static final int MAX_REASON_LENGTH = 200;
+
+    private static final ZoneId KST = ZoneId.of("Asia/Seoul");
+    private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("M월 d일");
 
     private InAppMessages() {}
 
@@ -44,6 +50,17 @@ public final class InAppMessages {
                     "입점 신청이 승인됐습니다. %s의 상품을 등록하고 판매를 시작할 수 있습니다."
                             .formatted(get(params, "storeName"));
             case PRODUCT_BANNED -> "상품이 제재로 판매 중지됐습니다. 사유: " + reason(params);
+            case REVIEW_CREATED ->
+                    "%s에 새 리뷰가 등록됐습니다. 별점 %s점"
+                            .formatted(get(params, "productName"), get(params, "rating"));
+            case SETTLEMENT_CONFIRMED ->
+                    "%s~%s 판매분 정산이 확정됐습니다. 정산 금액 %s"
+                            .formatted(
+                                    day(Instant.parse(get(params, "periodStart"))),
+                                    // 기간 끝은 기간에 들지 않는다. 끝 날은 그 직전 날이다
+                                    day(Instant.parse(get(params, "periodEnd")).minusNanos(1)),
+                                    won(params, "amount"));
+            case SETTLEMENT_PAID_OUT -> "정산 금액 %s이 지급됐습니다.".formatted(won(params, "amount"));
             case CLAIM_MEDIATION_REQUESTED -> "%s 클레임에 중재 요청이 들어왔습니다.".formatted(claimType(params));
             case REFUND_FAILED ->
                     "환불이 실패했습니다(%s). 환불 재시도 화면에서 확인해 주세요.".formatted(get(params, "code"));
@@ -71,6 +88,10 @@ public final class InAppMessages {
 
     private static String won(Map<String, String> params, String name) {
         return "%,d원".formatted(Long.parseLong(get(params, name)));
+    }
+
+    private static String day(Instant instant) {
+        return DAY.format(instant.atZone(KST));
     }
 
     private static String reason(Map<String, String> params) {

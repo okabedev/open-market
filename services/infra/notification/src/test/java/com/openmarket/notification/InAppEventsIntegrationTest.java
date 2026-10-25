@@ -103,7 +103,8 @@ class InAppEventsIntegrationTest {
                                 "SHIPMENT_DELIVERED BUYER 019a2c3d-1a2b-7c3d-8e4f-5a6b7c8d9e0f ORDER"),
                         Map.entry(
                                 "fulfillment.claim/ClaimRequested",
-                                "CLAIM_REQUESTED SELLER 019a2b00-0000-7000-8000-00000000a001 CLAIM"),
+                                "CLAIM_REQUESTED SELLER 019a2b00-0000-7000-8000-00000000a001"
+                                        + " SELLER_ORDER"),
                         Map.entry(
                                 "fulfillment.claim/ClaimApproved",
                                 "CLAIM_APPROVED BUYER 019a2c3d-1a2b-7c3d-8e4f-5a6b7c8d9e0f ORDER"),
@@ -125,14 +126,27 @@ class InAppEventsIntegrationTest {
                                 "SELLER_REJECTED BUYER 019a0f3c-5e2b-7c41-9d3e-2f6a8b1c4d70 SELLER_APPLICATION"),
                         Map.entry(
                                 "catalog.product/ProductBanned",
-                                "PRODUCT_BANNED SELLER 019a0f3c-5e2b-7c41-9d3e-2f6a8b1c4d70 PRODUCT"));
+                                "PRODUCT_BANNED SELLER 019a0f3c-5e2b-7c41-9d3e-2f6a8b1c4d70 PRODUCT"),
+                        Map.entry(
+                                "review.review/ReviewCreated",
+                                "REVIEW_CREATED SELLER 019a2b00-0000-7000-8000-00000000a001 REVIEW"),
+                        Map.entry(
+                                "settlement.settlement/SettlementConfirmed",
+                                "SETTLEMENT_CONFIRMED SELLER 019a2b00-0000-7000-8000-00000000a001"
+                                        + " SETTLEMENT"),
+                        Map.entry(
+                                "settlement.settlement/SettlementPaidOut",
+                                "SETTLEMENT_PAID_OUT SELLER 019a2b00-0000-7000-8000-00000000a001"
+                                        + " SETTLEMENT"));
         Map<String, String> publishers =
                 Map.of(
                         "fulfillment.shipment", "fulfillment",
                         "fulfillment.claim", "fulfillment",
                         "payment.payment", "payment",
                         "member.seller", "member",
-                        "catalog.product", "catalog");
+                        "catalog.product", "catalog",
+                        "review.review", "review",
+                        "settlement.settlement", "settlement");
         Map<String, UUID> eventIds = new HashMap<>();
         for (String key : expected.keySet()) {
             String topic = key.substring(0, key.indexOf('/'));
@@ -148,6 +162,19 @@ class InAppEventsIntegrationTest {
         }
         assertThat(rows(eventIds.get("fulfillment.claim/ClaimRejected")).getFirst())
                 .endsWith("| 반품 신청이 거부됐습니다. 거부 사유를 확인하고 중재를 요청할 수 있습니다.");
+        assertThat(rows(eventIds.get("fulfillment.claim/ClaimRequested")).getFirst())
+                .contains(" SELLER_ORDER 019a2c3d-4e60-7b71-8c2d-3e4f5a6b7c81 ");
+        assertThat(rows(eventIds.get("review.review/ReviewCreated")).getFirst())
+                .endsWith(
+                        " REVIEW 019a3a10-0000-7000-8000-0000000000c1 | 반팔 티셔츠에 새 리뷰가 등록됐습니다. 별점 5점");
+        assertThat(rows(eventIds.get("settlement.settlement/SettlementConfirmed")).getFirst())
+                .endsWith(
+                        " SETTLEMENT 019a4a00-0000-7000-8000-00000000e001 | 10월 26일~11월 1일 판매분 정산이"
+                                + " 확정됐습니다. 정산 금액 43,417원");
+        // 정산 알림은 이메일도 보내고, 새 리뷰는 인앱만이다
+        assertThat(emails(eventIds.get("settlement.settlement/SettlementConfirmed"))).isEqualTo(1);
+        assertThat(emails(eventIds.get("settlement.settlement/SettlementPaidOut"))).isEqualTo(1);
+        assertThat(emails(eventIds.get("review.review/ReviewCreated"))).isZero();
         assertThat(rows(eventIds.get("payment.payment/RefundFailed")).getFirst())
                 .endsWith("| 환불이 실패했습니다(NOT_CANCELABLE_AMOUNT). 환불 재시도 화면에서 확인해 주세요.");
     }
@@ -190,6 +217,15 @@ class InAppEventsIntegrationTest {
                 .param("id", eventId)
                 .query(String.class)
                 .list();
+    }
+
+    private int emails(UUID eventId) {
+        return jdbc.sql(
+                        "SELECT count(*) FROM notification WHERE source_event_id = :id AND channel ="
+                                + " 'EMAIL'")
+                .param("id", eventId)
+                .query(Integer.class)
+                .single();
     }
 
     private static String example(String publisher, String type) throws Exception {

@@ -7,5 +7,7 @@ public enum NotificationTarget {
     CLAIM,
     REFUND,
     PRODUCT,
-    SELLER_APPLICATION
+    SELLER_APPLICATION,
+    REVIEW,
+    SETTLEMENT
 }

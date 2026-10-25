@@ -18,7 +18,9 @@ class NotificationTopics {
         "fulfillment.claim",
         "payment.payment",
         "member.seller",
-        "catalog.product"
+        "catalog.product",
+        "review.review",
+        "settlement.settlement"
     };
 
     @Bean

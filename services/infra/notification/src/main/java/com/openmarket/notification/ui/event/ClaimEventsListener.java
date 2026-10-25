@@ -17,7 +17,7 @@ import org.springframework.stereotype.Component;
  * {@code fulfillment.claim} 토픽의 클레임 이벤트로 인앱 알림을 만든다(docs/architecture/notification.md "인앱 알림").
  *
  * <ul>
- *   <li>{@code ClaimRequested} → 판매자(취소 포함)
+ *   <li>{@code ClaimRequested} → 판매자(취소 포함). 하위 주문 상세로 간다
  *   <li>{@code ClaimApproved} → 구매자(반품·교환만. 취소는 신청과 함께 승인되므로 알리지 않고 처리 기록만 남긴다)
  *   <li>{@code ClaimRejected}, {@code ClaimCompleted} → 구매자
  *   <li>{@code ClaimMediationRequested} → 관리자
@@ -52,8 +52,9 @@ class ClaimEventsListener {
                                                     NotifyCommand.Audience.SELLER,
                                                     event.payload().sellerId(),
                                                     Map.of("type", event.payload().type()),
-                                                    NotifyCommand.Target.CLAIM,
-                                                    event.payload().claimId())));
+                                                    // 클레임은 하위 주문 상세에서 처리한다
+                                                    NotifyCommand.Target.SELLER_ORDER,
+                                                    event.payload().sellerOrderId())));
             case "ClaimApproved" ->
                     processor.process(
                             "notification.claim-approved",
@@ -159,7 +160,7 @@ class ClaimEventsListener {
     }
 
     /** 소비 쪽 페이로드. 알림에 쓰는 필드만 둔다. */
-    record ClaimRequestedMessage(UUID claimId, String type, UUID sellerId) {}
+    record ClaimRequestedMessage(String type, UUID sellerOrderId, UUID sellerId) {}
 
     /** 소비 쪽 페이로드. */
     record ClaimApprovedMessage(String type, UUID orderId, UUID buyerId, long refundAmount) {}

@@ -51,7 +51,7 @@ public class ThymeleafEmailRenderer implements EmailRendererPort {
                 textEngine.process(template, context));
     }
 
-    private static String subject(NotificationKind kind) {
+    static String subject(NotificationKind kind) {
         return switch (kind) {
             case EMAIL_VERIFICATION -> "[오픈 마켓] 이메일 인증을 완료해 주세요";
             case ORDER_PAID -> "[오픈 마켓] 주문이 완료됐습니다";
@@ -62,6 +62,8 @@ public class ThymeleafEmailRenderer implements EmailRendererPort {
             case SELLER_APPROVED -> "[오픈 마켓] 입점 신청이 승인됐습니다";
             case SELLER_REJECTED -> "[오픈 마켓] 입점 신청이 반려됐습니다";
             case PRODUCT_BANNED -> "[오픈 마켓] 상품이 판매 중지됐습니다";
+            case SETTLEMENT_CONFIRMED -> "[오픈 마켓] 정산이 확정됐습니다";
+            case SETTLEMENT_PAID_OUT -> "[오픈 마켓] 정산 금액이 지급됐습니다";
             default -> throw new IllegalArgumentException("이메일을 보내지 않는 알림 종류: " + kind);
         };
     }

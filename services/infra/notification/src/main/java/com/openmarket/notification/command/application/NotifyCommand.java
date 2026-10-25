@@ -47,6 +47,9 @@ public record NotifyCommand(UUID sourceEventId, List<Notice> notices) {
         CLAIM_REQUESTED,
         SELLER_APPROVED,
         PRODUCT_BANNED,
+        REVIEW_CREATED,
+        SETTLEMENT_CONFIRMED,
+        SETTLEMENT_PAID_OUT,
         CLAIM_MEDIATION_REQUESTED,
         REFUND_FAILED
     }
@@ -58,6 +61,8 @@ public record NotifyCommand(UUID sourceEventId, List<Notice> notices) {
         CLAIM,
         REFUND,
         PRODUCT,
-        SELLER_APPLICATION
+        SELLER_APPLICATION,
+        REVIEW,
+        SETTLEMENT
     }
 }
