@@ -53,10 +53,340 @@
         }
       }
     },
+    "/v1/admin/settlements/{settlementId}/payout" : {
+      "post" : {
+        "tags" : [ "admin-settlement-command-controller" ],
+        "operationId" : "payOut",
+        "parameters" : [ {
+          "name" : "settlementId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        }
+      }
+    },
+    "/v1/admin/settlement-runs" : {
+      "post" : {
+        "tags" : [ "admin-settlement-command-controller" ],
+        "operationId" : "run",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RunSettlementResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/seller/settlements" : {
+      "get" : {
+        "tags" : [ "seller-settlement-query-controller" ],
+        "operationId" : "settlements",
+        "parameters" : [ {
+          "name" : "cursor",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "size",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 20,
+            "maximum" : 50,
+            "minimum" : 1
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CursorPageViewSettlementView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/seller/settlements/{settlementId}" : {
+      "get" : {
+        "tags" : [ "seller-settlement-query-controller" ],
+        "operationId" : "settlement",
+        "parameters" : [ {
+          "name" : "settlementId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SettlementView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/seller/settlements/{settlementId}/items" : {
+      "get" : {
+        "tags" : [ "seller-settlement-query-controller" ],
+        "operationId" : "settlementItems",
+        "parameters" : [ {
+          "name" : "settlementId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "cursor",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "size",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 20,
+            "maximum" : 50,
+            "minimum" : 1
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CursorPageViewSettlementItemView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/seller/settlement-items/pending" : {
+      "get" : {
+        "tags" : [ "seller-settlement-query-controller" ],
+        "operationId" : "pendingItems",
+        "parameters" : [ {
+          "name" : "cursor",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "size",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 20,
+            "maximum" : 50,
+            "minimum" : 1
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CursorPageViewSettlementItemView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/seller/settlement-items/pending/summary" : {
+      "get" : {
+        "tags" : [ "seller-settlement-query-controller" ],
+        "operationId" : "pendingSummary",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PendingSettlementSummaryView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/settlements" : {
+      "get" : {
+        "tags" : [ "admin-settlement-query-controller" ],
+        "operationId" : "list",
+        "parameters" : [ {
+          "name" : "status",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "enum" : [ "CONFIRMED", "PAID_OUT" ]
+          }
+        }, {
+          "name" : "sellerId",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "page",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 0,
+            "minimum" : 0
+          }
+        }, {
+          "name" : "size",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 20,
+            "maximum" : 100,
+            "minimum" : 1
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PageViewSettlementView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/settlements/{settlementId}" : {
+      "get" : {
+        "tags" : [ "admin-settlement-query-controller" ],
+        "operationId" : "settlement_1",
+        "parameters" : [ {
+          "name" : "settlementId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SettlementView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/settlements/{settlementId}/items" : {
+      "get" : {
+        "tags" : [ "admin-settlement-query-controller" ],
+        "operationId" : "items",
+        "parameters" : [ {
+          "name" : "settlementId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "cursor",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "size",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 20,
+            "maximum" : 50,
+            "minimum" : 1
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CursorPageViewSettlementItemView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/commission-rates" : {
       "get" : {
         "tags" : [ "admin-commission-rate-query-controller" ],
-        "operationId" : "list",
+        "operationId" : "list_1",
         "responses" : {
           "200" : {
             "description" : "OK",
@@ -83,6 +413,235 @@
           }
         },
         "required" : [ "rateBp" ]
+      },
+      "RunSettlementResponse" : {
+        "type" : "object",
+        "properties" : {
+          "confirmedCount" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }
+      },
+      "CursorPageViewSettlementView" : {
+        "type" : "object",
+        "properties" : {
+          "items" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/SettlementView"
+            }
+          },
+          "totalCount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "nextCursor" : {
+            "type" : "string"
+          }
+        }
+      },
+      "SettlementView" : {
+        "type" : "object",
+        "properties" : {
+          "settlementId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "sellerId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "periodStart" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "periodEnd" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "itemCount" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "salesAmount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "commissionAmount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "sellerCouponDiscount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "amount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "status" : {
+            "type" : "string",
+            "enum" : [ "CONFIRMED", "PAID_OUT" ]
+          },
+          "confirmedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "paidOutAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "CursorPageViewSettlementItemView" : {
+        "type" : "object",
+        "properties" : {
+          "items" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/SettlementItemView"
+            }
+          },
+          "totalCount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "nextCursor" : {
+            "type" : "string"
+          }
+        }
+      },
+      "SettlementItemLineView" : {
+        "type" : "object",
+        "properties" : {
+          "orderLineId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "productId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "productName" : {
+            "type" : "string"
+          },
+          "categoryId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "quantity" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "amount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "commissionRateBp" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "commissionAmount" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }
+      },
+      "SettlementItemView" : {
+        "type" : "object",
+        "properties" : {
+          "sellerOrderId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "orderId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "confirmedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "periodStart" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "periodEnd" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "salesAmount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "commissionAmount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "sellerCouponDiscount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "settlementAmount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "lines" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/SettlementItemLineView"
+            }
+          }
+        }
+      },
+      "PendingSettlementSummaryView" : {
+        "type" : "object",
+        "properties" : {
+          "itemCount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "salesAmount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "commissionAmount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "sellerCouponDiscount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "settlementAmount" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }
+      },
+      "PageViewSettlementView" : {
+        "type" : "object",
+        "properties" : {
+          "items" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/SettlementView"
+            }
+          },
+          "totalCount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "page" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "size" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }
       },
       "CommissionRateView" : {
         "type" : "object",

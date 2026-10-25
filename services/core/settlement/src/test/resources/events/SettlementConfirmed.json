@@ -1,0 +1,11 @@
+{
+  "settlementId": "019a4a00-0000-7000-8000-00000000e001",
+  "sellerId": "019a2b00-0000-7000-8000-00000000a001",
+  "periodStart": "2026-10-25T15:00:00Z",
+  "periodEnd": "2026-11-01T15:00:00Z",
+  "salesAmount": 49800,
+  "commission": 4383,
+  "sellerCouponDiscount": 2000,
+  "amount": 43417,
+  "confirmedAt": "2026-11-01T18:00:03.123456Z"
+}

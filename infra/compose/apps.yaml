@@ -219,8 +219,9 @@ services:
     environment:
       <<: *spring-env
       SETTLEMENT_DB_PASSWORD: ${SETTLEMENT_DB_PASSWORD:?}
-      # 정산 기간 길이. E2E가 줄일 때만 넘긴다(config-repo settlement.yml 기본 7d).
+      # 정산 기간 길이와 마감 지연. E2E가 줄일 때만 넘긴다(config-repo settlement.yml 기본 7d, 3h).
       SETTLEMENT_PERIOD_LENGTH:
+      SETTLEMENT_CLOSE_DELAY:
     healthcheck:
       test: ["CMD", "curl", "-fs", "http://localhost:8108/actuator/health"]
       interval: 5s

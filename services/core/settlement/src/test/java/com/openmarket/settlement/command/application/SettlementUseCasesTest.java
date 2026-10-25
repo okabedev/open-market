@@ -42,7 +42,14 @@ class SettlementUseCasesTest {
         removeRate = new RemoveCommissionRateUseCase(rates, auditLog, 1_000);
         createItem =
                 new CreateSettlementItemUseCase(
-                        items, rates, clock, ANCHOR, Duration.ofDays(7), 1_000);
+                        items,
+                        new SettlementFakes.Settlements(),
+                        rates,
+                        new SettlementFakes.RecordingSellerLock(),
+                        clock,
+                        ANCHOR,
+                        Duration.ofDays(7),
+                        1_000);
     }
 
     @Test
