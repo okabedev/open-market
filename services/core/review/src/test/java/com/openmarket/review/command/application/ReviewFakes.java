@@ -1,11 +1,15 @@
 package com.openmarket.review.command.application;
 
+import com.openmarket.common.core.audit.AuditEntry;
+import com.openmarket.common.core.audit.AuditLog;
 import com.openmarket.common.messaging.outbox.Outbox;
 import com.openmarket.review.command.domain.RatingSummary;
 import com.openmarket.review.command.domain.RatingSummaryRepository;
 import com.openmarket.review.command.domain.Review;
 import com.openmarket.review.command.domain.ReviewEligibility;
 import com.openmarket.review.command.domain.ReviewEligibilityRepository;
+import com.openmarket.review.command.domain.ReviewReply;
+import com.openmarket.review.command.domain.ReviewReplyRepository;
 import com.openmarket.review.command.domain.ReviewRepository;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -48,6 +52,28 @@ final class ReviewFakes {
             rows.put(review.id(), review);
             return review;
         }
+
+        @Override
+        public Optional<Review> findForUpdateById(UUID reviewId) {
+            return Optional.ofNullable(rows.get(reviewId));
+        }
+    }
+
+    static final class Replies implements ReviewReplyRepository {
+        final Map<UUID, ReviewReply> rows = new LinkedHashMap<>();
+        int saves;
+
+        @Override
+        public ReviewReply save(ReviewReply reply) {
+            saves++;
+            rows.put(reply.reviewId(), reply);
+            return reply;
+        }
+
+        @Override
+        public Optional<ReviewReply> findById(UUID reviewId) {
+            return Optional.ofNullable(rows.get(reviewId));
+        }
     }
 
     static final class Summaries implements RatingSummaryRepository {
@@ -84,5 +110,14 @@ final class ReviewFakes {
         }
 
         record Appended(String aggregateType, String aggregateId, String type, Object payload) {}
+    }
+
+    static final class RecordingAuditLog implements AuditLog {
+        final List<AuditEntry> entries = new ArrayList<>();
+
+        @Override
+        public void record(AuditEntry entry) {
+            entries.add(entry);
+        }
     }
 }

@@ -12,6 +12,8 @@ openmarket:
   # 토큰 없이 여는 서비스 경로(common-security). gateway.yml의 public-paths에도 gateway 기준 경로로 적는다.
   security:
     public-paths:
-      # 상품 별점 요약(docs/architecture/review.md "API")
+      # 상품 별점 요약과 상품 리뷰 목록(docs/architecture/review.md "API")
       - method: GET
         pattern: /v1/products/*/rating-summary
+      - method: GET
+        pattern: /v1/products/*/reviews

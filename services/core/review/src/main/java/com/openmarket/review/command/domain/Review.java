@@ -149,6 +149,30 @@ public class Review {
         return review;
     }
 
+    /** 관리자가 숨긴다. 이미 숨겼으면 false이고 아무것도 바꾸지 않는다. */
+    public boolean hide(Instant now) {
+        return changeStatus(ReviewStatus.HIDDEN, now);
+    }
+
+    /** 관리자가 다시 보인다. 이미 보이면 false이고 아무것도 바꾸지 않는다. */
+    public boolean show(Instant now) {
+        return changeStatus(ReviewStatus.VISIBLE, now);
+    }
+
+    private boolean changeStatus(ReviewStatus to, Instant now) {
+        if (status == to) {
+            return false;
+        }
+        status = to;
+        updatedAt = now;
+        return true;
+    }
+
+    /** 이 판매자의 상품 리뷰인가. */
+    public boolean isSoldBy(UUID sellerId) {
+        return this.sellerId.equals(sellerId);
+    }
+
     public UUID id() {
         return id;
     }

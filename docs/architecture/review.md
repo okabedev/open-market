@@ -35,17 +35,31 @@ M5 시작(2026-10-22)에 정한 규칙이다. API와 화면은 각 PR에서 이 
 |---|---|---|
 | POST | `/v1/reviews` | 리뷰 작성. 로그인한 회원(작성 자격의 구매자). `Idempotency-Key` 필수. 201 `{reviewId}` |
 | GET | `/v1/products/{productId}/rating-summary` | 공개. 상품 별점 요약 `{productId, ratingCount, ratingAverage}`. 리뷰가 없거나 없는 상품이면 `ratingCount` 0, `ratingAverage` null(상품이 있는지는 보지 않는다) |
+| GET | `/v1/products/{productId}/reviews` | 공개. 상품의 보이는 리뷰. 커서 목록 |
+| GET | `/v1/reviews` | 내가 쓴 리뷰. 숨긴 리뷰도 `status`와 함께 보인다. 커서 목록 |
+| GET | `/v1/reviews/writable` | 리뷰를 쓸 수 있는 내 구매확정 주문 항목(리뷰 ID가 없는 작성 자격). 구매확정 최근 순 커서 목록 |
+| GET | `/v1/seller/reviews` | 판매자. 자기 상품의 리뷰(숨긴 리뷰 포함). 커서 목록 |
+| PUT | `/v1/seller/reviews/{reviewId}/reply` | 판매자 답글 달기·고치기 `{content}`. 204 |
+| GET | `/v1/admin/reviews` | 관리자. 모든 리뷰. `status`, `productId`, `sellerId`로 거르는 쪽 번호 목록(`page`, `size` 최대 100) |
+| POST | `/v1/admin/reviews/{reviewId}/hide`, `/show` | 관리자 숨김·다시 보임 `{reason}`. 204 |
 
 - 작성 본문: `orderLineId`, `rating`, `content`, `fileIds`(선택, 없으면 사진 없음). `fileIds`는 회원 업로드 `POST /api/file/v1/files`(`purpose=REVIEW_IMAGE`)로 받은 파일이다([file.md](file.md) "리뷰 사진").
-- 쓸 수 있는 리뷰·상품 리뷰·내 리뷰 목록, 답글, 숨김 API는 다음 PR에서 더한다.
+- 목록은 작성 최근 순이고 시각이 같으면 리뷰 ID 역순이다. 커서 목록은 `?cursor=&size=`(기본 20, 최대 50)이고 `{items, totalCount, nextCursor}`다. 틀린 커서는 400 `REVIEW_INVALID_CURSOR`다([conventions.md](conventions.md) "REST API").
+- 공개 상품 리뷰는 작성자를 싣지 않는다(`reviewId`, `optionValues`, `rating`, `content`, `fileIds`, `reply`, `createdAt`). 내·판매자·관리자 목록은 주문 항목, 상품, 판매자, 구매자 ID와 `status`를 더 싣는다. 리뷰 서비스는 구매자 이름을 갖지 않는다.
+- 사진은 `fileIds`만 준다. 화면이 `/files/{fileId}/w300`, `/files/{fileId}/w800`으로 받는다(catalog 상품 이미지와 같다). `reply`는 `{content, createdAt, updatedAt}`이고 없으면 null이다.
+- 답글은 목록 쿼리에서 함께 읽고, 사진은 그 쪽의 리뷰 ID로 한 번 더 읽는다(쪽마다 쿼리 2개 + 개수 1개).
+- 상품 리뷰 목록은 부분 인덱스 `review_product_idx`(`WHERE status = 'VISIBLE'`)를 쓴다. 상태를 바인딩 값으로 비교하면 일반 실행 계획에서 부분 인덱스를 못 쓰고 `review_created_idx`로 전체를 훑으므로(`EXPLAIN`으로 확인) SQL 상수로 비교한다.
 
 ## 답글(`ReviewReply`, REV-3)
 - 리뷰 상품의 판매자만 단다. 1~1,000자. 리뷰마다 하나이고, 다시 쓰면 고친다(204). 다른 판매자의 리뷰면 404 `REVIEW_NOT_FOUND`다.
 - 숨긴 리뷰에도 답글을 쓸 수 있지만 공개 목록에는 리뷰와 함께 빠진다.
+- 리뷰 행을 잠그고 쓴다. 같은 리뷰의 첫 답글이 동시에 와도 하나만 생긴다. 같은 본문으로 다시 쓰면 바꾸지 않는다(고친 시각 그대로). 이벤트는 내지 않는다.
 
 ## 숨김(REV-3, ADM-2)
 - 관리자가 사유(1~200자)를 남기고 숨기거나 다시 보인다. 같은 상태로 다시 하면 204, 이벤트 없음이다. 감사 로그(`REVIEW_HIDDEN`, `REVIEW_SHOWN`)를 남긴다(NFR-8).
 - 상태가 바뀌면 같은 트랜잭션에서 별점 요약을 다시 계산하고 `RatingSummaryChanged`를 낸다.
+- 리뷰 행 → 별점 요약 행 순으로 잠근다. 같은 리뷰를 동시에 여러 번 숨겨도 요약에서 한 번만 빠지고 이벤트도 하나다(테스트로 확인). 사유가 틀리면 400 `REVIEW_INVALID_INPUT`, 없는 리뷰는 404 `REVIEW_NOT_FOUND`다.
+- 감사 로그 대상은 `REVIEW`이고 사유를 `detail`에 남긴다. 리뷰에는 사유를 저장하지 않는다.
 
 ## 별점 요약(`RatingSummary`, REV-2)
 - 상품마다 보이는 리뷰 수와 별점 합, 리비전을 둔다. 평균은 합 ÷ 수를 소수 첫째 자리로 반올림(`HALF_UP`)해 보여 준다. 예: 13 ÷ 3 → 4.3, 81 ÷ 20 → 4.1. 리뷰가 없으면 평균 없음이다. 이벤트와 조회 API가 같은 규칙으로 계산한다(테스트가 같은지 확인한다).
