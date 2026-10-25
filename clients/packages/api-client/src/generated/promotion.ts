@@ -50,6 +50,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/coupon-discounts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["preview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/coupons": {
         parameters: {
             query?: never;
@@ -76,6 +92,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["stop_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/issued-coupons": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["mine"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -145,6 +177,32 @@ export interface components {
             /** Format: uuid */
             issuedCouponId?: string;
         };
+        PreviewCouponDiscountRequest: {
+            issuedCouponIds: string[];
+            sellerOrders: components["schemas"]["SellerOrder"][];
+        };
+        SellerOrder: {
+            /** Format: uuid */
+            sellerId: string;
+            /** Format: int64 */
+            amount?: number;
+        };
+        Result: {
+            applicable?: boolean;
+            sellerOrders?: components["schemas"]["SellerOrder"][];
+            /** Format: uuid */
+            platformIssuedCouponId?: string;
+            /** Format: int64 */
+            platformCouponDiscount?: number;
+            /** Format: int64 */
+            paymentAmount?: number;
+            unavailable?: components["schemas"]["Unavailable"][];
+        };
+        Unavailable: {
+            /** Format: uuid */
+            issuedCouponId?: string;
+            reason?: string;
+        };
         CouponView: {
             /** Format: uuid */
             couponId?: string;
@@ -186,6 +244,37 @@ export interface components {
             page?: number;
             /** Format: int32 */
             size?: number;
+        };
+        CursorPageViewIssuedCouponView: {
+            items?: components["schemas"]["IssuedCouponView"][];
+            /** Format: int64 */
+            totalCount?: number;
+            nextCursor?: string;
+        };
+        IssuedCouponView: {
+            /** Format: uuid */
+            issuedCouponId?: string;
+            /** Format: uuid */
+            couponId?: string;
+            /** @enum {string} */
+            issuer?: "PLATFORM" | "SELLER";
+            /** Format: uuid */
+            sellerId?: string;
+            name?: string;
+            /** @enum {string} */
+            discountType?: "FIXED" | "RATE";
+            /** Format: int64 */
+            discountValue?: number;
+            /** Format: int64 */
+            maxDiscount?: number;
+            /** Format: int64 */
+            minOrderAmount?: number;
+            /** @enum {string} */
+            state?: "USABLE" | "RESERVED" | "USED" | "EXPIRED";
+            /** Format: date-time */
+            issuedAt?: string;
+            /** Format: date-time */
+            expiresAt?: string;
         };
         IssuableCouponsView: {
             items?: components["schemas"]["CouponView"][];
@@ -289,6 +378,30 @@ export interface operations {
             };
         };
     };
+    preview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PreviewCouponDiscountRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Result"];
+                };
+            };
+        };
+    };
     list_1: {
         parameters: {
             query?: {
@@ -356,6 +469,30 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    mine: {
+        parameters: {
+            query?: {
+                usable?: boolean;
+                cursor?: string;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CursorPageViewIssuedCouponView"];
+                };
             };
         };
     };

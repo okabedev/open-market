@@ -126,6 +126,34 @@
         }
       }
     },
+    "/v1/coupon-discounts" : {
+      "post" : {
+        "tags" : [ "coupon-discount-controller" ],
+        "operationId" : "preview",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/PreviewCouponDiscountRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Result"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/coupons" : {
       "get" : {
         "tags" : [ "admin-coupon-query-controller" ],
@@ -232,6 +260,51 @@
         "responses" : {
           "204" : {
             "description" : "No Content"
+          }
+        }
+      }
+    },
+    "/v1/issued-coupons" : {
+      "get" : {
+        "tags" : [ "issued-coupon-query-controller" ],
+        "operationId" : "mine",
+        "parameters" : [ {
+          "name" : "usable",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "boolean",
+            "default" : false
+          }
+        }, {
+          "name" : "cursor",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "size",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 20,
+            "maximum" : 100,
+            "minimum" : 1
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CursorPageViewIssuedCouponView"
+                }
+              }
+            }
           }
         }
       }
@@ -352,6 +425,83 @@
           }
         }
       },
+      "PreviewCouponDiscountRequest" : {
+        "type" : "object",
+        "properties" : {
+          "issuedCouponIds" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string",
+              "format" : "uuid"
+            }
+          },
+          "sellerOrders" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/SellerOrder"
+            }
+          }
+        },
+        "required" : [ "issuedCouponIds", "sellerOrders" ]
+      },
+      "SellerOrder" : {
+        "type" : "object",
+        "properties" : {
+          "sellerId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "amount" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        },
+        "required" : [ "sellerId" ]
+      },
+      "Result" : {
+        "type" : "object",
+        "properties" : {
+          "applicable" : {
+            "type" : "boolean"
+          },
+          "sellerOrders" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/SellerOrder"
+            }
+          },
+          "platformIssuedCouponId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "platformCouponDiscount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "paymentAmount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "unavailable" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/Unavailable"
+            }
+          }
+        }
+      },
+      "Unavailable" : {
+        "type" : "object",
+        "properties" : {
+          "issuedCouponId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "reason" : {
+            "type" : "string"
+          }
+        }
+      },
       "CouponView" : {
         "type" : "object",
         "properties" : {
@@ -440,6 +590,76 @@
           "size" : {
             "type" : "integer",
             "format" : "int32"
+          }
+        }
+      },
+      "CursorPageViewIssuedCouponView" : {
+        "type" : "object",
+        "properties" : {
+          "items" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/IssuedCouponView"
+            }
+          },
+          "totalCount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "nextCursor" : {
+            "type" : "string"
+          }
+        }
+      },
+      "IssuedCouponView" : {
+        "type" : "object",
+        "properties" : {
+          "issuedCouponId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "couponId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "issuer" : {
+            "type" : "string",
+            "enum" : [ "PLATFORM", "SELLER" ]
+          },
+          "sellerId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "discountType" : {
+            "type" : "string",
+            "enum" : [ "FIXED", "RATE" ]
+          },
+          "discountValue" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "maxDiscount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "minOrderAmount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "state" : {
+            "type" : "string",
+            "enum" : [ "USABLE", "RESERVED", "USED", "EXPIRED" ]
+          },
+          "issuedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "expiresAt" : {
+            "type" : "string",
+            "format" : "date-time"
           }
         }
       },
