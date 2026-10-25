@@ -1,0 +1,18 @@
+# settlement 실행 설정. 공통 설정은 application.yml에 있다. 설계는 docs/architecture/settlement.md.
+server:
+  port: 8108
+spring:
+  datasource:
+    password: ${SETTLEMENT_DB_PASSWORD}
+  kafka:
+    consumer:
+      group-id: settlement
+
+openmarket:
+  settlement:
+    # 요율이 없는 카테고리의 수수료율(bp, 1,000 = 10%)
+    default-commission-rate: 1000
+    # 정산 기간: 기준 시각(월요일 0시, 한국 시간)에서 길이씩 나눈 [시작, 끝). E2E는 환경 변수로 길이를 줄인다.
+    period:
+      anchor: 2026-01-05T00:00:00+09:00
+      length: ${SETTLEMENT_PERIOD_LENGTH:7d}

@@ -14,6 +14,16 @@ M5 시작(2026-10-22)에 정한 규칙이다. API와 화면은 각 PR에서 이 
 ## 수수료율(`CommissionRate`)
 - 소분류 카테고리마다 요율을 bp(0.01%) 단위 정수 0~10,000으로 둔다. 요율이 없는 카테고리는 기본 요율 `openmarket.settlement.default-commission-rate`(기본 1,000bp = 10%)다.
 - 관리자가 카테고리별로 정하거나 지운다. 감사 로그(`COMMISSION_RATE_CHANGED`)를 남긴다. 바꾼 요율은 그 뒤에 생기는 정산 대상부터 쓴다.
+- 감사 로그 대상은 `CATEGORY`(카테고리 ID)이고 `detail`에 이전 → 새 요율을 남긴다(예: `기본(1000bp) → 850bp`, `850bp → 기본(1000bp)`). 같은 요율로 정하거나 없는 요율을 지우면 204이고 감사 로그가 없다.
+- 요율 행을 잠그고 바꾼다. 카테고리 ID가 catalog에 있는지는 보지 않는다. 관리자 화면이 catalog 카테고리 트리에서 고르고, 없는 카테고리의 요율은 쓰이지 않을 뿐이다.
+- 기본 요율 설정도 0~10,000bp여야 한다. 아니면 서비스가 뜨지 않는다.
+
+### API
+| 메서드 | 경로 | 설명 |
+|---|---|---|
+| GET | `/v1/admin/commission-rates` | 관리자. `{defaultRateBp, rates: [{categoryId, rateBp, updatedAt}]}`. 요율을 정한 카테고리만 카테고리 ID 순으로 준다. 카테고리 이름은 화면이 catalog 트리로 붙인다 |
+| PUT | `/v1/admin/commission-rates/{categoryId}` | 관리자. `{rateBp}`(필수, 0~10,000). 204. 범위 밖이면 400 `SETTLEMENT_INVALID_INPUT` |
+| DELETE | `/v1/admin/commission-rates/{categoryId}` | 관리자. 요율을 지워 기본 요율로 돌린다. 204 |
 
 ## 정산 대상(`SettlementItem`, STL-1)
 `fulfillment.shipment`의 `PurchaseConfirmed`를 소비 그룹 `settlement`로 받아 하위 주문마다 하나 만든다.
@@ -25,12 +35,17 @@ M5 시작(2026-10-22)에 정한 규칙이다. API와 화면은 각 PR에서 이 
 | 정산 금액 | 판매 금액 − 수수료 − 판매자 쿠폰 부담분 |
 
 - 하위 주문 ID 유니크로 한 번만 생긴다.
+- 항목마다 주문 항목, 상품, 상품명, 카테고리, 수량, 항목 금액, 받은 때의 요율(bp)과 수수료를 함께 저장한다(`settlement_item_line`). 판매자 정산 내역에 쓴다.
+- 리스너 이름은 `settlement.purchase-confirmed`다. 다른 이벤트 ID로 같은 구매확정이 다시 와도 하위 주문 ID로 하나만 생긴다.
 - 정산 기간은 구매확정 시각으로 정한다(아래 "정산 기간"). 받았을 때 그 판매자의 그 기간이 이미 확정됐으면 다음 기간에 넣는다. 늦게 온 이벤트가 확정된 정산을 바꾸지 않게 하기 위해서다.
 - 정산 대상 만들기와 확정은 판매자 단위로 잠그고 한다(방법은 정산 PR에서 정한다). 둘이 겹쳐 확정된 기간에 대상이 들어가지 않게 한다.
+- settlement 골격 PR(2026-10-25)은 구매확정 시각의 기간에 넣는다. 확정된 기간이면 다음 기간에 넣는 규칙과 판매자 단위 잠금은 정산(`Settlement`)을 만드는 정산 확정 PR에서 더한다. 그 전에는 확정된 정산이 없으므로 결과가 같다.
 
 ## 정산 기간
 - 기간은 기준 시각 `openmarket.settlement.period.anchor`(기본 `2026-01-05T00:00+09:00`, 월요일)에서 길이 `openmarket.settlement.period.length`(기본 7일)씩 나눈 구간 `[시작, 끝)`이다. 기본값이면 월요일 0시(한국 시간)부터 다음 월요일 0시까지다.
 - E2E는 환경 변수로 길이를 줄인다(예: 1분). 결제 기한, 자동 구매확정과 같은 방식이다([dev-setup.md](../dev-setup.md) "E2E").
+  - 환경 변수는 `SETTLEMENT_PERIOD_LENGTH`(config-repo `settlement.yml` 기본 `7d`)이고 `apps.yaml`은 값이 있을 때만 넘긴다. `run.sh`에서 줄이는 값은 M5 완료 E2E PR에서 정한다.
+- 기간 경계 시각은 다음 기간이다. 기준 시각 전의 시각도 그 앞 기간으로 나눈다. 정산 대상에 `[period_start, period_end)`를 저장한다.
 
 ## 정산 확정(`Settlement`, STL-2, STL-4)
 - 정산 작업(`SettlementJob`)은 `openmarket.settlement.job.cron`(기본 매주 월요일 03:00)에 돌고 ShedLock(`settlement-confirm`)으로 한 인스턴스에서만 돈다. 끝난 지 `openmarket.settlement.job.close-delay`(기본 3시간)가 지난 기간 중 확정하지 않은 대상이 있는 기간을 오래된 순으로 확정한다. 늦게 오는 이벤트를 기다리는 여유다.

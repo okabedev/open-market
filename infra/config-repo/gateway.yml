@@ -109,6 +109,12 @@ spring:
                 - Path=/api/review/**
               filters:
                 - StripPrefix=2
+            - id: settlement
+              uri: lb://settlement
+              predicates:
+                - Path=/api/settlement/**
+              filters:
+                - StripPrefix=2
             - id: notification
               uri: lb://notification
               predicates:

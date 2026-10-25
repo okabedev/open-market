@@ -1,0 +1,16 @@
+# jar 안에는 앱 이름, config 서버 주소, 클래스패스에 묶인 설정만 둔다.
+# 포트, 데이터 소스 같은 실행 설정은 infra/config-repo의 settlement.yml과 공통 application.yml에 있다.
+spring:
+  application:
+    name: settlement
+  config:
+    import: "optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}"
+  cloud:
+    config:
+      # config 서버에 닿지 못하면 데이터 소스 설정 없이 뜨지 않고 바로 실패한다. 테스트는 spring.cloud.config.enabled=false로 끈다.
+      fail-fast: true
+  flyway:
+    locations: classpath:db/migration,classpath:db/common/web,classpath:db/common/messaging
+springdoc:
+  # 응답 타입을 명시하지 않은 API도 OpenAPI 문서에 JSON으로 적는다. 프론트 api-client가 이 문서에서 타입을 만든다.
+  default-produces-media-type: application/json

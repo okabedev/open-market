@@ -1,0 +1,121 @@
+{
+  "openapi" : "3.1.0",
+  "info" : {
+    "title" : "OpenAPI definition",
+    "version" : "v0"
+  },
+  "paths" : {
+    "/v1/admin/commission-rates/{categoryId}" : {
+      "put" : {
+        "tags" : [ "admin-commission-rate-command-controller" ],
+        "operationId" : "set",
+        "parameters" : [ {
+          "name" : "categoryId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SetCommissionRateRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        }
+      },
+      "delete" : {
+        "tags" : [ "admin-commission-rate-command-controller" ],
+        "operationId" : "remove",
+        "parameters" : [ {
+          "name" : "categoryId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        }
+      }
+    },
+    "/v1/admin/commission-rates" : {
+      "get" : {
+        "tags" : [ "admin-commission-rate-query-controller" ],
+        "operationId" : "list",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CommissionRatesView"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "SetCommissionRateRequest" : {
+        "type" : "object",
+        "properties" : {
+          "rateBp" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        },
+        "required" : [ "rateBp" ]
+      },
+      "CommissionRateView" : {
+        "type" : "object",
+        "properties" : {
+          "categoryId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "rateBp" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "updatedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "CommissionRatesView" : {
+        "type" : "object",
+        "properties" : {
+          "defaultRateBp" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "rates" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/CommissionRateView"
+            }
+          }
+        }
+      }
+    }
+  }
+}
