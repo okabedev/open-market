@@ -98,7 +98,8 @@ test("M4: 관리자가 알림을 받고 교환 중재를 승인하고, 거절된
       .getByRole("listitem", { name: /교환 신청이 들어왔습니다/ })
       .getByRole("button", { name: /보기$/ })
       .click();
-    await expect(seller).toHaveURL(`${env.seller}/orders?status=claims`);
+    // M5부터 클레임 신청 알림은 그 하위 주문 상세로 간다(notification.md "M5에서 더한 것").
+    await expect(seller).toHaveURL(new RegExp(`^${env.seller}/orders/[0-9a-f-]{36}$`));
   });
 
   const [mediatingSo = "", refundingSo = ""] = await sellerOrderIds(seller, name);

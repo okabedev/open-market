@@ -75,7 +75,8 @@ test("M3: 장바구니에서 주문해 결제하면 주문 내역과 판매자 �
     await row.getByRole("link", { name }).click();
     await buyer.waitForURL(`${env.shop}/orders/${orderId}`);
     await expect(buyer.getByRole("heading", { name })).toBeVisible();
-    await expect(buyer.getByText("결제 완료")).toBeVisible();
+    // 주문 상태 배지가 먼저다. 하위 주문 진행 상태(M4)도 "결제 완료"로 보인다.
+    await expect(buyer.getByText("결제 완료").first()).toBeVisible();
     await expect(buyer.getByText("홍길동 · 010-1234-5678")).toBeVisible();
     await expect(buyer.getByRole("button", { name: "주문 취소" })).toHaveCount(0);
   });

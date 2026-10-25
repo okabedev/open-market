@@ -73,7 +73,8 @@ test("판매자 둘의 상품을 한 번에 주문하고 결제하면 PAID가 �
   await expect(buyer.getByRole("heading", { name: sellerB.store })).toBeVisible();
 
   await buyer.goto(`${env.shop}/orders/${orderId}`);
-  await expect(buyer.getByText("결제 완료")).toBeVisible();
+  // 주문 상태 배지가 먼저다. 하위 주문 진행 상태(M4)도 "결제 완료"로 보인다.
+  await expect(buyer.getByText("결제 완료").first()).toBeVisible();
   // 주문명은 첫 항목의 상품명 + "외 1건"이다.
   await expect(buyer.getByRole("heading", { name: / 외 1건$/ })).toBeVisible();
 
