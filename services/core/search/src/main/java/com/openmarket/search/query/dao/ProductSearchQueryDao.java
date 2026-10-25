@@ -16,6 +16,8 @@ import com.openmarket.search.query.dto.ProductSearchResultView;
 import com.openmarket.search.query.dto.ProductSearchSort;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -89,6 +91,19 @@ public class ProductSearchQueryDao {
         if (categoryId != null) {
             bool.filter(f -> f.term(t -> t.field("categoryPath").value(categoryId.toString())));
         }
+        Integer minRating = condition.minRating();
+        if (minRating != null) {
+            bool.filter(
+                    f ->
+                            f.range(
+                                    r ->
+                                            r.number(
+                                                    n ->
+                                                            n.field("ratingAverage")
+                                                                    .gte(
+                                                                            minRating
+                                                                                    .doubleValue()))));
+        }
         Long minPrice = condition.minPrice();
         Long maxPrice = condition.maxPrice();
         if (minPrice != null || maxPrice != null) {
@@ -122,7 +137,10 @@ public class ProductSearchQueryDao {
         return bool.build();
     }
 
-    /** 품절 뒤로 → 고른 정렬 → productId(같은 값일 때 순서를 고정해 커서가 끊기지 않게 한다). */
+    /**
+     * 품절 뒤로 → 고른 정렬 → productId(같은 값일 때 순서를 고정해 커서가 끊기지 않게 한다). 관련도가 같으면 판매량 많은 순이다. 관련도 점수에 판매량을
+     * 더하지는 않는다(docs/architecture/search.md "정렬과 필터").
+     */
     private static List<SortOptions> sort(Condition condition) {
         List<SortOptions> sorts = new ArrayList<>();
         sorts.add(field("inStock", SortOrder.Desc));
@@ -133,11 +151,17 @@ public class ProductSearchQueryDao {
         switch (sort) {
             case RELEVANCE -> {
                 sorts.add(SortOptions.of(s -> s.score(sc -> sc.order(SortOrder.Desc))));
+                sorts.add(field("salesCount", SortOrder.Desc));
                 sorts.add(field("publishedAt", SortOrder.Desc));
             }
             case LATEST -> sorts.add(field("publishedAt", SortOrder.Desc));
             case PRICE_ASC -> sorts.add(field("minPrice", SortOrder.Asc));
             case PRICE_DESC -> sorts.add(field("minPrice", SortOrder.Desc));
+            case RATING -> {
+                sorts.add(field("ratingAverage", SortOrder.Desc));
+                sorts.add(field("ratingCount", SortOrder.Desc));
+            }
+            case SALES -> sorts.add(field("salesCount", SortOrder.Desc));
         }
         sorts.add(field("productId", SortOrder.Asc));
         return sorts;
@@ -151,6 +175,7 @@ public class ProductSearchQueryDao {
      * 검색 조건.
      *
      * @param keyword 앞뒤 공백을 지운 검색어. 없으면 null
+     * @param minRating 평균 별점 하한(1~5). 리뷰가 없는 상품은 빠진다
      * @param cursor 이전 쪽의 {@code nextCursor}
      */
     public record Condition(
@@ -158,6 +183,7 @@ public class ProductSearchQueryDao {
             @Nullable UUID categoryId,
             @Nullable Long minPrice,
             @Nullable Long maxPrice,
+            @Nullable Integer minRating,
             ProductSearchSort sort,
             @Nullable String cursor,
             int size) {}
@@ -170,7 +196,9 @@ public class ProductSearchQueryDao {
             long minPrice,
             boolean inStock,
             @Nullable String thumbnailFileId,
-            @Nullable Instant publishedAt) {
+            @Nullable Instant publishedAt,
+            @Nullable Double ratingAverage,
+            @Nullable Long ratingCount) {
 
         ProductSearchItemView toView() {
             return new ProductSearchItemView(
@@ -180,7 +208,11 @@ public class ProductSearchQueryDao {
                     minPrice,
                     inStock,
                     thumbnailFileId == null ? null : UUID.fromString(thumbnailFileId),
-                    publishedAt);
+                    publishedAt,
+                    ratingAverage == null
+                            ? null
+                            : BigDecimal.valueOf(ratingAverage).setScale(1, RoundingMode.HALF_UP),
+                    ratingCount == null ? 0 : ratingCount);
         }
     }
 

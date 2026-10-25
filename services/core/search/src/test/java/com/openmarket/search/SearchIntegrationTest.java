@@ -70,6 +70,7 @@ class SearchIntegrationTest {
 
     static final Path PUBLISHER_EXAMPLES = Path.of("../catalog/src/test/resources/events");
 
+    /** 리스너가 받는 토픽. 다른 검색 통합 테스트도 같은 설정을 써서 컨텍스트를 함께 쓴다. */
     @TestConfiguration(proxyBeanMethods = false)
     static class Topics {
         @Bean
@@ -90,6 +91,26 @@ class SearchIntegrationTest {
         @Bean
         NewTopic catalogStockDlt() {
             return TopicBuilder.name("catalog.stock.DLT").partitions(1).build();
+        }
+
+        @Bean
+        NewTopic reviewRatingSummary() {
+            return TopicBuilder.name("review.rating-summary").partitions(1).build();
+        }
+
+        @Bean
+        NewTopic reviewRatingSummaryDlt() {
+            return TopicBuilder.name("review.rating-summary.DLT").partitions(1).build();
+        }
+
+        @Bean
+        NewTopic fulfillmentShipment() {
+            return TopicBuilder.name("fulfillment.shipment").partitions(1).build();
+        }
+
+        @Bean
+        NewTopic fulfillmentShipmentDlt() {
+            return TopicBuilder.name("fulfillment.shipment.DLT").partitions(1).build();
         }
     }
 

@@ -1,5 +1,6 @@
 package com.openmarket.search.command.domain;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -9,7 +10,8 @@ import org.jspecify.annotations.Nullable;
  * 검색 상품(docs/glossary.md "검색 상품"). catalog 상품 하나의 검색용 사본이다. 상품 이벤트는 상품 {@code revision}이, 품절 전환은
  * {@code availabilityRevision}이 저장된 것보다 클 때만 반영한다(docs/architecture/search.md "색인").
  *
- * <p>품절 전환이 상품 스냅샷보다 먼저 오면 상태와 내용 없이 판매 가능 여부만 가진다. 이때는 검색에 나오지 않는다.
+ * <p>품절 전환이 상품 스냅샷보다 먼저 오면 상태와 내용 없이 판매 가능 여부만 가진다. 이때는 검색에 나오지 않는다. 별점 요약과 판매량도 각자의 리비전으로 따로
+ * 반영한다(docs/architecture/search.md "별점", "판매량").
  */
 public final class SearchProduct {
 
@@ -19,6 +21,8 @@ public final class SearchProduct {
     private @Nullable Content content;
     private boolean inStock;
     private long availabilityRevision;
+    private Rating rating;
+    private Sales sales;
     private final @Nullable DocumentVersion version;
 
     private SearchProduct(
@@ -28,6 +32,8 @@ public final class SearchProduct {
             @Nullable Content content,
             boolean inStock,
             long availabilityRevision,
+            Rating rating,
+            Sales sales,
             @Nullable DocumentVersion version) {
         this.productId = productId;
         this.revision = revision;
@@ -35,12 +41,14 @@ public final class SearchProduct {
         this.content = content;
         this.inStock = inStock;
         this.availabilityRevision = availabilityRevision;
+        this.rating = rating;
+        this.sales = sales;
         this.version = version;
     }
 
     /** 아직 받은 이벤트가 없는 상품. 저장소에 없을 때 만든다. */
     public static SearchProduct newProduct(UUID productId) {
-        return new SearchProduct(productId, 0, null, null, false, 0, null);
+        return new SearchProduct(productId, 0, null, null, false, 0, Rating.NONE, Sales.NONE, null);
     }
 
     /** 저장소에서 읽은 값으로 되살린다. */
@@ -51,9 +59,19 @@ public final class SearchProduct {
             @Nullable Content content,
             boolean inStock,
             long availabilityRevision,
+            Rating rating,
+            Sales sales,
             @Nullable DocumentVersion version) {
         return new SearchProduct(
-                productId, revision, status, content, inStock, availabilityRevision, version);
+                productId,
+                revision,
+                status,
+                content,
+                inStock,
+                availabilityRevision,
+                rating,
+                sales,
+                version);
     }
 
     /**
@@ -101,6 +119,32 @@ public final class SearchProduct {
         return true;
     }
 
+    /**
+     * 별점 요약({@code RatingSummaryChanged})을 반영한다.
+     *
+     * @return 더 새로운 별점 리비전이라 반영했으면 true
+     */
+    public boolean changeRating(Rating rating) {
+        if (rating.revision() <= this.rating.revision()) {
+            return false;
+        }
+        this.rating = rating;
+        return true;
+    }
+
+    /**
+     * Postgres에서 더한 판매량(절대값)을 반영한다. 다시 처리하거나 쓰기 순서가 섞여도 리비전이 큰 값만 남는다.
+     *
+     * @return 더 새로운 판매량 리비전이라 반영했으면 true
+     */
+    public boolean changeSales(Sales sales) {
+        if (sales.revision() <= this.sales.revision()) {
+            return false;
+        }
+        this.sales = sales;
+        return true;
+    }
+
     /** 판매 중이고 내용을 아는 상품만 검색에 나온다(SRC-3). 품절이어도 나온다(뒤로 간다). */
     public boolean isSearchable() {
         return status == SearchProductStatus.ON_SALE && content != null;
@@ -130,6 +174,14 @@ public final class SearchProduct {
         return availabilityRevision;
     }
 
+    public Rating rating() {
+        return rating;
+    }
+
+    public Sales sales() {
+        return sales;
+    }
+
     /** 저장소에서 읽은 버전. 새로 만든 상품이면 null이다. */
     public @Nullable DocumentVersion version() {
         return version;
@@ -157,6 +209,28 @@ public final class SearchProduct {
         public Content {
             categoryPath = List.copyOf(categoryPath);
         }
+    }
+
+    /**
+     * 별점 요약(review).
+     *
+     * @param average 소수 첫째 자리 평균. 보이는 리뷰가 없으면 null
+     * @param count 보이는 리뷰 수
+     * @param revision 별점 요약 리비전. 받은 적이 없으면 0
+     */
+    public record Rating(@Nullable BigDecimal average, long count, long revision) {
+
+        public static final Rating NONE = new Rating(null, 0, 0);
+    }
+
+    /**
+     * 판매량. 구매확정 수량의 합이다.
+     *
+     * @param revision 판매량 리비전(Postgres {@code product_sales}). 받은 적이 없으면 0
+     */
+    public record Sales(long count, long revision) {
+
+        public static final Sales NONE = new Sales(0, 0);
     }
 
     /** 상품 스냅샷 중 검색에 쓰는 부분. */

@@ -143,6 +143,8 @@ class IndexingUseCasesTest {
                     p.content(),
                     p.inStock(),
                     p.availabilityRevision(),
+                    p.rating(),
+                    p.sales(),
                     null);
         }
     }

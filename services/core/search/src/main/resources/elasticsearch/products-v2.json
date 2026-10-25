@@ -1,0 +1,115 @@
+{
+  "settings": {
+    "number_of_shards": 1,
+    "number_of_replicas": 0,
+    "analysis": {
+      "tokenizer": {
+        "korean_mixed": {
+          "type": "nori_tokenizer",
+          "decompound_mode": "mixed"
+        }
+      },
+      "analyzer": {
+        "korean": {
+          "type": "custom",
+          "tokenizer": "korean_mixed",
+          "filter": [
+            "nori_part_of_speech",
+            "nori_readingform",
+            "lowercase"
+          ]
+        },
+        "korean_suggest": {
+          "type": "custom",
+          "tokenizer": "korean_mixed",
+          "filter": [
+            "nori_part_of_speech",
+            "nori_readingform",
+            "lowercase",
+            "suggest_edge_ngram"
+          ]
+        }
+      },
+      "filter": {
+        "suggest_edge_ngram": {
+          "type": "edge_ngram",
+          "min_gram": 1,
+          "max_gram": 20
+        }
+      }
+    }
+  },
+  "mappings": {
+    "dynamic": "strict",
+    "properties": {
+      "productId": {
+        "type": "keyword"
+      },
+      "revision": {
+        "type": "long"
+      },
+      "status": {
+        "type": "keyword"
+      },
+      "sellerId": {
+        "type": "keyword"
+      },
+      "storeName": {
+        "type": "text",
+        "analyzer": "korean"
+      },
+      "categoryId": {
+        "type": "keyword"
+      },
+      "categoryPath": {
+        "type": "keyword"
+      },
+      "name": {
+        "type": "text",
+        "analyzer": "korean",
+        "fields": {
+          "suggest": {
+            "type": "text",
+            "analyzer": "korean_suggest",
+            "search_analyzer": "korean"
+          }
+        }
+      },
+      "description": {
+        "type": "text",
+        "analyzer": "korean"
+      },
+      "thumbnailFileId": {
+        "type": "keyword",
+        "index": false
+      },
+      "minPrice": {
+        "type": "long"
+      },
+      "publishedAt": {
+        "type": "date"
+      },
+      "inStock": {
+        "type": "boolean"
+      },
+      "availabilityRevision": {
+        "type": "long"
+      },
+      "ratingAverage": {
+        "type": "double"
+      },
+      "ratingCount": {
+        "type": "long"
+      },
+      "ratingRevision": {
+        "type": "long"
+      },
+      "salesCount": {
+        "type": "long"
+      },
+      "salesRevision": {
+        "type": "long"
+      }
+    }
+  }
+}

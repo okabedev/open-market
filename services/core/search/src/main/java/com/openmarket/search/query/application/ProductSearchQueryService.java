@@ -22,12 +22,13 @@ public class ProductSearchQueryService {
             @Nullable UUID categoryId,
             @Nullable Long minPrice,
             @Nullable Long maxPrice,
+            @Nullable Integer minRating,
             ProductSearchSort sort,
             @Nullable String cursor,
             int size) {
         String keyword = q == null || q.isBlank() ? null : q.strip();
         return dao.search(
                 new ProductSearchQueryDao.Condition(
-                        keyword, categoryId, minPrice, maxPrice, sort, cursor, size));
+                        keyword, categoryId, minPrice, maxPrice, minRating, sort, cursor, size));
     }
 }

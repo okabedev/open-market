@@ -1,5 +1,6 @@
 package com.openmarket.search.query.dto;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 import org.jspecify.annotations.Nullable;
@@ -10,6 +11,8 @@ import org.jspecify.annotations.Nullable;
  * @param minPrice SKU 가격 중 가장 낮은 값(원)
  * @param inStock 판매 가능한 SKU가 있는가. 품절이면 false
  * @param thumbnailFileId 첫 이미지. {@code /files/{id}/w300}으로 받는다. 없으면 null
+ * @param ratingAverage 소수 첫째 자리 평균 별점. 리뷰가 없으면 null
+ * @param ratingCount 보이는 리뷰 수
  */
 public record ProductSearchItemView(
         UUID productId,
@@ -18,4 +21,6 @@ public record ProductSearchItemView(
         long minPrice,
         boolean inStock,
         @Nullable UUID thumbnailFileId,
-        @Nullable Instant publishedAt) {}
+        @Nullable Instant publishedAt,
+        @Nullable BigDecimal ratingAverage,
+        long ratingCount) {}

@@ -9,5 +9,9 @@ public enum ProductSearchSort {
     /** 최저가 낮은 순. */
     PRICE_ASC,
     /** 최저가 높은 순. */
-    PRICE_DESC
+    PRICE_DESC,
+    /** 평균 별점 높은 순, 같으면 리뷰 수 많은 순. 리뷰가 없는 상품은 뒤로 간다. */
+    RATING,
+    /** 판매량(구매확정 수량) 많은 순. */
+    SALES
 }
