@@ -43,3 +43,5 @@ openmarket:
     public-paths:
       - method: GET
         pattern: /v1/products
+      - method: GET
+        pattern: /v1/suggestions

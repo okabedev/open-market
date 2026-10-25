@@ -18,3 +18,6 @@ openmarket:
       # 구매자 상품 검색(docs/architecture/search.md "검색 API")
       - method: GET
         pattern: /v1/products
+      # 자동완성("자동완성 API")
+      - method: GET
+        pattern: /v1/suggestions

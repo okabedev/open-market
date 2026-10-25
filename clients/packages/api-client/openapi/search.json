@@ -5,6 +5,34 @@
     "version" : "v0"
   },
   "paths" : {
+    "/v1/suggestions" : {
+      "get" : {
+        "tags" : [ "suggestion-query-controller" ],
+        "operationId" : "suggest",
+        "parameters" : [ {
+          "name" : "q",
+          "in" : "query",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "maxLength" : 50,
+            "minLength" : 1
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SuggestionListView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/products" : {
       "get" : {
         "tags" : [ "product-search-query-controller" ],
@@ -99,6 +127,25 @@
   },
   "components" : {
     "schemas" : {
+      "SuggestionListView" : {
+        "type" : "object",
+        "properties" : {
+          "items" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/SuggestionView"
+            }
+          }
+        }
+      },
+      "SuggestionView" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string"
+          }
+        }
+      },
       "ProductSearchItemView" : {
         "type" : "object",
         "properties" : {
