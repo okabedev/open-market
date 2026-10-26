@@ -1,10 +1,10 @@
 "use client";
 
-import { FormAlert, idleState, SubmitButton, TextAreaField } from "@openmarket/ui";
+import { FormAlert, idleState, stars, SubmitButton, TextAreaField } from "@openmarket/ui";
 import { useActionState, useState } from "react";
 import { writeReview } from "@/app/my/reviews/actions";
 import { PhotoUpload } from "@/components/photo-upload";
-import { REVIEW_LIMITS, stars } from "@/lib/reviews";
+import { REVIEW_LIMITS } from "@/lib/reviews";
 
 type ReviewFormProps = {
   orderLineId: string;
