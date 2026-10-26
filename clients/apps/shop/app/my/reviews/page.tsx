@@ -9,10 +9,10 @@ import {
   formatDateTime,
   PageHeader,
   ProductImage,
+  stars,
 } from "@openmarket/ui";
 import Link from "next/link";
 import { bff } from "@/lib/bff";
-import { stars } from "@/lib/reviews";
 import { requireSession } from "@/lib/session";
 
 const PAGE_SIZE = 20;

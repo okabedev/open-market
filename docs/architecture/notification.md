@@ -88,7 +88,7 @@ M5에서 더한 것(2026-10-22 설계, 2026-10-25 구현)
 - 정산 확정 문구는 기간을 한국 날짜로 넣는다. 기간 끝(`periodEnd`)은 기간에 들지 않으므로 그 직전 날을 끝 날로 쓴다. 예: `10월 26일~11월 1일 판매분 정산이 확정됐습니다. 정산 금액 43,417원`.
 - `CLAIM_REQUESTED`는 하위 주문 상세(`SELLER_ORDER`, `ClaimRequested`의 sellerOrderId)로 간다. 클레임은 하위 주문 상세에서 처리한다. 그 전에 만든 알림은 `CLAIM`(클레임 ID)으로 남아 있어 seller는 계속 클레임 진행 중 목록으로 보낸다(M4 회고에서 넘어옴).
 - 금액(2026-10-25 결정): 구매자 주문 완료는 주문 금액(= 결제 금액, 할인 뒤)이고, 판매자 새 주문은 하위 주문의 상품 금액(할인 전)이다. 판매자 주문 화면도 상품 금액을 보이고 할인 필드가 없어 같은 값을 쓴다.
-- `REVIEW`, `SETTLEMENT` 화면은 seller 화면 PR에서 연결한다. 그때까지 seller는 읽음만 하고, 이메일 링크는 앱 첫 화면이다.
+- seller `REVIEW`는 리뷰 목록의 그 리뷰(`/reviews#review-{reviewId}`)로 간다(M5 PR 14b). `SETTLEMENT` 화면은 정산 화면 PR(14c)에서 연결한다. 그때까지 정산 알림은 읽음만 하고, 이메일 링크는 앱 첫 화면이다.
 - notification 메모리(M4 peak 564MB/640MB, 중간 측정 470MB)는 리스너 두 개만 늘어 대기 상태로는 차이를 보기 어렵다. M5 E2E PR에서 시나리오를 돌린 뒤 서비스 15개와 함께 다시 잰다([risks.md](risks.md) R6).
 
 화면(세 앱 같음, `packages/ui`의 `NotificationBell`, `NotificationList`). 조회 방식과 관리자 역할 대상 알림의 근거는 [ADR 0019](../adr/0019-in-app-notification-polling.md)
@@ -102,7 +102,8 @@ M5에서 더한 것(2026-10-22 설계, 2026-10-25 구현)
   | shop | `SELLER_APPLICATION` | 입점 신청 |
   | seller | `SELLER_ORDER` | 하위 주문 상세 |
   | seller | `CLAIM` | 주문 목록의 클레임 진행 중 탭(M5 전에 만든 클레임 신청 알림. 클레임 ID만 있다) |
-  | seller | `REVIEW`, `SETTLEMENT` | 아직 없음(seller 화면 PR) |
+  | seller | `REVIEW` | 리뷰 목록의 그 리뷰(`/reviews#review-{reviewId}`) |
+  | seller | `SETTLEMENT` | 아직 없음(정산 화면 PR) |
   | seller | `PRODUCT` | 상품 상세 |
   | admin | `CLAIM` | 클레임 중재 |
   | admin | `REFUND` | 결제 실패 |

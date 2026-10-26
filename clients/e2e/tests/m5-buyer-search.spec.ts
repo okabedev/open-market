@@ -7,11 +7,12 @@ import { publish, registerProduct, searchIds } from "../support/products";
 import { writeReview } from "../support/reviews";
 
 /**
- * M5 구매자 리뷰·검색(REV-1, REV-2, SRC-2): 구매확정한 상품에 내 리뷰에서 사진과 함께 리뷰를 쓰면 검색의 별점순·판매량순·별점
- * 필터와 상품 상세 별점·리뷰에 보인다. 검색창은 입력하는 동안 자동완성을 보인다. 구매확정은 배송 완료 30초 뒤 자동이다(run.sh
+ * M5 리뷰·검색(REV-1~3, SRC-2): 구매확정한 상품에 내 리뷰에서 사진과 함께 리뷰를 쓰면 검색의 별점순·판매량순·별점 필터와 상품 상세
+ * 별점·리뷰에 보인다. 검색창은 입력하는 동안 자동완성을 보인다. 판매자는 새 리뷰 알림에서 그 리뷰로 가 답글을 달고, 답글은 상품 상세에
+ * 보인다. 구매확정은 배송 완료 30초 뒤 자동이다(run.sh
  * `FULFILLMENT_AUTO_CONFIRM_AFTER`).
  */
-test("M5: 구매확정한 상품에 쓴 리뷰가 검색 정렬·별점 필터·상품 상세에 보이고, 검색창이 자동완성을 보인다", async ({
+test("M5: 구매확정한 상품에 쓴 리뷰가 검색 정렬·별점 필터·상품 상세에 보이고, 검색창이 자동완성을 보이고, 판매자가 알림에서 답글을 단다", async ({
   browser,
 }) => {
   test.setTimeout(360_000);
@@ -113,5 +114,31 @@ test("M5: 구매확정한 상품에 쓴 리뷰가 검색 정렬·별점 필터·
     await expect(
       buyer.getByRole("region", { name: "리뷰" }).getByText("아직 리뷰가 없습니다."),
     ).toBeVisible();
+  });
+
+  await test.step("판매자: 새 리뷰 알림을 열면 리뷰 목록의 그 리뷰로 가고, 단 답글이 상품 상세에 보인다", async () => {
+    await expect(async () => {
+      await seller.goto(`${env.seller}/notifications`);
+      await expect(seller.getByText(`${reviewed}에 새 리뷰가 등록됐습니다. 별점 5점`)).toBeVisible({
+        timeout: 1_000,
+      });
+    }).toPass({ timeout: 30_000 });
+    await seller
+      .getByRole("listitem", { name: /새 리뷰가 등록됐습니다/ })
+      .getByRole("button", { name: /보기$/ })
+      .click();
+    await expect(seller).toHaveURL(new RegExp(`^${env.seller}/reviews#review-[0-9a-f-]{36}$`));
+    // 클라이언트 이동은 :target을 바꾸지 않으므로 주소의 리뷰 ID로 찾는다.
+    const target = seller.locator(`#${new URL(seller.url()).hash.slice(1)}`);
+    await expect(target).toContainText("두께가 적당하고 구김이 적어요.");
+    await target.getByLabel("답글", { exact: true }).fill("찾아 주셔서 감사합니다.");
+    await target.getByRole("button", { name: "답글 달기" }).click();
+    await expect(seller.getByText("답글을 저장했습니다.")).toBeVisible();
+    await expect(seller.getByRole("button", { name: "답글 고치기" })).toBeVisible();
+
+    await buyer.goto(`${env.shop}/products/${reviewedId}`);
+    const reviews = buyer.getByRole("region", { name: "리뷰" });
+    await expect(reviews.getByText("판매자 답글")).toBeVisible();
+    await expect(reviews.getByText("찾아 주셔서 감사합니다.")).toBeVisible();
   });
 });

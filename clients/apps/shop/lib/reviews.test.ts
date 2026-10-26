@@ -1,13 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ratingLabel, stars } from "./reviews";
-
-describe("stars", () => {
-  it("별점을 다섯 칸 별로 그린다", () => {
-    expect(stars(4)).toBe("★★★★☆");
-    expect(stars(5)).toBe("★★★★★");
-    expect(stars(1)).toBe("★☆☆☆☆");
-  });
-});
+import { ratingLabel } from "./reviews";
 
 describe("ratingLabel", () => {
   it("평균은 소수 첫째 자리, 리뷰 수는 천 단위로 끊는다", () => {

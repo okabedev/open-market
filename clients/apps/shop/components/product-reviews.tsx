@@ -1,7 +1,7 @@
-import { Alert, Button, ProductImage } from "@openmarket/ui";
+import { Alert, Button, ProductImage, stars } from "@openmarket/ui";
 import Link from "next/link";
 import { bff } from "@/lib/bff";
-import { ratingLabel, stars } from "@/lib/reviews";
+import { ratingLabel } from "@/lib/reviews";
 
 const PAGE_SIZE = 10;
 

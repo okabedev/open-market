@@ -55,6 +55,11 @@ M5 시작(2026-10-22)에 정한 규칙이다. API와 화면은 각 PR에서 이 
 - 리뷰 쓰기 `/orders/{orderId}/reviews/{orderLineId}`: 상품 이름과 옵션은 주문 상세(order)에서 읽는다. 별점(1~5점 라디오), 본문, 사진을 받고 화면을 그릴 때 만든 `Idempotency-Key`로 쓴다. 쓰면 `/my/reviews?notice=review-written`로 간다. 409·404는 review 문구를 폼에 보인다.
 - 사진은 고르는 즉시 BFF `/api/files?purpose=REVIEW_IMAGE`로 한 장씩 올리고, 공개 경로 `/files/{fileId}/w300`으로 미리 본다(붙기 전 `TEMP`도 공개 용도면 보인다, [file.md](file.md) "썸네일과 제공").
 
+### 화면(seller)
+- 리뷰 `/reviews`: 내 상품 리뷰(`/v1/seller/reviews`)를 작성 최근 순 커서 목록(`?cursor=`)으로 보인다. 숨긴 리뷰는 "숨김"과 안내를 붙인다. 구매자 이름은 없다.
+- 리뷰마다 답글 폼이 있다. 답글이 있으면 그 본문을 채워 "답글 고치기"다. 저장하면 `/reviews?notice=replied#review-{reviewId}`로 돌아간다.
+- 새 리뷰 알림(`REVIEW`)은 `/reviews#review-{reviewId}`로 온다. 리뷰 한 건을 읽는 API가 없고, 새 리뷰는 첫 쪽 맨 위다.
+
 ## 답글(`ReviewReply`, REV-3)
 - 리뷰 상품의 판매자만 단다. 1~1,000자. 리뷰마다 하나이고, 다시 쓰면 고친다(204). 다른 판매자의 리뷰면 404 `REVIEW_NOT_FOUND`다.
 - 숨긴 리뷰에도 답글을 쓸 수 있지만 공개 목록에는 리뷰와 함께 빠진다.

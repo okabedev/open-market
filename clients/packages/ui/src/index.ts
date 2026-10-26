@@ -2,6 +2,7 @@
 export { cn } from "./lib/cn";
 export { formatDateTime, formatPrice } from "./lib/format";
 export { listQuery, PAGE_SIZE } from "./lib/list";
+export { stars } from "./lib/review";
 export {
   COUPON_PHASE_LABELS,
   couponPhase,
