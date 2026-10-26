@@ -4,7 +4,7 @@
 저장 위치는 `FileStoragePort` 뒤에 숨겨서, 나중에 S3 호환 저장소(예: 로컬 MinIO)로 바꿀 수 있게 한다. 이때 공개 제공을 맡는 조회 DAO(`FileContentQueryDao`)도 같이 바꾼다.
 
 ## 흐름
-1. 판매자 브라우저가 BFF Route Handler를 거쳐 `POST /api/file/v1/seller/files`(multipart `file`, `purpose=PRODUCT_IMAGE`)로 올린다. 경로 접두어로 gateway와 file 둘 다 `SELLER` 역할을 검사한다. 클레임 사진은 구매자가 `POST /api/file/v1/files`(`purpose=CLAIM_IMAGE`)로 올린다. 로그인한 회원이면 된다. 경로마다 받는 용도가 정해져 있고, 다른 용도면 400 `COMMON_INVALID_REQUEST`다(판매자 경로는 `PRODUCT_IMAGE`, 회원 경로는 `CLAIM_IMAGE`와 `REVIEW_IMAGE`). 리뷰 사진도 회원 경로로 올린다.
+1. 판매자 브라우저가 BFF Route Handler를 거쳐 `POST /api/file/v1/seller/files`(multipart `file`, `purpose=PRODUCT_IMAGE`)로 올린다. 경로 접두어로 gateway와 file 둘 다 `SELLER` 역할을 검사한다. 클레임 사진은 구매자가 `POST /api/file/v1/files`(`purpose=CLAIM_IMAGE`)로 올린다. 로그인한 회원이면 된다. 경로마다 받는 용도가 정해져 있고, 다른 용도면 400 `COMMON_INVALID_REQUEST`다(판매자 경로는 `PRODUCT_IMAGE`, 회원 경로는 `CLAIM_IMAGE`와 `REVIEW_IMAGE`). 리뷰 사진도 회원 경로로 올린다. shop은 BFF Route Handler `/api/files?purpose=CLAIM_IMAGE|REVIEW_IMAGE`가 사용자 토큰을 붙여 넘긴다.
 2. file은 검사를 통과한 파일의 원본과 변형을 저장하고 `StoredFile`(`TEMP`)을 만든다. 응답은 `fileId`, 원본 크기, 변형 목록(이름, URL, 크기)이다. URL은 공개 파일(상품 이미지, 리뷰 사진)이면 `/files/...`, 비공개 파일(클레임 사진)이면 `/api/file/v1/files/...`다(아래 "비공개 파일").
 3. 클라이언트는 상품, 리뷰, 클레임을 저장할 때 `fileId`를 넣는다.
 4. 소유 서비스가 발행한 이벤트에 든 `fileId`를 file이 받아 `ATTACHED`로 바꾸고 소유자를 기록한다. 소유자에서 빠진 파일은 `DETACHED`로 바꾼다(아래 "첨부").
@@ -55,7 +55,7 @@
 - 원본은 저장만 하고 제공하지 않는다(EXIF에 위치 정보가 있을 수 있다).
 - 공개 변형은 gateway `GET /files/{fileId}/{variant}`로 인증 없이 제공한다. gateway와 file의 공개 경로 설정 양쪽에 적는다([auth.md](auth.md) "인가"). `Cache-Control: max-age=31536000, public, immutable`이다. 내용이 바뀌면 새 `fileId`를 쓴다.
 - 이 경로는 OpenAPI 문서에서 뺀다. 브라우저가 `<img>`로 받고, api-client는 `/api/file` 아래만 부른다.
-- 공개 경로는 공개 용도(`PRODUCT_IMAGE`, `REVIEW_IMAGE`)의 변형만 준다. 비공개 용도면 404 `FILE_NOT_FOUND`다.
+- 공개 경로는 공개 용도(`PRODUCT_IMAGE`, `REVIEW_IMAGE`)의 변형만 준다. 비공개 용도면 404 `FILE_NOT_FOUND`다. 상태는 보지 않아 붙기 전(`TEMP`)에도 준다. 올린 직후 폼이 미리 본다.
 
 ## 비공개 파일
 클레임 사진(`CLAIM_IMAGE`)은 비공개다. 구매자 본인, 해당 판매자, 관리자만 본다. 변형은 상품 이미지와 같이 `w300`, `w800`을 만들고 원본은 제공하지 않는다.

@@ -19,6 +19,7 @@ const NAV: NavItem[] = [
   { href: "/cart", label: "장바구니" },
   { href: "/orders", label: "주문 내역" },
   { href: "/my/coupons", label: "내 쿠폰" },
+  { href: "/my/reviews", label: "내 리뷰" },
   { href: "/my", label: "내 정보" },
   { href: "/my/addresses", label: "배송지" },
   { href: "/my/seller", label: "입점 신청" },
