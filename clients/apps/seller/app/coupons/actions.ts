@@ -1,10 +1,9 @@
 "use server";
 
-import { problemState, type FormState } from "@openmarket/ui";
+import { couponFormValues, problemState, readCouponForm, type FormState } from "@openmarket/ui";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { bff } from "@/lib/bff";
-import { couponFormValues, readCouponForm } from "@/lib/coupon-form";
 
 function text(form: FormData, name: string): string {
   const value = form.get(name);

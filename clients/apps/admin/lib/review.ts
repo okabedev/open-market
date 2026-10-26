@@ -17,6 +17,9 @@ export const NOTICES = {
   "mediation-rejected": "거부를 확정했습니다. 구매자에게 사유가 보입니다.",
   "refund-retried": "환불을 다시 시도합니다. 몇 초 안에 결과가 반영됩니다.",
   "cancel-retried": "결제 취소를 다시 시도합니다. 다음 취소 작업 주기에 반영됩니다.",
+  "coupon-created":
+    "플랫폼 쿠폰을 만들었습니다. 발급 기간이 되면 구매자가 쿠폰 화면에서 받을 수 있습니다.",
+  "coupon-stopped": "발급을 멈췄습니다. 이미 받은 쿠폰은 사용 기한까지 쓸 수 있습니다.",
 } as const;
 
 export type Notice = keyof typeof NOTICES;

@@ -13,6 +13,7 @@ const NAV: NavItem[] = [
   { href: "/seller-applications", label: "입점 심사" },
   { href: "/sellers", label: "판매자" },
   { href: "/products", label: "상품" },
+  { href: "/coupons", label: "쿠폰" },
   { href: "/claims", label: "클레임 중재" },
   { href: "/payment-failures", label: "결제 실패" },
 ];
