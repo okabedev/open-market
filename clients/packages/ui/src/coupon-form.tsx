@@ -1,23 +1,37 @@
 "use client";
 
-import { FormAlert, idleState, SubmitButton, TextField } from "@openmarket/ui";
-import { useActionState, useState } from "react";
-import { COUPON_LIMITS } from "@/lib/coupon-form";
-import { createCoupon } from "../actions";
+import { useActionState, useState, type ReactNode } from "react";
+import { TextField } from "./field";
+import { FormAlert } from "./form-alert";
+import { idleState, type FormState } from "./form-state";
+import { COUPON_LIMITS } from "./lib/coupon-form";
+import { SubmitButton } from "./submit-button";
 
 type CouponFormProps = {
+  /** 쿠폰을 만드는 Server Action. 앱마다 판매자·관리자 경로를 부른다 */
+  action: (state: FormState, form: FormData) => Promise<FormState>;
   /** 화면을 그릴 때 만든 멱등성 키. 두 번 눌러도 하나만 생긴다 */
   idempotencyKey: string;
   /** 발급 시작·끝 기본값(한국 시간 `datetime-local`) */
   defaults: { issueStartAt: string; issueEndAt: string };
+  /** 최소 주문 금액 안내. 무엇의 합과 비교하는지 */
+  minOrderHint: string;
+  /** 폼 아래 안내. 어디에 쓰는 쿠폰이고 누가 부담하는지 */
+  scopeNote: ReactNode;
 };
 
 /**
- * 판매자 쿠폰 만들기 폼(PRM-1). 할인 방식에 따라 할인 값의 단위(원, %)가 바뀌고 최대 할인 칸은 정률일 때만 보인다. 시각은 한국
- * 시간으로 받는다. 검사는 Server Action이 한다(`lib/coupon-form.ts`).
+ * 쿠폰 만들기 폼(PRM-1, 판매자 쿠폰과 플랫폼 쿠폰). 할인 방식에 따라 할인 값의 단위(원, %)가 바뀌고 최대 할인 칸은 정률일 때만
+ * 보인다. 시각은 한국 시간으로 받는다. 검사는 Server Action이 `readCouponForm`으로 한다.
  */
-export function CouponForm({ idempotencyKey, defaults }: CouponFormProps) {
-  const [state, formAction] = useActionState(createCoupon, idleState);
+export function CouponForm({
+  action,
+  idempotencyKey,
+  defaults,
+  minOrderHint,
+  scopeNote,
+}: CouponFormProps) {
+  const [state, formAction] = useActionState(action, idleState);
   const errors = state.fieldErrors ?? {};
   const values = state.values ?? {};
   const [discountType, setDiscountType] = useState(
@@ -100,7 +114,7 @@ export function CouponForm({ idempotencyKey, defaults }: CouponFormProps) {
           min={0}
           defaultValue={values.minOrderAmount ?? "0"}
           error={errors.minOrderAmount}
-          hint="이 판매자 상품 금액의 합과 비교합니다."
+          hint={minOrderHint}
         />
         <TextField
           name="quantity"
@@ -145,10 +159,7 @@ export function CouponForm({ idempotencyKey, defaults }: CouponFormProps) {
         />
       </div>
 
-      <p className="text-sm text-muted-foreground">
-        내 모든 상품에 쓰는 쿠폰입니다. 만든 뒤에는 내용을 바꿀 수 없고 발급 중지만 할 수 있습니다.
-        쿠폰 할인은 정산 금액에서 뺍니다.
-      </p>
+      <p className="text-sm text-muted-foreground">{scopeNote}</p>
 
       <div>
         <SubmitButton pendingText="만드는 중…">쿠폰 만들기</SubmitButton>

@@ -1,6 +1,10 @@
-import { kstInputToIso, type FormState } from "@openmarket/ui";
+import type { FormState } from "../form-state";
+import { kstInputToIso } from "./coupon";
 
-/** 쿠폰 정책 규칙의 상한(docs/architecture/promotion.md "쿠폰 정책"). 최종 검사는 promotion이 한다(400 `PROMOTION_INVALID_INPUT`). */
+/**
+ * 쿠폰 정책 규칙의 상한(docs/architecture/promotion.md "쿠폰 정책"). 판매자·관리자 쿠폰 만들기가 같은 규칙이다. 최종 검사는 promotion이
+ * 한다(400 `PROMOTION_INVALID_INPUT`).
+ */
 export const COUPON_LIMITS = {
   name: 50,
   rate: 100,

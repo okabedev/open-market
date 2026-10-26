@@ -79,7 +79,12 @@ M5 시작(2026-10-22)에 정한 규칙이다. API와 화면은 각 PR에서 이 
 
 ### 화면(seller)
 - 쿠폰 `/coupons`: 내 쿠폰을 최근 생성 순, 쪽 번호로 보인다. 탭은 전체·발급 중(`ISSUING`)·발급 중지(`STOPPED`)다. 단계는 상태와 발급 기간으로 "발급 예정", "발급 중", "발급 끝남", "발급 중지"로 보인다(`couponPhase`, `packages/ui`). 발급 수 / 수량을 보이고, 중지하지 않은 쿠폰은 확인한 뒤 발급을 멈춘다.
-- 쿠폰 만들기 `/coupons/new`: 위 "쿠폰 정책" 규칙을 Server Action이 먼저 검사하고(`lib/coupon-form.ts`), 화면을 그릴 때 만든 `Idempotency-Key`로 만든다. 발급 시각은 한국 시간 `datetime-local`로 받아 ISO로 바꾼다. 기본 발급 기간은 다음 정시부터 7일, 사용 기한은 30일이다. 최대 할인 칸은 정률일 때만 보이고 정액이면 보내지 않는다.
+- 쿠폰 만들기 `/coupons/new`: 위 "쿠폰 정책" 규칙을 Server Action이 먼저 검사하고(`readCouponForm`, 폼 `CouponForm`과 함께 `packages/ui`에 있어 admin도 쓴다), 화면을 그릴 때 만든 `Idempotency-Key`로 만든다. 발급 시각은 한국 시간 `datetime-local`로 받아 ISO로 바꾼다. 기본 발급 기간은 다음 정시부터 7일, 사용 기한은 30일이다. 최대 할인 칸은 정률일 때만 보이고 정액이면 보내지 않는다.
+
+### 화면(admin)
+- 쿠폰 `/coupons`: 모든 쿠폰(`GET /v1/admin/coupons`)을 최근 생성 순, 쪽 번호로 보인다. 상태 탭, 발행 주체(플랫폼·판매자) 링크, 판매자(`?sellerId=`)로 거른다. 단계와 발급 수 / 수량은 seller와 같다. promotion은 상호를 갖지 않아 판매자 쿠폰은 판매자 ID 앞 8자리와 그 판매자 쿠폰만 보기 링크로 보인다.
+- 어느 쿠폰이든 확인한 뒤 발급을 멈춘다. 보던 목록 조건(`returnTo`)으로 돌아가 `?notice=coupon-stopped`를 보인다.
+- 플랫폼 쿠폰 만들기 `/coupons/new`: seller와 같은 폼과 검사, `Idempotency-Key`. 최소 주문 금액은 판매자 쿠폰 할인 뒤 주문 상품 금액과 비교한다고 안내한다(아래 "할인 계산").
 
 ### 선착순 발급
 구매자가 `POST /v1/coupons/{couponId}/issue`로 내려받는다. 새로 받으면 201, 이미 받았으면 200이고 둘 다 `{issuedCouponId}`다(다시 눌러도 같은 결과).
