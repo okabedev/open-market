@@ -87,7 +87,10 @@ export default async function SellerOrderPage({
             {view?.confirmedAt ? (
               <p>
                 {formatDateTime(view.confirmedAt)}에{" "}
-                {view.confirmMode === "AUTO" ? "자동으로 " : ""}구매확정했습니다.
+                {view.confirmMode === "AUTO" ? "자동으로 " : ""}구매확정했습니다.{" "}
+                <Link href="/my/reviews" className="font-medium underline">
+                  리뷰 쓰러 가기
+                </Link>
               </p>
             ) : view?.confirmDueAt && actions?.confirm ? (
               <p className="text-muted-foreground">

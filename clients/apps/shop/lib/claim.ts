@@ -4,7 +4,6 @@
  */
 export const CLAIM_LIMITS = {
   photos: 5,
-  photoBytes: 10 * 1024 * 1024,
   description: 500,
 } as const;
 

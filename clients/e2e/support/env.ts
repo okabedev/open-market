@@ -13,7 +13,6 @@ export const env = {
   adminEmail: process.env.ADMIN_SEED_EMAIL ?? "admin@openmarket.local",
   adminPassword: process.env.ADMIN_SEED_PASSWORD ?? "admin-local-1234",
   sellerClientSecret: process.env.SELLER_CLIENT_SECRET ?? "seller-local-secret",
-  shopClientSecret: process.env.SHOP_CLIENT_SECRET ?? "shop-local-secret",
   adminClientSecret: process.env.ADMIN_CLIENT_SECRET ?? "admin-local-secret",
 };
 

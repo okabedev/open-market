@@ -1,3 +1,13 @@
+/**
+ * 리뷰 작성 규칙의 상한. 클라이언트 폼도 쓰므로 zod에 의존하지 않는다(검증 스키마는 `app/my/reviews/actions.ts`). 원본은 review
+ * 규칙이다(docs/architecture/review.md "리뷰").
+ */
+export const REVIEW_LIMITS = {
+  photos: 5,
+  contentMin: 10,
+  contentMax: 1000,
+} as const;
+
 /** 별점(1~5)을 다섯 칸 별로 그린다. 화면 읽기 프로그램에는 `aria-label`로 숫자를 따로 준다. */
 export function stars(rating: number): string {
   const filled = Math.min(5, Math.max(0, Math.round(rating)));

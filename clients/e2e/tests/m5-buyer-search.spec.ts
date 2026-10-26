@@ -4,14 +4,14 @@ import { approvedSeller, signUpVerifyAndLogin } from "../support/flows";
 import { accept, buyNowPaid, sellerOrderIds, ship, waitForDelivery } from "../support/fulfillment";
 import { addAddress } from "../support/orders";
 import { publish, registerProduct, searchIds } from "../support/products";
-import { writeReviewByApi } from "../support/reviews";
+import { writeReview } from "../support/reviews";
 
 /**
- * M5 구매자 검색(SRC-2, REV-2): 구매확정한 상품에 리뷰를 쓰면 검색의 별점순·판매량순·별점 필터와 상품 상세 별점·리뷰에 보인다. 검색창은
- * 입력하는 동안 자동완성을 보인다. 구매확정은 배송 완료 30초 뒤 자동이다(run.sh `FULFILLMENT_AUTO_CONFIRM_AFTER`). 리뷰는 shop 작성
- * 화면이 생기기 전까지 API로 쓴다(support/reviews.ts).
+ * M5 구매자 리뷰·검색(REV-1, REV-2, SRC-2): 구매확정한 상품에 내 리뷰에서 사진과 함께 리뷰를 쓰면 검색의 별점순·판매량순·별점
+ * 필터와 상품 상세 별점·리뷰에 보인다. 검색창은 입력하는 동안 자동완성을 보인다. 구매확정은 배송 완료 30초 뒤 자동이다(run.sh
+ * `FULFILLMENT_AUTO_CONFIRM_AFTER`).
  */
-test("M5: 구매확정한 상품의 리뷰가 검색 정렬·별점 필터·상품 상세에 보이고, 검색창이 자동완성을 보인다", async ({
+test("M5: 구매확정한 상품에 쓴 리뷰가 검색 정렬·별점 필터·상품 상세에 보이고, 검색창이 자동완성을 보인다", async ({
   browser,
 }) => {
   test.setTimeout(360_000);
@@ -44,17 +44,23 @@ test("M5: 구매확정한 상품의 리뷰가 검색 정렬·별점 필터·상�
     await ship(seller, sellerOrderId, "7234567890");
   });
 
-  await test.step("배송 완료 30초 뒤 자동 구매확정되고, 구매자가 별점 5점 리뷰를 쓴다", async () => {
+  await test.step("배송 완료 30초 뒤 자동 구매확정되고, 구매자가 내 리뷰에서 사진과 함께 별점 5점 리뷰를 쓴다", async () => {
     await waitForDelivery(
       buyer,
       orderId,
       (page) => page.getByText(/자동으로 구매확정했습니다/),
       150_000,
     );
-    await writeReviewByApi(email, password, reviewedId, {
+    await writeReview(buyer, reviewed, {
       rating: 5,
       content: "두께가 적당하고 구김이 적어요.",
+      photo: true,
     });
+    const written = buyer.getByRole("list", { name: "내가 쓴 리뷰" }).getByRole("listitem").first();
+    await expect(written).toContainText(reviewed);
+    await expect(written.getByLabel("별점 5점")).toBeVisible();
+    await expect(written.getByRole("img", { name: "리뷰 사진 1" })).toBeVisible();
+    await expect(buyer.getByRole("link", { name: `${reviewed} 리뷰 쓰기` })).toHaveCount(0);
   });
 
   await test.step("검색: 별점순·판매량순 맨 위가 리뷰·판매가 있는 상품이고, 별점 필터는 리뷰 없는 상품을 뺀다", async () => {
@@ -102,6 +108,7 @@ test("M5: 구매확정한 상품의 리뷰가 검색 정렬·별점 필터·상�
     await expect(reviews.getByText("5.0 (리뷰 1개)")).toBeVisible();
     await expect(reviews.getByLabel("별점 5점")).toBeVisible();
     await expect(reviews.getByText("두께가 적당하고 구김이 적어요.")).toBeVisible();
+    await expect(reviews.getByRole("img", { name: "리뷰 사진 1" })).toBeVisible();
     await buyer.goto(`${env.shop}/products/${plainId}`);
     await expect(
       buyer.getByRole("region", { name: "리뷰" }).getByText("아직 리뷰가 없습니다."),

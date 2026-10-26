@@ -12,12 +12,13 @@ vi.mock("@/lib/bff", () => ({
 
 const { POST } = await import("./route");
 
-function upload(file: Blob | string | null): Request {
+function upload(file: Blob | string | null, purpose: string | null = "CLAIM_IMAGE"): Request {
   const body = new FormData();
   if (file !== null) {
     body.set("file", file);
   }
-  return new Request("http://shop.local/api/files", { method: "POST", body });
+  const query = purpose === null ? "" : `?purpose=${purpose}`;
+  return new Request(`http://shop.local/api/files${query}`, { method: "POST", body });
 }
 
 describe("POST /api/files", () => {
@@ -62,6 +63,25 @@ describe("POST /api/files", () => {
     expect(path).toBe("/v1/files");
     expect(options.params).toEqual({ query: { purpose: "CLAIM_IMAGE" } });
     expect(options.bodySerializer({}).get("file")).toBeInstanceOf(File);
+  });
+
+  it("리뷰 사진 용도로도 넘긴다", async () => {
+    post.mockResolvedValue({
+      data: { fileId: "f-2", width: 800, height: 600, variants: [] },
+      response: new Response(null, { status: 201 }),
+    });
+
+    const response = await POST(upload(new File(["jpeg"], "a.jpg"), "REVIEW_IMAGE"));
+
+    expect(response.status).toBe(201);
+    const [, options] = post.mock.calls[0] as [string, { params: unknown }];
+    expect(options.params).toEqual({ query: { purpose: "REVIEW_IMAGE" } });
+  });
+
+  it("용도가 없거나 회원이 올릴 수 없는 용도면 400이고 file을 부르지 않는다", async () => {
+    expect((await POST(upload(new File(["x"], "a.jpg"), null))).status).toBe(400);
+    expect((await POST(upload(new File(["x"], "a.jpg"), "PRODUCT_IMAGE"))).status).toBe(400);
+    expect(post).not.toHaveBeenCalled();
   });
 
   it("file이 거절하면 상태와 문구를 그대로 넘긴다", async () => {

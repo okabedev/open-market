@@ -50,6 +50,11 @@ M5 시작(2026-10-22)에 정한 규칙이다. API와 화면은 각 PR에서 이 
 - 답글은 목록 쿼리에서 함께 읽고, 사진은 그 쪽의 리뷰 ID로 한 번 더 읽는다(쪽마다 쿼리 2개 + 개수 1개).
 - 상품 리뷰 목록은 부분 인덱스 `review_product_idx`(`WHERE status = 'VISIBLE'`)를 쓴다. 상태를 바인딩 값으로 비교하면 일반 실행 계획에서 부분 인덱스를 못 쓰고 `review_created_idx`로 전체를 훑으므로(`EXPLAIN`으로 확인) SQL 상수로 비교한다.
 
+### 화면(shop)
+- 내 리뷰 `/my/reviews`: 위는 "쓸 수 있는 리뷰"(`/v1/reviews/writable`), 아래는 "내가 쓴 리뷰"(`/v1/reviews`)다. 목록마다 커서(`?writableCursor=`, `?cursor=`)를 따로 둔다. 숨긴 리뷰는 "숨김"과 함께 보인다. 구매확정한 하위 주문 상세에서도 이 화면으로 간다.
+- 리뷰 쓰기 `/orders/{orderId}/reviews/{orderLineId}`: 상품 이름과 옵션은 주문 상세(order)에서 읽는다. 별점(1~5점 라디오), 본문, 사진을 받고 화면을 그릴 때 만든 `Idempotency-Key`로 쓴다. 쓰면 `/my/reviews?notice=review-written`로 간다. 409·404는 review 문구를 폼에 보인다.
+- 사진은 고르는 즉시 BFF `/api/files?purpose=REVIEW_IMAGE`로 한 장씩 올리고, 공개 경로 `/files/{fileId}/w300`으로 미리 본다(붙기 전 `TEMP`도 공개 용도면 보인다, [file.md](file.md) "썸네일과 제공").
+
 ## 답글(`ReviewReply`, REV-3)
 - 리뷰 상품의 판매자만 단다. 1~1,000자. 리뷰마다 하나이고, 다시 쓰면 고친다(204). 다른 판매자의 리뷰면 404 `REVIEW_NOT_FOUND`다.
 - 숨긴 리뷰에도 답글을 쓸 수 있지만 공개 목록에는 리뷰와 함께 빠진다.
