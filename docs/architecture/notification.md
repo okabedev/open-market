@@ -28,7 +28,7 @@ SMTP와 member 조회는 이벤트 처리 트랜잭션 밖에 둔다. 둘이 느
 - 템플릿은 `templates/mail/<이름>.html`과 `.txt` 두 개다(Thymeleaf). 메일은 HTML과 텍스트를 함께 보낸다.
 - 가입 인증은 `email-verification`이고, 회원 알림 이메일은 모두 `notice` 하나다. `notice`는 인앱 문구(`message`)와 앱 화면 링크(`link`)를 넣는다.
 - 제목은 `ThymeleafEmailRenderer`에 종류별로 둔다.
-- 앱 화면 링크는 `ConfiguredAppLinks`가 받는 쪽의 앱 주소(`openmarket.notification.app-urls`)와 이동 대상으로 만든다. 화면이 아직 없는 대상은 앱의 첫 화면이다.
+- 앱 화면 링크는 `ConfiguredAppLinks`가 받는 쪽의 앱 주소(`openmarket.notification.app-urls`)와 이동 대상으로 만든다. 화면은 아래 "이동 대상 → 앱 화면" 표와 같다(앱의 알림 이동과 같은 경로). 이동 대상이 없으면 앱의 첫 화면이다.
 - 값 이름이 `At`으로 끝나면 한국 시간(`yyyy년 M월 d일 HH:mm`)으로 바꿔 넣는다.
 
 | 종류 | 원인 이벤트 | 값 |

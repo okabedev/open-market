@@ -10,7 +10,8 @@ import org.springframework.stereotype.Component;
 
 /**
  * 앱 주소({@code openmarket.notification.app-urls})로 화면 주소를 만든다. 화면 경로는 앱(clients/apps)의 라우트와 같다. 판매자
- * 리뷰는 한 건 화면이 없어 리뷰 목록의 그 리뷰다. 화면이 아직 없는 대상(관리자 클레임·환불, 판매자 클레임)은 앱의 첫 화면이나 목록이다.
+ * 리뷰는 한 건 화면이 없어 리뷰 목록의 그 리뷰다. 관리자 클레임·환불과 판매자 클레임(M5 전에 만든 알림)은 목록 화면이다. 앱의 알림 이동({@code
+ * clients/apps/<앱>/lib/notifications.ts})과 같다.
  */
 @Component
 class ConfiguredAppLinks implements AppLinkPort {
@@ -48,10 +49,13 @@ class ConfiguredAppLinks implements AppLinkPort {
                     case SELLER_ORDER -> "/orders/" + targetId;
                     case PRODUCT -> "/products/" + targetId;
                     case SELLER_APPLICATION -> "/my/seller";
-                    case CLAIM -> audience == NotificationAudience.SELLER ? "/orders" : "/";
+                    case CLAIM ->
+                            audience == NotificationAudience.SELLER
+                                    ? "/orders?status=claims"
+                                    : "/claims";
                     case REVIEW -> "/reviews#review-" + targetId;
                     case SETTLEMENT -> "/settlements/" + targetId;
-                    case REFUND -> "/";
+                    case REFUND -> "/payment-failures";
                 };
     }
 }

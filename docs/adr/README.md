@@ -23,6 +23,8 @@
 | [0017](0017-image-processing.md) | 썸네일은 JDK ImageIO + TwelveMonkeys 리더로 서브샘플링해 만든다 | 승인 |
 | [0018](0018-toss-payments-integration.md) | 토스 결제는 주문서형 SDK v2와 서버 승인, 웹훅 대신 조회로 연동하고 E2E는 가짜 PG로 돌린다 | 승인 |
 | [0019](0019-in-app-notification-polling.md) | 인앱 알림은 조회 방식으로 하고, 관리자 알림은 역할에 한 건만 둔다 | 승인 |
+| [0020](0020-first-come-coupon-issuance.md) | 선착순 쿠폰은 Redis Lua 앞단 필터와 DB 조건부 발급·유니크로 지킨다 | 승인 |
+| [0021](0021-order-reservation-join.md) | 재고·쿠폰 예약 결과는 주문에 따로 기록하고 주문 행 잠금으로 합류한다 | 승인 |
 
 
 ## 템플릿
