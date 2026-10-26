@@ -4,12 +4,13 @@ import {
   Button,
   Card,
   CardContent,
+  couponTerms,
   formatDateTime,
   PageHeader,
 } from "@openmarket/ui";
 import Link from "next/link";
 import { bff } from "@/lib/bff";
-import { couponTerms, stateLabel } from "@/lib/coupons";
+import { stateLabel } from "@/lib/coupons";
 import { requireSession } from "@/lib/session";
 
 const PAGE_SIZE = 20;

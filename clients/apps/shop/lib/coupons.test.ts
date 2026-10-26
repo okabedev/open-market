@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   couponChoices,
-  couponTerms,
   discountSummary,
   issueNotice,
   selectedCouponIds,
@@ -22,22 +21,6 @@ const coupon = (id: string, sellerId?: string) => ({
   discountType: "FIXED" as const,
   discountValue: 1_000,
   minOrderAmount: 0,
-});
-
-describe("couponTerms", () => {
-  it("정액·정률 할인과 최대 할인, 최소 주문 금액을 쓴다", () => {
-    expect(couponTerms({ discountType: "FIXED", discountValue: 3_000, minOrderAmount: 0 })).toBe(
-      "3,000원 할인",
-    );
-    expect(
-      couponTerms({
-        discountType: "RATE",
-        discountValue: 10,
-        maxDiscount: 5_000,
-        minOrderAmount: 30_000,
-      }),
-    ).toBe("10% 할인(최대 5,000원) · 30,000원 이상 구매 시");
-  });
 });
 
 describe("stateLabel", () => {

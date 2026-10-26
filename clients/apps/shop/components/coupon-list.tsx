@@ -1,9 +1,9 @@
 import type { PromotionComponents } from "@openmarket/api-client";
-import { Alert, Badge, Button, formatDateTime } from "@openmarket/ui";
+import { Alert, Badge, Button, couponTerms, formatDateTime } from "@openmarket/ui";
 import Link from "next/link";
 import { issueCoupon } from "@/app/coupons/actions";
 import { bff } from "@/lib/bff";
-import { couponTerms, issueNotice } from "@/lib/coupons";
+import { issueNotice } from "@/lib/coupons";
 import { currentSession } from "@/lib/session";
 
 type Coupon = PromotionComponents["schemas"]["CouponView"];

@@ -1,19 +1,20 @@
 import { expect, test } from "@playwright/test";
-import { createCouponByApi } from "../support/coupons";
+import { createPlatformCouponByApi, createSellerCoupon } from "../support/coupons";
 import { env, uniqueTag } from "../support/env";
 import { approvedSeller, signUpVerifyAndLogin } from "../support/flows";
 import { addAddress, openFakePgCheckout, placeOrder } from "../support/orders";
 import { publish, registerProduct } from "../support/products";
 
 /**
- * M5 구매자 쿠폰(PRM-2, PRM-3): 구매자가 플랫폼 쿠폰(쿠폰 받기 화면)과 판매자 쿠폰(상품 상세)을 받고, 주문서에서 둘을 골라 할인된 금액으로
- * 결제한다. 결제되면 두 쿠폰은 사용함이 된다. 쿠폰은 seller·admin 쿠폰 화면이 생기기 전까지 API로 만든다(support/coupons.ts).
+ * M5 쿠폰(PRM-1~3): 판매자가 판매자 센터에서 쿠폰을 만들고, 구매자가 플랫폼 쿠폰(쿠폰 받기 화면)과 판매자 쿠폰(상품 상세)을 받아
+ * 주문서에서 둘을 골라 할인된 금액으로 결제한다. 결제되면 두 쿠폰은 사용함이 된다. 판매자 목록에 발급 수가 보이고, 발급을 멈추면 상품
+ * 상세에서 빠진다. 플랫폼 쿠폰은 admin 쿠폰 화면이 생기기 전까지 API로 만든다(support/coupons.ts).
  */
 test("M5: 쿠폰을 받아 주문서에서 판매자·플랫폼 쿠폰을 적용해 할인된 금액으로 결제하고, 쿠폰은 사용함이 된다", async ({
   browser,
 }) => {
   test.setTimeout(300_000);
-  const { seller, email: sellerEmail, store, tag } = await approvedSeller(browser);
+  const { seller, store, tag } = await approvedSeller(browser);
   const product = `캔버스토트백 ${tag}`;
   const sellerCoupon = `토트백 3천원 ${tag}`;
   const platformCoupon = `오픈마켓 10% ${tag}`;
@@ -21,20 +22,19 @@ test("M5: 쿠폰을 받아 주문서에서 판매자·플랫폼 쿠폰을 적용
   await test.step("판매자 상품 30,000원, 판매자 쿠폰 3,000원(1만 원 이상), 플랫폼 쿠폰 10%(최대 5,000원)", async () => {
     productId = await registerProduct(seller, { name: product, price: 30_000, stock: 10 });
     await publish(seller);
-    await createCouponByApi(
-      { role: "seller", email: sellerEmail, password: "e2e-seller-1234" },
-      { name: sellerCoupon, discountType: "FIXED", discountValue: 3_000, minOrderAmount: 10_000 },
-    );
-    await createCouponByApi(
-      { role: "admin" },
-      {
-        name: platformCoupon,
-        discountType: "RATE",
-        discountValue: 10,
-        maxDiscount: 5_000,
-        minOrderAmount: 0,
-      },
-    );
+    await createSellerCoupon(seller, {
+      name: sellerCoupon,
+      discountType: "FIXED",
+      discountValue: 3_000,
+      minOrderAmount: 10_000,
+    });
+    await createPlatformCouponByApi({
+      name: platformCoupon,
+      discountType: "RATE",
+      discountValue: 10,
+      maxDiscount: 5_000,
+      minOrderAmount: 0,
+    });
   });
 
   const buyer = await (await browser.newContext()).newPage();
@@ -106,5 +106,22 @@ test("M5: 쿠폰을 받아 주문서에서 판매자·플랫폼 쿠폰을 적용
         );
       }
     }).toPass({ timeout: 30_000, intervals: [1_000] });
+  });
+
+  await test.step("판매자: 목록에 발급 수 1장이 보이고, 발급을 멈추면 상품 상세에서 쿠폰이 빠진다", async () => {
+    await seller.goto(`${env.seller}/coupons`);
+    const row = seller.getByRole("row").filter({ hasText: sellerCoupon });
+    await expect(row).toContainText("1 / 100");
+    await row.getByRole("button", { name: "발급 중지" }).click();
+    await seller.getByRole("alertdialog").getByRole("button", { name: "발급 중지" }).click();
+    await expect(seller.getByText("발급을 멈췄습니다.")).toBeVisible();
+    await expect(seller.getByRole("row").filter({ hasText: sellerCoupon })).toContainText(
+      "발급 중지",
+    );
+    await expect(row.getByRole("button", { name: "발급 중지" })).toHaveCount(0);
+
+    await buyer.goto(`${env.shop}/products/${productId}`);
+    await expect(buyer.getByRole("heading", { name: product })).toBeVisible();
+    await expect(buyer.getByRole("region", { name: `${store} 쿠폰` })).toHaveCount(0);
   });
 });
