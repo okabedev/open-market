@@ -38,7 +38,7 @@
 | 라이브러리 | Flyway 위치 | 테이블 |
 |---|---|---|
 | `common-web` | `classpath:db/common/web` | `idempotency_record`, `audit_log` |
-| `common-messaging` | `classpath:db/common/messaging` | `outbox_event`, `processed_event`, `shedlock` |
+| `common-messaging` | `classpath:db/common/messaging` | `outbox_event`, `processed_event`, `shedlock`, `dead_letter`(M6) |
 
 - 서비스는 `spring.flyway.locations`에 자기 `classpath:db/migration`과 위 위치를 함께 적는다.
 - 라이브러리 마이그레이션 버전은 `V0_<n>`이다. 서비스 마이그레이션은 `V1`부터 시작하므로 겹치지 않는다.
@@ -98,7 +98,30 @@ PK는 `(principal, idempotency_key)`다. 처리 중에 같은 키가 또 오면 
 | trace_id | varchar(32) | 요청의 trace id. 요청 로그와 잇는다 |
 | occurred_at | timestamptz | |
 
-인덱스는 `(target_type, target_id)`, `occurred_at`이다. 조회 화면은 ADM-4(M6)에서 만든다.
+인덱스는 `(target_type, target_id)`, `occurred_at`이다.
+
+조회(ADM-4, M6): `common-web`이 서비스마다 `GET /v1/admin/audit-logs?from&to&actorId&action&before&size`를 연다. `(occurred_at, id)` 내림차순 커서이고, admin BFF가 서비스들의 결과를 합친다([ADR 0023](../adr/0023-admin-ops-queries.md)).
+
+### dead_letter
+리스너 그룹이 처리하지 못해 DLT로 간 메시지(ADM-5, 용어집 "DLT 메시지"). `common-messaging`의 DLT 수집기가 넣는다. 규칙은 [messaging.md](messaging.md#dlt-재처리).
+
+| 컬럼 | 타입 | 설명 |
+|---|---|---|
+| id | uuid | UUID v7 |
+| consumer_group | varchar(100) | 실패한 리스너 그룹 |
+| dlt_topic, dlt_partition, dlt_offset | varchar, integer, bigint | DLT 위치. 함께 유니크 |
+| original_topic, original_partition, original_offset | varchar, integer, bigint | 원래 위치 |
+| event_id, event_type | uuid, varchar(100) | 헤더 `id`, `type`. 읽을 수 없으면 비어 있다 |
+| message_key | varchar | 원래 키 |
+| payload | text | 원래 값. API로 내보내지 않는다 |
+| headers | jsonb | 원래 헤더와 `kafka_dlt-*` 헤더(값은 UTF-8 문자열, 읽을 수 없으면 base64) |
+| exception_class | varchar(300) | `kafka_dlt-exception-cause-fqcn`, 없으면 `kafka_dlt-exception-fqcn` |
+| trace_id | varchar(32) | `traceparent`의 trace id |
+| status | varchar(20) | `PENDING`, `RETRIED`, `DISCARDED` |
+| dead_lettered_at | timestamptz | DLT에 들어간 시각(레코드 타임스탬프) |
+| resolved_at, resolved_by, discard_reason | timestamptz, varchar(100), varchar(500) | 다시 보내거나 버린 시각, 사람, 버린 사유 |
+
+인덱스는 `(dead_lettered_at, id)`, `(status, dead_lettered_at)`, `event_id`다.
 
 ## 엔티티 규칙
 - PK는 애플리케이션이 만드는 UUID v7이다. 외부에 노출하는 ID도 같은 값을 쓴다.

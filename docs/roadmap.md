@@ -18,6 +18,7 @@
 | M3 | 2026-10-20 | 2026-10-21 | `m3` | [M3 회고](#m3-회고) |
 | M4 | 2026-10-21 | 2026-10-22 | `m4` | [M4 회고](#m4-회고) |
 | M5 | 2026-10-22 | 2026-10-26 | `m5` | [M5 회고](#m5-회고) |
+| M6 | 2026-10-26 | | | |
 
 ### M0 회고
 - 완료 기준 E2E(2026-10-18): 빈 볼륨으로 기본·`obs`·`apps` profile을 띄웠다. gateway 경유 `POST /api/member/v1/ping`은 202였다. 이벤트가 outbox → Debezium → `member.ping` → `PingSentListener`로 갔다. 같은 메시지(키·값·헤더)를 다시 넣어도 처리 로그와 `processed_event`는 1건, DLT는 0건이었다. Tempo에서 trace 하나에 gateway → member HTTP → Kafka 소비 스팬이 이어졌고, Loki에서 같은 trace id로 로그 2줄이 나왔다.
@@ -315,13 +316,37 @@
 **완료 기준 E2E**: 선착순 쿠폰을 받아 주문에 적용하고, 구매확정 후 리뷰를 쓰면 검색 결과의 별점이 바뀐다. 정산 배치를 두 번 돌려도 정산 금액이 같다.
 
 ## M6 — 운영 성숙도
-- [ ] 관리자 백오피스: 운영 지표, 감사 로그 조회, DLT 재처리(ADM-4, ADM-5)
+- [x] 설계: DLT 재처리([messaging.md](architecture/messaging.md) "DLT 재처리", [ADR 0022](adr/0022-dead-letter-reprocessing.md)), 관리자 운영 조회([ADR 0023](adr/0023-admin-ops-queries.md), [order.md](architecture/order.md)·[payment.md](architecture/payment.md) "운영 지표", [data.md](architecture/data.md) "audit_log"), 관리자 2단계 인증([auth.md](architecture/auth.md)), 리스크 R13~R16
 - [ ] k6 부하 테스트(NFR-9)와 성능 개선 기록(README 표)
-- [ ] 장애 주입: Kafka 중지, DB 지연, 외부 PG 지연 상황에서 정합성 확인
-- [ ] 대시보드와 알림 규칙(NFR-10)
+  - [ ] `infra/k6/` 시나리오: 상품 조회, 검색, 주문 생성(PG 제외), 선착순 쿠폰 1,000건 동시 요청. 첫 측정과 부하 중 메모리·연결 풀(R6, R13)
+  - [ ] 측정 결과에 따른 성능 개선. README 표(개선 전·후)
+- [ ] 장애 주입: Kafka 중지, DB 지연, 외부 PG 지연 상황에서 정합성 확인(R16). 복제 슬롯 무효(R5), 쿠폰 예약 실패 조합, Redis 장애 중 쿠폰 발급. 찾은 결함은 `fix/` PR로 고친다
+- [ ] 관리자 백오피스: 운영 지표, 감사 로그 조회, DLT 재처리(ADM-4, ADM-5)
+  - [ ] `common-messaging` DLT 수집·다시 보내기·버리기(R14)
+  - [ ] `common-web` 감사 로그 조회 API. 금액 변경(결제, 환불, 정산)의 감사 누락 점검(NFR-8)
+  - [ ] order·payment 운영 지표 API
+  - [ ] admin 운영 지표, 감사 로그, DLT 메시지 화면
+- [ ] 관리자 2단계 인증(TOTP, R15)
+- [ ] 대시보드와 알림 규칙(NFR-10): 서비스 RED, JVM, Kafka, 비즈니스 대시보드와 알림 5종([observability.md](architecture/observability.md))
 - [ ] 개인정보 마스킹·감사 로그 점검(NFR-7, NFR-8), OWASP Top 10 점검
-- [ ] 관리자 2단계 인증(TOTP)
-- [ ] 운영 런북(장애 유형별 대응 절차)
+- [ ] 운영 런북(장애 유형별 대응 절차, 관리자 TOTP 등록 해제 포함)
+- [ ] 마일스톤 E2E `infra/e2e/run.sh m6`
+- 관련 요구사항: ADM-4, ADM-5, NFR-1~NFR-10
+- 범위 결정(2026-10-26)
+  - DLT 메시지는 소비한 서비스가 자기 스키마에 모으고, 다시 보낼 때는 실패한 그룹만 처리하게 헤더로 표시한다. 새 서비스는 만들지 않는다(ADR 0022).
+  - 감사 로그와 DLT 메시지 화면은 admin BFF가 서비스마다 물어 시간순으로 합친다. 운영 지표는 Prometheus가 아니라 order·payment의 업무 DB에서 센다(ADR 0023).
+  - 관리자 TOTP는 `ADMIN` 역할 계정이면 어느 클라이언트로 로그인하든 필수다. 첫 로그인에 등록하고 복구 코드를 준다.
+  - 장애 주입 도구: DB 지연은 Toxiproxy(`fault` profile), PG 지연은 가짜 PG다. 버전은 장애 주입 PR에서 정한다.
+  - M5에서 넘긴 것 중 판매자 주문의 쿠폰 할인 필드와 관리자 쿠폰·정산 목록의 상호 표시는 M6 범위(운영 성숙도) 밖이라 하지 않는다. M6 이후 백로그다.
+- 화면별 API(M5 회고: 설계에서 화면이 읽을 API를 대조한다)
+
+  | 화면 | 읽고 쓰는 API | 있는지 |
+  |---|---|---|
+  | admin 운영 지표 | order `GET /v1/admin/metrics/orders`, payment `GET /v1/admin/metrics/payments` | 새로 만든다 |
+  | admin 감사 로그 | 서비스마다 `GET /v1/admin/audit-logs` | 새로 만든다(`common-web`) |
+  | admin DLT 메시지 | 서비스마다 `GET /v1/admin/dead-letters`, `POST .../{id}/retry`, `POST .../{id}/discard` | 새로 만든다(`common-messaging`) |
+  | auth TOTP 등록·확인 | auth 화면(Thymeleaf), gateway 밖 | 새로 만든다 |
+- 순서: 설계 → k6 첫 측정(R13) → 성능 개선 → 장애 주입(R16) → DLT 재처리(R14) → 감사 로그 조회 → 운영 지표 → admin 화면 → TOTP(R15) → 대시보드·알림 → 보안 점검 → 런북 → E2E
 
 **완료 기준 E2E**: k6 시나리오에서 NFR-9 목표를 만족한다. Kafka를 1분간 중지했다가 다시 띄워도 이벤트 유실이 없고, Saga가 끝까지 진행된다.
 
