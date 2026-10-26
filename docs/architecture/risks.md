@@ -9,13 +9,13 @@
 | R3 | 포매터·정적 분석 도구의 Java 25 지원 | 도구가 새 문법을 못 읽으면 빌드가 깨진다 | 후보 도구로 템플릿 빌드 | M0-b | 확인(2026-10-16): palantir 제외, google-java-format 1.36.1 + Error Prone + NullAway 동작. [ADR 0010](../adr/0010-code-style-tools.md) |
 | R4 | Gateway 구현 선택(WebFlux 또는 WebMVC) | 레이트 리밋, 토큰 처리 필터 지원 범위가 다르다 | 두 구현의 필터 문서 비교, 필요한 필터(JWT, Redis 레이트 리밋, 경로 재작성) 동작 확인 | M0-c | 확인(2026-10-16): WebFlux 선택. Redis 레이트 리밋을 설정으로 쓸 수 있다(WebMVC는 Bucket4j, 키 리졸버는 Java DSL만). JWT·역할·레이트 리밋·접두어 제거를 `GatewayTest`, `RateLimitTest`로 확인. Redis 무응답 시 기본 타임아웃(60s)만큼 요청이 멈추는 것을 발견해 200ms로 줄였다(`RedisOutageTest`). [ADR 0011](../adr/0011-gateway-webflux.md) |
 | R5 | Debezium과 Postgres 논리 복제 | 스키마 여러 개의 outbox를 커넥터 하나로 읽고, 토픽을 `aggregate_type`으로 나눠야 한다. 복제 슬롯이 쌓이면 디스크가 찬다 | 샘플 서비스 두 개로 outbox → 토픽 확인, 커넥터 중지 후 재기동 시 유실 없는지 확인 | M0-d | 확인(2026-10-18): 스키마 두 개(member, catalog)의 outbox가 커넥터 하나로 각 토픽에 나가고, 커넥터·Kafka 중지 중에 쓴 행은 재기동 뒤 유실 없이 나왔다. heartbeat가 없으면 슬롯이 따라오지 못하고, 없는 토픽에서는 태스크가 RUNNING인 채 멈추며, Kafka 재접속 뒤 5분간 태스크를 다시 받지 못하는 것을 발견해 설정으로 고쳤다. 아래 "outbox 발행 확인" |
-| R6 | 로컬 메모리 예산 | 서비스 15개, Kafka, Connect, ES, 관측성을 함께 띄워야 한다. WSL 메모리가 부족하면 E2E를 돌릴 수 없다 | profile별로 띄워 `docker stats`로 실측하고, 서비스 JVM 힙 기본값(`-XX:MaxRAMPercentage`)을 정한다 | M0-c | 확인(2026-10-17): 전체 profile 실측 5.1GB(Spring 서비스 4개). 상한이 없으면 JVM이 VM 메모리 기준으로 힙 상한을 5GB로 잡는 것을 발견했다. JVM 컨테이너에 `mem_limit` 512m + `MaxRAMPercentage=50`을 두었다. 서비스 15개 기준 컨테이너 상한 합계 약 11.5GB, 빌드까지 VM 전체 약 18GB로 `.wslconfig` 20GB를 권장한다. 아래 "메모리 예산". 재측정(2026-10-21, M3 마감): 서비스 11개 + 전체 profile에서 VM 14.4GB, order가 512m 상한에 7MB까지 닿아 Spring 서비스 상한을 640m·힙 40%로 바꿨다. 아래 "M3 재측정". 재측정(2026-10-22, M4 마감): 서비스 12개, 상한 도달·OOM 없음. notification이 가장 크다(peak 564MB/640MB). 아래 "M4 재측정". 중간 측정(2026-10-25, M5 settlement 골격): 서비스 15개가 모두 뜬 첫 측정. 대기 상태에서 상한 도달·OOM 없음, VM 14.5GB. 연결 수 합계가 Postgres 한도를 넘는 것을 찾아 서비스당 풀을 5로 정했다. 아래 "M5 중간 측정" |
+| R6 | 로컬 메모리 예산 | 서비스 15개, Kafka, Connect, ES, 관측성을 함께 띄워야 한다. WSL 메모리가 부족하면 E2E를 돌릴 수 없다 | profile별로 띄워 `docker stats`로 실측하고, 서비스 JVM 힙 기본값(`-XX:MaxRAMPercentage`)을 정한다 | M0-c | 확인(2026-10-17): 전체 profile 실측 5.1GB(Spring 서비스 4개). 상한이 없으면 JVM이 VM 메모리 기준으로 힙 상한을 5GB로 잡는 것을 발견했다. JVM 컨테이너에 `mem_limit` 512m + `MaxRAMPercentage=50`을 두었다. 서비스 15개 기준 컨테이너 상한 합계 약 11.5GB, 빌드까지 VM 전체 약 18GB로 `.wslconfig` 20GB를 권장한다. 아래 "메모리 예산". 재측정(2026-10-21, M3 마감): 서비스 11개 + 전체 profile에서 VM 14.4GB, order가 512m 상한에 7MB까지 닿아 Spring 서비스 상한을 640m·힙 40%로 바꿨다. 아래 "M3 재측정". 재측정(2026-10-22, M4 마감): 서비스 12개, 상한 도달·OOM 없음. notification이 가장 크다(peak 564MB/640MB). 아래 "M4 재측정". 중간 측정(2026-10-25, M5 settlement 골격): 서비스 15개가 모두 뜬 첫 측정. 대기 상태에서 상한 도달·OOM 없음, VM 14.5GB. 연결 수 합계가 Postgres 한도를 넘는 것을 찾아 서비스당 풀을 5로 정했다. 아래 "M5 중간 측정". 재측정(2026-10-26, M5 마감): 서비스 15개로 M5 시나리오 3개를 돈 직후 상한 도달·OOM 없음, VM 12.8GB. notification peak 534MB/640MB로 M4보다 여유가 생겼다. 상한은 그대로다. 아래 "M5 재측정" |
 | R7 | auth issuer 호스트 이름 | 브라우저, IDE 실행 서비스, 컨테이너가 같은 issuer URL로 auth에 닿아야 한다 | hosts + 네트워크 별칭으로 세 경우 모두 토큰 검증 확인 | M1 | 확인(2026-10-18): issuer를 고정하면 요청 주소와 상관없이 `iss`가 같다(`AuthorizationServerIntegrationTest`, 무작위 포트·다른 Host). 호스트(curl, hosts 대신 `--resolve`)에서 PKCE 로그인으로 받은 토큰을 컨테이너 gateway가 검증했다. 네트워크 별칭은 auth를 IDE로 띄우면 사라져 JWK를 받지 못해, 컨테이너가 `host-gateway`로 호스트 포트에 닿게 바꿨다. auth가 컨테이너일 때와 IDE일 때 모두 검증 통과. IDE gateway(bootRun)도 hosts 항목을 넣은 뒤 같은 결과였다(유효 토큰 통과, 서명 위조·토큰 없음 401). IDE gateway는 Netty DNS 리졸버가 `/etc/hosts`만 읽어서, JVM 옵션 `jdk.net.hosts.file`로는 대신할 수 없다. [ADR 0013](../adr/0013-auth-issuer-host.md) |
 | R8 | Next.js BFF 세션과 토큰 갱신 | 서버 컴포넌트, Server Action, Route Handler 모두에서 세션을 읽고 토큰을 갱신해야 한다. 동시 갱신 경쟁이 생길 수 있다 | 갱신 중복 방지(Redis 락) 시나리오 테스트 | M1 | 확인(2026-10-18): Redis 락(`SET NX PX`)을 잡은 한 요청만 갱신하고 나머지는 기다린다. BFF 인스턴스 둘이 동시에 20번 갱신해도 auth 요청은 1번이다(`bff.test.ts`, 락을 끄면 2번으로 실패). 실제 auth와 브라우저에서 액세스 토큰을 강제 만료한 뒤 서버 컴포넌트 5·Route Handler 5·Server Action 1을 동시에 보내기를 3번 반복했다. 모두 인증됐고 세션이 유지됐다. [ADR 0014](../adr/0014-bff-session.md) |
 | R9 | 토스페이먼츠 테스트 환경 | 테스트 키로 승인, 부분취소, 웹훅을 로컬에서 받을 수 있어야 한다. 웹훅은 공인 주소가 필요하다 | 승인·취소 API 확인. 웹훅은 결제 조회 폴링으로 대신할 수 있는지 확인 | M3 | 확인(2026-10-20): 주문서형 연동 키는 전자결제 신청(사업자 정보) 뒤에만 나와서 문서용 공개 테스트 키를 쓴다. 위젯 결제 → 서버 승인 → 조회 → 부분취소 → 나머지 취소가 로컬에서 됐고, 토스 `Idempotency-Key`로 승인·취소를 다시 보내도 한 번만 처리됐다. 웹훅 없이 `paymentKey` 조회로 상태를 확정할 수 있다. `orderId` 조회는 문서용 키에서 404라 쓰지 않는다. 아래 "토스 테스트 환경 확인". [ADR 0018](../adr/0018-toss-payments-integration.md) |
 | R10 | Elasticsearch nori 플러그인 | 공식 이미지에 nori가 없어서 커스텀 이미지가 필요하다 | Dockerfile로 플러그인 설치, 인덱스 분석기 테스트 | M2 | 확인(2026-10-19): 공식 9.4.6 이미지에 `analysis-nori` 9.4.6을 설치한 이미지가 뜨고, 메모리는 1.5GB로 같다. 색인·검색 `decompound_mode` 조합 셋을 상품명으로 비교했다. 검색도 `mixed`로 해야 붙여 쓴 원형(`사과즙`)이 띄어 쓴 문서보다 위로 오고, `operator: and`에서도 띄어 쓴 문서를 놓치지 않았다. [ADR 0016](../adr/0016-elasticsearch-nori.md) |
 | R11 | 선착순 쿠폰 발급의 정합성 | Redis 카운터·회원 집합과 DB 발급 행이 어긋날 수 있다(Redis 차지 뒤 DB 저장 실패, Redis 재시작으로 키 유실, 키를 다시 만드는 사이 끼어든 요청). 어긋나면 수량을 넘겨 발급하거나 1인 2매가 된다(PRM-2) | 동시 요청(수량보다 많은 회원, 같은 회원의 중복 요청)을 몰아 넣고 DB 발급 수 ≤ 수량, 회원당 1장을 확인한다. DB 저장 실패와 Redis 키 삭제를 끼워 같은 확인을 한다 | M5 | 확인(2026-10-23). DB 조건부 발급 수와 유니크를 마지막 방어선으로 두고 Redis는 앞단 필터로 쓴다. 결과와 남는 어긋남은 [promotion.md](promotion.md) "정합성" |
-| R12 | 주문 예약 두 개(재고·쿠폰)의 합류 | order가 다른 토픽의 두 결과를 모아야 한다. 결과가 어떤 순서로 와도, 한쪽이 실패해도, 같은 결과를 다시 받아도 주문 상태가 하나로 정해지고 받은 예약이 풀려야 한다 | 두 결과의 순서(재고 먼저, 쿠폰 먼저, 동시)와 실패 조합마다 주문 상태와 catalog·promotion 예약을 확인한다. 동시 도착은 두 리스너를 같은 주문에 동시에 돌린다 | M5 | 확인(2026-10-23). 성공 결과를 주문에 따로 기록하고 주문 행 잠금으로 하나씩 처리한다. 순서·중복·실패 조합(Kafka)과 동시 처리(두 스레드 × 20회)에서 상태가 하나로 정해지고 주문 이벤트가 한 번만 나갔다(`ReservationJoinIntegrationTest`). 예약 해제는 catalog·promotion의 `OrderCancelled` 처리 테스트가 맡고, 서비스를 모두 띄운 확인은 M5 완료 기준 E2E에서 한다. 규칙은 [order.md](order.md) "예약 결과" |
+| R12 | 주문 예약 두 개(재고·쿠폰)의 합류 | order가 다른 토픽의 두 결과를 모아야 한다. 결과가 어떤 순서로 와도, 한쪽이 실패해도, 같은 결과를 다시 받아도 주문 상태가 하나로 정해지고 받은 예약이 풀려야 한다 | 두 결과의 순서(재고 먼저, 쿠폰 먼저, 동시)와 실패 조합마다 주문 상태와 catalog·promotion 예약을 확인한다. 동시 도착은 두 리스너를 같은 주문에 동시에 돌린다 | M5 | 확인(2026-10-23). 성공 결과를 주문에 따로 기록하고 주문 행 잠금으로 하나씩 처리한다. 순서·중복·실패 조합(Kafka)과 동시 처리(두 스레드 × 20회)에서 상태가 하나로 정해지고 주문 이벤트가 한 번만 나갔다(`ReservationJoinIntegrationTest`). 예약 해제는 catalog·promotion의 `OrderCancelled` 처리 테스트가 맡고, 서비스를 모두 띄운 확인은 M5 완료 기준 E2E에서 한다. M5 E2E(2026-10-26)에서 재고·쿠폰 예약이 함께 성공한 주문이 결제되고 쿠폰이 사용됨이 됐다(`m5-buyer-coupon`, `m5-completion`). 실패 조합은 E2E에서 보지 않았다. 규칙은 [order.md](order.md) "예약 결과" |
 
 ## outbox 발행 확인 (R5)
 환경(2026-10-18): 기본 profile을 빈 볼륨으로 띄우고, member·catalog 계정으로 `outbox_event`를 만든 뒤(Flyway와 같은 DDL) 행을 직접 넣었다. 토픽은 `kafka-console-consumer`로 읽고 `id` 헤더로 중복을 셌다. 설정 설명은 [messaging.md](messaging.md#발행-transactional-outbox--debezium)에 있다.
@@ -161,6 +161,28 @@ M5 중간 측정(2026-10-25)
   - 새 서비스(promotion, review, settlement)는 대기 상태에서 393~421MB로 기존 서비스와 비슷하다.
 - 같이 찾은 것: Postgres 연결 수. DB를 쓰는 서비스 12개가 Hikari 기본 풀(10)을 쓰면 합계 120으로 `max_connections` 100을 넘는다. settlement를 더하자 마지막에 뜬 search가 연결을 받지 못해 뜨지 않았고, Debezium 커넥터도 등록에 실패해 connect가 멈췄다. 공통 설정에서 서비스당 풀을 5(합계 60)로 정했다([data.md](data.md) "연결 수").
 - 결정: 메모리 상한은 그대로 둔다. 시나리오를 돈 뒤의 재측정은 M5 마감(완료 기준 E2E) 때 한다.
+
+M5 재측정(2026-10-26)
+- 측정: E2E 스택(`openmarket-e2e`, 빈 볼륨, `apps`·`e2e` profile, Spring 서비스 15개)에서 M5 시나리오 3개(쿠폰 주문, 리뷰·검색·답글·숨김·수수료율, 완료 기준: 정산 확정 두 번·지급)를 `E2E_KEEP=1`로 돈 직후 cgroup `memory.stat`의 `anon`, `memory.peak`, `memory.events`를 봤다. 관측성 profile과 부하 도구는 띄우지 않았고, 앱 3개는 run.sh가 멈춘 뒤다.
+- 결과
+
+  | 서비스 | anon | peak | 상한 |
+  |---|---|---|---|
+  | notification | 502MB | 534MB | 640MB |
+  | order, auth | 467MB, 461MB | 486MB, 497MB | 640MB |
+  | member, promotion | 449MB, 441MB | 487MB, 478MB | 640MB |
+  | fulfillment, catalog, payment | 429MB, 423MB, 419MB | 441MB, 466MB, 454MB | 640MB |
+  | review, settlement | 418MB, 412MB | 433MB, 419MB | 640MB |
+  | search, gateway | 346MB, 337MB | 383MB, 365MB | 640MB |
+  | discovery, config | 271MB, 229MB | 325MB, 263MB | 640MB |
+  | file | 496MB | 528MB | 768MB |
+  | elasticsearch, connect, kafka | 1,487MB, 519MB, 430MB | 1,626MB, 902MB, 660MB | 없음 |
+
+  - 컨테이너 23개 모두 상한 도달(`memory.events` max)과 OOM이 0이다(kafka-ui도 0).
+  - notification은 M5에서 리스너 셋(리뷰, 정산 확정, 정산 지급)이 더해졌지만 peak 534MB로 M4(564MB)보다 낮다. 여유 106MB다. M4 측정은 시나리오 4개(메일 다수)를 돈 뒤라 메일 렌더링이 더 많았다.
+  - 새 서비스(promotion, review, settlement)는 시나리오 뒤에도 412~441MB로 기존 서비스와 같은 수준이다.
+  - 컨테이너 anon 합계 9.0GB, VM `free` 사용량 12.8GB(20GB 중, 사용 가능 7.2GB)다. 스택을 지운 뒤 3.6GB였다. M3 전망(서비스 15개, 약 16.2GB)보다 작다.
+- 결정: 상한은 그대로 둔다(Spring 640m·힙 40%, file 768m). `.wslconfig` 20GB 권장도 그대로다. 부하 중 측정은 M6 부하 테스트(k6)에서 한다.
 
 서비스 15개 전망(M0, 512m 기준. M3 갱신은 위 "M3 재측정")
 - 컨테이너: 실측 최댓값(335MB) 기준 Spring 서비스 15개는 약 5GB, 나머지 12개는 약 4GB다. 합계 약 9GB. 상한 기준은 15 × 512MB = 7.5GB에 4GB를 더해 약 11.5GB다.

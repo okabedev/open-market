@@ -245,7 +245,7 @@
 
 ## M5 — 쿠폰·리뷰·정산·검색 고도화
 - [x] 설계: 쿠폰([promotion.md](architecture/promotion.md)), 리뷰([review.md](architecture/review.md)), 정산([settlement.md](architecture/settlement.md)), 검색 v2([search.md](architecture/search.md) "M5 설계"), 이벤트 필드([context-map.md](architecture/context-map.md)), 리스크 R11·R12
-- [ ] promotion: 쿠폰 정책, 선착순 발급(Redis), 주문 예약·사용·복원
+- [x] promotion: 쿠폰 정책, 선착순 발급(Redis), 주문 예약·사용·복원
   - [x] 골격, 쿠폰 정책 생성(관리자·판매자)·중지·조회
   - [x] 선착순 발급(Redis Lua + DB 유니크)과 동시성 테스트(R11)
   - [x] 할인 계산 API, `OrderPlaced` → 쿠폰 예약·실패, `OrderPaid` → 사용, `OrderCancelled` → 복원
@@ -275,7 +275,8 @@
     - [x] 리뷰 숨김·다시 보임
     - [x] 수수료율
     - [x] 정산 목록·지급, 정산 작업 즉시 실행(member 관리자 판매자 조회 API로 정산 계좌를 함께 보인다)
-- [ ] 마일스톤 E2E `infra/e2e/run.sh m5`. 서비스 15개 메모리 재측정(R6)
+- [x] 마일스톤 E2E `infra/e2e/run.sh m5`. 서비스 15개 메모리 재측정(R6)
+  - `m5-completion`: 선착순 쿠폰 주문 → 구매확정 → 리뷰가 검색 별점에 반영, 정산 작업 두 번에도 정산 하나·금액 같음(STL-4), 관리자 지급과 판매자 알림. E2E 정산 기간 `1m`, 마감 지연 `5s`(2026-10-26)
 - 관련 요구사항: PRM-1~3, REV-1~3, STL-1~4, SRC-2, ADM-2(리뷰 숨김), ADM-3, NTF-1(정산 확정)
 - 범위 결정(2026-10-22, 자세한 규칙은 각 서비스 문서의 "범위 결정")
   - 한 주문에 플랫폼 쿠폰 1장과 판매자별 판매자 쿠폰 1장까지 쓴다. 판매자 쿠폰은 그 판매자의 모든 상품에 쓴다. 모든 쿠폰은 발급 수량이 있는 선착순 쿠폰이고, 만든 뒤 바꾸지 않는다.
