@@ -77,6 +77,10 @@ M5 시작(2026-10-22)에 정한 규칙이다. API와 화면은 각 PR에서 이 
 - 내 쿠폰 `/my/coupons`는 `state`를 "사용 가능", "주문에 사용 중", "사용함", "기간 만료"로 보인다.
 - 주문서는 `usable=true`로 받은 쿠폰 중 플랫폼 쿠폰과 주문의 판매자 쿠폰을 고르게 한다(판매자마다 한 장, 플랫폼 한 장, GET 폼 `?sellerCoupon=&platformCoupon=`). 고르면 할인 미리보기로 할인과 결제 금액을 보이고, 쓸 수 없는 쿠폰은 이유를 보이고 쿠폰 없이 계산한다. 주문할 때 고른 쿠폰과 그 결제 금액(`expectedAmount`)을 보낸다.
 
+### 화면(seller)
+- 쿠폰 `/coupons`: 내 쿠폰을 최근 생성 순, 쪽 번호로 보인다. 탭은 전체·발급 중(`ISSUING`)·발급 중지(`STOPPED`)다. 단계는 상태와 발급 기간으로 "발급 예정", "발급 중", "발급 끝남", "발급 중지"로 보인다(`couponPhase`, `packages/ui`). 발급 수 / 수량을 보이고, 중지하지 않은 쿠폰은 확인한 뒤 발급을 멈춘다.
+- 쿠폰 만들기 `/coupons/new`: 위 "쿠폰 정책" 규칙을 Server Action이 먼저 검사하고(`lib/coupon-form.ts`), 화면을 그릴 때 만든 `Idempotency-Key`로 만든다. 발급 시각은 한국 시간 `datetime-local`로 받아 ISO로 바꾼다. 기본 발급 기간은 다음 정시부터 7일, 사용 기한은 30일이다. 최대 할인 칸은 정률일 때만 보이고 정액이면 보내지 않는다.
+
 ### 선착순 발급
 구매자가 `POST /v1/coupons/{couponId}/issue`로 내려받는다. 새로 받으면 201, 이미 받았으면 200이고 둘 다 `{issuedCouponId}`다(다시 눌러도 같은 결과).
 1. 쿠폰이 `ISSUING`이고 발급 기간 안이어야 한다. 아니면 409 `PROMOTION_COUPON_NOT_ISSUING`이다. 없는 쿠폰은 404 `PROMOTION_COUPON_NOT_FOUND`다.

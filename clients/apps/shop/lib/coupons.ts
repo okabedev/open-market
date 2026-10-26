@@ -1,13 +1,7 @@
-/** 쿠폰 할인 조건(promotion 쿠폰 정책, docs/architecture/promotion.md "쿠폰 정책"). */
-type Terms = {
-  discountType?: "FIXED" | "RATE";
-  discountValue?: number;
-  maxDiscount?: number;
-  minOrderAmount?: number;
-};
+import type { CouponTerms } from "@openmarket/ui";
 
 /** 주문서에서 고를 수 있는 내 쿠폰(promotion `GET /v1/issued-coupons?usable=true`의 항목). */
-export type UsableCoupon = Terms & {
+export type UsableCoupon = CouponTerms & {
   issuedCouponId?: string;
   issuer?: "PLATFORM" | "SELLER";
   sellerId?: string;
@@ -15,21 +9,6 @@ export type UsableCoupon = Terms & {
 };
 
 export type IssuedCouponState = "USABLE" | "RESERVED" | "USED" | "EXPIRED";
-
-function won(value: number | undefined): string {
-  return `${(value ?? 0).toLocaleString("ko-KR")}원`;
-}
-
-/** 할인과 조건 문구. 예: "10% 할인(최대 5,000원) · 30,000원 이상 구매 시". */
-export function couponTerms(terms: Terms): string {
-  const discount =
-    terms.discountType === "RATE"
-      ? `${terms.discountValue}% 할인${terms.maxDiscount ? `(최대 ${won(terms.maxDiscount)})` : ""}`
-      : `${won(terms.discountValue)} 할인`;
-  return terms.minOrderAmount
-    ? `${discount} · ${won(terms.minOrderAmount)} 이상 구매 시`
-    : discount;
-}
 
 const STATE_LABELS: Record<IssuedCouponState, string> = {
   USABLE: "사용 가능",

@@ -1,6 +1,6 @@
-import { Button, Label } from "@openmarket/ui";
+import { Button, couponTerms, Label } from "@openmarket/ui";
 import Link from "next/link";
-import { couponTerms, type CouponChoices } from "@/lib/coupons";
+import type { CouponChoices } from "@/lib/coupons";
 
 // 클레임 신청 폼의 select와 같은 모양이다.
 const selectClass = "h-10 w-full rounded-md border border-input bg-card px-3 text-sm";
