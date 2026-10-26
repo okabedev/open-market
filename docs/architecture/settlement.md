@@ -46,7 +46,7 @@ M5 시작(2026-10-22)에 정한 규칙이다. API와 화면은 각 PR에서 이 
 ## 정산 기간
 - 기간은 기준 시각 `openmarket.settlement.period.anchor`(기본 `2026-01-05T00:00+09:00`, 월요일)에서 길이 `openmarket.settlement.period.length`(기본 7일)씩 나눈 구간 `[시작, 끝)`이다. 기본값이면 월요일 0시(한국 시간)부터 다음 월요일 0시까지다.
 - E2E는 환경 변수로 길이를 줄인다(예: 1분). 결제 기한, 자동 구매확정과 같은 방식이다([dev-setup.md](../dev-setup.md) "E2E").
-  - 환경 변수는 `SETTLEMENT_PERIOD_LENGTH`(config-repo `settlement.yml` 기본 `7d`)이고 `apps.yaml`은 값이 있을 때만 넘긴다. `run.sh`에서 줄이는 값은 M5 완료 E2E PR에서 정한다.
+  - 환경 변수는 `SETTLEMENT_PERIOD_LENGTH`(config-repo `settlement.yml` 기본 `7d`)이고 `apps.yaml`은 값이 있을 때만 넘긴다. `run.sh`는 `1m`으로 줄인다(M5 완료 E2E에서 정했다, 2026-10-26). 구매확정한 주문의 기간이 1분 안에 끝나 시나리오가 길어지지 않는다.
 - 기간 경계 시각은 다음 기간이다. 기준 시각 전의 시각도 그 앞 기간으로 나눈다. 정산 대상에 `[period_start, period_end)`를 저장한다.
 
 ## 정산 확정(`Settlement`, STL-2, STL-4)
@@ -56,7 +56,7 @@ M5 시작(2026-10-22)에 정한 규칙이다. API와 화면은 각 PR에서 이 
 - 관리자는 작업을 바로 돌린다(`POST /v1/admin/settlement-runs`). 결과는 같다. E2E가 이것으로 두 번 돌린다.
   - 즉시 실행은 ShedLock 없이 같은 유스케이스(`RunSettlementUseCase`)를 부른다. 정기 작업과 겹쳐도 판매자 잠금과 판매자·기간 유니크로 결과가 같다.
   - 작업은 끝난 기간의 확정되지 않은 판매자·기간을 기간 시작, 판매자 ID 순으로 500개씩 읽어 하나씩 확정한다. 한 번 돌면서 같은 판매자·기간을 두 번 시도하지 않는다.
-  - E2E는 마감 지연도 환경 변수 `SETTLEMENT_CLOSE_DELAY`(config-repo 기본 `3h`)로 줄인다. 크론은 `openmarket.settlement.job.cron`(한국 시간)이다.
+  - E2E는 마감 지연도 환경 변수 `SETTLEMENT_CLOSE_DELAY`(config-repo 기본 `3h`)로 줄인다. `run.sh`는 `5s`다. 크론은 `openmarket.settlement.job.cron`(한국 시간, 매주 월요일 03:00)이라 E2E 중에는 돌지 않고, 시나리오가 관리자 즉시 실행으로 확정한다(`m5-completion`).
 - 판매자는 확정된 정산과 그 내역, 아직 확정되지 않은 대상(정산 예정 금액과 내역)을 본다(STL-2).
 
 | 상태 | 뜻 | 다음 |

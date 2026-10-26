@@ -40,6 +40,10 @@ export FULFILLMENT_DELIVER_AFTER=3s
 # 반품할 하위 주문은 이 기한 안에 반품을 신청한다(docs/roadmap.md M4 완료 기준).
 export FULFILLMENT_CONFIRM_INTERVAL=2s
 export FULFILLMENT_AUTO_CONFIRM_AFTER=30s
+# 정산 기간과 마감 지연(config-repo 기본값은 7일, 3시간). 구매확정한 주문의 기간이 1분 안에 끝나고 5초 뒤 확정할 수 있게 줄인다.
+# 정기 정산 작업은 매주 월요일이라 E2E 중에는 돌지 않는다. 시나리오가 관리자 즉시 실행으로 확정한다(docs/architecture/settlement.md).
+export SETTLEMENT_PERIOD_LENGTH=1m
+export SETTLEMENT_CLOSE_DELAY=5s
 # 가입·이메일 인증의 IP당 한도(기본 1분에 5회). 시나리오가 한 IP에서 계정을 1분 안에 여럿 만든다.
 export GATEWAY_STRICT_RATE_LIMIT=60
 # 로그인의 IP당 한도(기본 1분에 10회). 판매자·구매자·역할 확인 토큰으로 1분 안에 여러 번 로그인한다.
