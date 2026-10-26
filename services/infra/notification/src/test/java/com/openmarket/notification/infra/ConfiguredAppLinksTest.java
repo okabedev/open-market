@@ -29,6 +29,10 @@ class ConfiguredAppLinksTest {
                 .isEqualTo("http://seller/products/" + id);
         assertThat(links.linkFor(NotificationAudience.SELLER, NotificationTarget.SELLER_ORDER, id))
                 .isEqualTo("http://seller/orders/" + id);
+        assertThat(links.linkFor(NotificationAudience.SELLER, NotificationTarget.REVIEW, id))
+                .isEqualTo("http://seller/reviews#review-" + id);
+        assertThat(links.linkFor(NotificationAudience.SELLER, NotificationTarget.SETTLEMENT, id))
+                .isEqualTo("http://seller/settlements/" + id);
     }
 
     @Test
@@ -38,9 +42,5 @@ class ConfiguredAppLinksTest {
                 .isEqualTo("http://seller/");
         assertThat(links.linkFor(NotificationAudience.ADMIN, NotificationTarget.REFUND, id))
                 .isEqualTo("http://admin/");
-        assertThat(links.linkFor(NotificationAudience.SELLER, NotificationTarget.REVIEW, id))
-                .isEqualTo("http://seller/");
-        assertThat(links.linkFor(NotificationAudience.SELLER, NotificationTarget.SETTLEMENT, id))
-                .isEqualTo("http://seller/");
     }
 }

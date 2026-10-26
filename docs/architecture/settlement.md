@@ -86,6 +86,12 @@ M5 시작(2026-10-22)에 정한 규칙이다. API와 화면은 각 PR에서 이 
 - 정산 대상은 `{sellerOrderId, orderId, confirmedAt, periodStart, periodEnd, salesAmount, commissionAmount, sellerCouponDiscount, settlementAmount, lines}`이고 `lines`는 주문 항목(상품명, 카테고리, 수량, 금액, 고정한 요율, 수수료)이다. 주문 항목은 쪽마다 한 번 더 읽는다(N+1 없음).
 - 커서 목록은 `?cursor=&size=`(기본 20, 최대 50)이고 틀린 커서는 400 `SETTLEMENT_INVALID_CURSOR`다. 정산 계좌는 member에 있어 응답에 싣지 않는다. 화면이 BFF로 함께 보인다.
 
+## 화면(seller)
+- 정산 `/settlements`: 위는 정산 예정 금액(`pending/summary`, 건수와 판매 금액 − 수수료 − 판매자 쿠폰 부담 = 정산 예정 금액), 아래는 확정된 정산(기간 최근 순 커서 목록). 상태는 `CONFIRMED` "지급 대기", `PAID_OUT` "지급 완료"다.
+- 기간은 한국 날짜로 쓰고 끝 날은 `periodEnd` 전날이다(예: `10월 26일~11월 1일`, 알림 문구와 같다). 한국 시간 자정에 나뉘지 않은 짧은 기간(E2E)은 시각까지 쓴다(`lib/settlement.ts` `periodLabel`).
+- 정산 상세 `/settlements/{settlementId}`: 금액 계산, 상태, 지급 시각, 정산 계좌(member `/v1/seller/me`의 가린 번호)와 내역(커서). 정산 확정·지급 알림이 여기로 온다.
+- 정산 예정 내역 `/settlements/pending`: 확정되지 않은 대상(커서). 내역은 하위 주문마다 구매확정 시각(하위 주문 상세 링크), 주문 항목, 받은 때 고정한 요율과 수수료, 판매자 쿠폰 부담분, 정산 금액이다.
+
 ## 이벤트
 필드는 [context-map.md](context-map.md) "settlement.settlement".
 | 받는 이벤트 | 처리 |
