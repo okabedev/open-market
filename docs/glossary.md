@@ -103,3 +103,11 @@
 | 이벤트 봉투 | `EventEnvelope` | 이벤트 공통 필드. [messaging.md](architecture/messaging.md) 참고 |
 | DLT | `<topic>.DLT` | 재시도 후에도 실패한 메시지가 가는 토픽 |
 | 감사 로그 | `AuditLog`, `audit_log` 테이블 | 관리자 작업을 누가, 언제, 무엇에 했는지 남긴다(NFR-8). 작업과 같은 트랜잭션에 쓴다 |
+| DLT 메시지 | `DeadLetter`, `dead_letter` 테이블 | 리스너 그룹 하나가 처리하지 못해 DLT로 간 메시지. 그 그룹의 서비스가 모아 둔다. 상태는 `PENDING`, `RETRIED`(다시 보냄), `DISCARDED`(버림) |
+| 다시 보내기 | `retry`, `dlt-target-group` 헤더 | DLT 메시지를 원래 토픽으로 다시 보내 실패한 그룹만 처리하게 한다(ADM-5) |
+| 운영 지표 | `OrderMetrics`, `PaymentMetrics` | 관리자가 보는 일별 주문 수, 결제된 주문 수, GMV, 결제 실패율(ADM-4). 업무 DB에서 센다 |
+| GMV | `gmv` | 총 거래액. 그날 결제된 주문의 결제 금액 합이다. 뒤의 취소·환불을 빼지 않는다 |
+| 결제 실패율 | `failureRate` | 결과가 정해진 승인 시도 중 거절된 비율. 결제 상태가 아니라 결제 원장으로 센다 |
+| 2단계 인증 | TOTP, `RecoveryCode` | 관리자가 비밀번호 다음에 확인하는 6자리 시간 기반 코드. 기기를 잃었을 때는 한 번 쓰는 복구 코드를 쓴다 |
+| 장애 주입 | `fault` | Kafka 중지, DB 지연, PG 지연을 일부러 넣어 정합성과 격리를 확인하는 시험 |
+| 런북 | `docs/runbook.md` | 장애 유형별 확인과 대응 절차 |

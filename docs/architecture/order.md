@@ -181,6 +181,16 @@ order는 `payment.payment`에서 결제 결과를 받는다([payment.md](payment
 - 하위 주문의 진행 상태는 위 "하위 주문 진행 상태"다. 하위 주문 처리(발주 확인, 발송)는 fulfillment가 한다([fulfillment.md](fulfillment.md) "API").
 - 판매자 화면은 이 필터로 할 일 탭(발주 확인 대기 `PAID`, 발송 대기 `ACCEPTED`, 배송 중 `SHIPPED`·`IN_TRANSIT`, 클레임 진행 중 `REQUESTED`·`APPROVED`·`MEDIATING`)을 만든다. 교환 재발송은 진행 상태가 `DELIVERED`로 남으므로 클레임 탭에서 찾는다. 필터는 판매자 인덱스(`seller_id`)로 좁힌 뒤 거른다.
 
+### 운영 지표(ADM-4, M6)
+관리자 화면의 일별 주문 지표다. 업무 DB에서 그때그때 센다([ADR 0023](../adr/0023-admin-ops-queries.md)).
+| 메서드 | 경로 | 설명 |
+|---|---|---|
+| GET | `/v1/admin/metrics/orders?from=&to=` | 날짜(KST, `from`~`to` 포함)별 주문 수, 결제된 주문 수, GMV. 주문이 없는 날도 0으로 준다. 기간은 31일까지이고 넘으면 400 `ORDER_METRICS_PERIOD_TOO_LONG` |
+
+- 주문 수: 그날 주문 시각(`placed_at`)인 주문. 상태와 상관없다(만료·취소 포함).
+- 결제된 주문 수, GMV: 그날 결제 시각(`paid_at`)인 주문의 수와 주문 금액(쿠폰 할인 뒤 결제 금액)의 합. 뒤에 취소·환불돼도 빼지 않는다(총 거래액). 환불 금액은 payment가 갖는다.
+- 인덱스는 `placed_at`, `paid_at`(값이 있는 행)이다.
+
 ## 내부 API
 서비스 간 조회다. `internal` scope 토큰만 부를 수 있고 gateway는 넘기지 않는다. 프론트 api-client(OpenAPI 문서)에 넣지 않는다.
 | 메서드 | 경로 | 설명 |

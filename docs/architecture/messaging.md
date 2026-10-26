@@ -49,6 +49,7 @@
 | `occurredAt` | outbox `occurred_at` | 발생 시각(ISO-8601 UTC) |
 | `schemaVersion` | outbox `schema_version` | 페이로드 버전. 하위 호환이 깨지면 올린다 |
 | `traceparent` | outbox `traceparent` | W3C 트레이스 컨텍스트. 소비자가 이어 받는다 |
+| `dlt-target-group` | DLT 재처리 | 관리자가 다시 보낸 메시지에만 있다. 이 그룹만 처리한다(아래 "DLT 재처리") |
 
 헤더 값은 UTF-8 문자열이다. Outbox Event Router가 `id`를 헤더로 넣고, `table.fields.additional.placement`가 나머지 컬럼을 위 이름으로 옮긴다. `SimpleHeaderConverter`가 문자열로 쓴다.
 - `id`: UUID 문자열
@@ -81,7 +82,7 @@
 - 처리 실패(WARN), DLT 전송(ERROR), DLT 전송 실패(ERROR)는 로그로 남는다. 로그에는 위치(`토픽-파티션@오프셋`), 이벤트 `type`·`id`, 예외 클래스만 쓴다. 키, 값, 예외 메시지는 개인정보가 들어갈 수 있어 쓰지 않는다.
 - 처리 기록(`processed_event`)은 핸들러와 같은 트랜잭션이라 실패한 처리에는 남지 않는다. DLT에서 다시 보낸 메시지는 처음 보는 이벤트로 처리된다.
 - 비즈니스 실패는 예외가 아니다. 예를 들어 재고 부족은 `StockReservationFailed` 이벤트로 발행한다.
-- DLT 메시지는 관리자 화면에서 보고 원래 토픽으로 다시 보낸다(ADM-5, M6).
+- DLT 메시지는 관리자 화면에서 보고 다시 처리한다(ADM-5). 아래 "DLT 재처리".
 
 소비자 설정(`infra/config-repo/application.yml`)
 | 설정 | 값 | 이유 |
@@ -95,6 +96,33 @@
 순서
 - 순서는 같은 키(집계) 안에서만 보장된다. 다른 집계의 이벤트 순서에 기대지 않는다.
 - 상태 전이가 맞지 않는 이벤트가 오면(예: `PAID`가 아닌 주문에 `ShipmentShipped` 도착) 경고 로그를 남기고 무시한다. 무시한 이벤트는 지표로 센다.
+
+## DLT 재처리
+관리자가 DLT 메시지를 보고 다시 처리하거나 버린다(ADM-5, M6). 근거는 [ADR 0022](../adr/0022-dead-letter-reprocessing.md), 화면이 여러 서비스를 합치는 방법은 [ADR 0023](../adr/0023-admin-ops-queries.md)이다.
+
+수집
+- `common-messaging`의 DLT 수집기가 서비스마다 하나 돈다. 그 서비스의 리스너가 구독하는 토픽의 DLT(`<토픽>.DLT`)를 그룹 `<서비스>-dead-letter`로 읽는다. 구독 토픽은 기동할 때 리스너 등록 정보에서 얻는다.
+- 헤더 `kafka_dlt-original-consumer-group`이 그 서비스의 리스너 그룹인 메시지만 `dead_letter` 테이블([data.md](data.md#dead_letter))에 넣는다. 다른 그룹 메시지는 넘긴다.
+- `(DLT 토픽, 파티션, 오프셋)`이 이미 있으면 넣지 않는다. 수집기가 같은 메시지를 다시 읽어도 한 행이다.
+- DLT 토픽 보관 기간(7일)과 상관없이 행이 남는다. 처리가 끝난 행(`RETRIED`, `DISCARDED`)은 30일 뒤 정리 작업이 지운다. `PENDING`은 지우지 않는다.
+
+다시 처리
+- 관리자가 `PENDING` 행을 다시 보내면, 저장한 키·값·원래 헤더로 원래 토픽의 원래 파티션에 보낸다. 헤더 `dlt-target-group`에 실패한 그룹을 더하고, `kafka_dlt-*` 헤더는 뺀다. 보낸 뒤 행을 `RETRIED`로 바꾼다.
+- `IdempotentEventProcessor`는 `dlt-target-group`이 있고 지금 리스너의 그룹이 아니면 처리하지 않고 넘긴다. 다른 그룹은 처리 기록(30일 보관)이 지워진 뒤에도 다시 처리하지 않는다.
+- 대상 그룹은 처리 기록이 없으므로(실패한 처리는 롤백됨) 처음 보는 이벤트로 처리한다. 또 실패하면 새 DLT 메시지가 되어 새 행으로 들어온다. 같은 이벤트 ID의 행을 함께 보여 준다.
+- 버리기는 사유가 있어야 하고 행을 `DISCARDED`로 바꾼다. 메시지는 보내지 않는다.
+- 다시 보내기와 버리기는 행을 잠그고 `PENDING`인지 확인한다. 같은 요청이 겹쳐도 한 번만 보낸다. Kafka 전송이 실패하면 상태를 바꾸지 않고 오류를 돌려준다. 전송은 됐는데 상태 저장이 실패하면 한 번 더 보낼 수 있고, 대상 그룹의 멱등 소비가 거른다.
+- 두 작업은 감사 로그(`DEAD_LETTER_RETRIED`, `DEAD_LETTER_DISCARDED`)를 남긴다.
+- 다시 보낸 메시지는 같은 키의 뒤 이벤트보다 늦게 도착한다. 그 사이 집계 상태가 바뀌었으면 소비자가 상태 전이 규칙(위 "순서")대로 무시한다.
+
+관리자 API(서비스마다, `common-messaging`)
+| 메서드 | 경로 | 내용 |
+|---|---|---|
+| GET | `/v1/admin/dead-letters?status&topic&before&size` | 목록(쌓인 시각 내림차순, 커서). 이벤트 `type`·`id`, 원래 토픽·파티션·오프셋, 그룹, 예외 클래스, 쌓인 시각, trace id, 상태 |
+| POST | `/v1/admin/dead-letters/{id}/retry` | 다시 보내기. 이미 처리한 행이면 409 `DEAD_LETTER_NOT_PENDING` |
+| POST | `/v1/admin/dead-letters/{id}/discard` | 버리기(`{reason}`). 상태 검사는 다시 보내기와 같다 |
+
+- 페이로드와 예외 메시지는 응답에 넣지 않는다. 개인정보가 들어갈 수 있다(NFR-7). 원인은 trace id로 로그와 트레이스에서 찾는다.
 
 ## 주문·결제 Saga (코레오그래피)
 중앙 오케스트레이터 없이 각 서비스가 이벤트에 반응한다. 주문 상태는 order가 소유한다.
@@ -186,7 +214,7 @@ sequenceDiagram
 | 환불(토스 부분취소, `RefundJob`) | payment | 1분 |
 | 주간 정산 확정(끝난 지 3시간 지난 정산 기간) | settlement | 매주 월요일 03:00 |
 | 미첨부 파일 삭제 | file | 1시간 |
-| 발행된 outbox 행(7일), `processed_event`(30일) 정리 | 각 서비스(`common-messaging`) | 매일 04:00 |
+| 발행된 outbox 행(7일), `processed_event`(30일), 처리가 끝난 `dead_letter`(30일, M6) 정리 | 각 서비스(`common-messaging`) | 매일 04:00 |
 | 멱등성 키 기록 정리(24시간) | 각 서비스(`common-web`) | 1시간 |
 
 인스턴스가 여러 개여도 한 번만 실행되도록 ShedLock을 쓴다. 각 작업은 다시 실행해도 결과가 같아야 한다.
