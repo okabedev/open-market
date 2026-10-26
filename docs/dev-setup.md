@@ -155,3 +155,26 @@ E2E는 토스페이먼츠 대신 가짜 PG(`infra/fake-pg`)로 결제한다([ADR
 - 상태는 메모리에만 있다. 컨테이너를 다시 띄우면 지워진다.
 - 개발용 스택에서 손으로 띄우려면 `TOSS_API_URL=http://fake-pg:8090 docker compose --profile apps --profile e2e up -d --wait fake-pg payment`, shop은 `TOSS_SDK_URL=http://localhost:8090/v2/standard pnpm --filter @openmarket/shop dev`다. 실제 토스로 돌아가려면 변수 없이 payment를 다시 띄운다.
 - 가짜 PG 테스트: 레포 루트에서 `node --test infra/fake-pg/*.test.mjs`(CI `compose` 잡).
+
+## 9. 부하 시험
+NFR-9(조회·검색 p95 200ms, 주문 생성 p95 500ms, 선착순 쿠폰 초과 발급 0건)를 k6로 잰다. 시나리오는 `infra/k6/*.js`, 결과 기록은 [risks.md](architecture/risks.md) "부하 측정"이다.
+
+```bash
+docker compose --profile apps --profile obs --profile search stop   # 개발용 스택을 멈춘다(포트가 겹친다)
+infra/k6/run.sh                  # browse, order, coupon을 차례로
+infra/k6/run.sh browse           # 하나만
+BROWSE_RATE=300 infra/k6/run.sh browse   # 부하 크기를 바꿔서
+```
+
+- 별도 Compose 프로젝트(`openmarket-load`)를 빈 볼륨으로 띄우고(기본·`apps`·`search`·`obs` profile) 시나리오마다 k6 컨테이너(`load` profile, `infra/compose/load.yaml`)를 돌린 뒤 지운다. 남겨서 보려면 `LOAD_KEEP=1`, 남긴 스택에 다시 돌리려면 `LOAD_REUSE=1`이다. 같은 시나리오를 조건을 바꿔 여러 번 돌릴 때는 `LOAD_LABEL=<라벨>`로 결과 파일 이름을 나눈다.
+- 시나리오는 `setup()`에서 데이터를 API로 만든다(판매자 가입·이메일 인증·입점 승인, 이미지를 올린 상품, 구매자). 기동 직후에는 JIT 예열로 지연이 크므로 30초 예열 단계(`WARMUP_DURATION`)를 먼저 돌리고, 임계값은 측정 단계에만 건다.
+
+  | 시나리오 | 부하(기본값) | 바꾸는 변수 |
+  |---|---|---|
+  | `browse` | 비로그인 상품 상세 3 : 검색 1, 초당 100건, 2분 | `BROWSE_RATE`, `BROWSE_DURATION` |
+  | `order` | 이메일 인증한 구매자 50명이 주문 생성(결제 없음), 초당 10건, 2분 | `ORDER_RATE`, `ORDER_DURATION`, `ORDER_BUYERS` |
+  | `coupon` | 수량 100장 플랫폼 쿠폰에 구매자 1,000명이 한꺼번에 받기 | `COUPON_BUYERS`, `COUPON_QUANTITY` |
+- k6는 BFF 자리에서 gateway(`http://gateway:8080`)를 부른다. 요청마다 `X-Forwarded-For`를 바꿔 여러 사용자의 요청처럼 보낸다. gateway는 그 마지막 값으로 익명 레이트 리밋 키를 정한다(R13). auth 로그인 한도는 실제 접속 주소를 보므로 `run.sh`가 `AUTH_LOGIN_RATE_LIMIT`을 늘린다.
+- 결과: `infra/k6/.out/<이름>.log`(k6 출력), `-summary.json`(지표), `-stats.csv`(5초마다 컨테이너 CPU·메모리, k6 포함), `-memory.txt`(시나리오 뒤 cgroup `anon`·`peak`·상한 도달), `-pool.txt`(Prometheus의 서비스별 연결 풀 대기·사용 최대값).
+- k6가 임계값을 넘으면 종료 코드가 0이 아니고 `run.sh`도 실패로 끝난다. 남은 시나리오는 계속 돈다.
+

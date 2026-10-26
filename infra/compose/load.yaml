@@ -1,0 +1,34 @@
+# load profile: 부하 시험(k6). infra/k6/run.sh가 `docker compose run`으로만 띄운다. `up`에는 profile을 더하지 않는다.
+
+services:
+  # Compose 네트워크 안에서 gateway, Mailpit에 서비스 이름으로 닿는다. auth는 issuer 이름으로 호스트 포트에 닿는다(ADR 0013).
+  # 결과(--summary-export)는 호스트의 infra/k6/.out에 쓴다. 이미지 기본 사용자는 그 디렉터리에 쓸 수 없어 run.sh가 호스트 사용자를 준다.
+  k6:
+    profiles: [load]
+    image: grafana/k6:2.3.0
+    user: "${LOAD_UID:-1000}:${LOAD_GID:-1000}"
+    working_dir: /scripts
+    volumes:
+      - ../k6:/scripts:ro
+      - ../k6/.out:/out
+      - ../../clients/e2e/fixtures/product.jpg:/fixtures/product.jpg:ro
+    extra_hosts:
+      - "auth.openmarket.local:host-gateway"
+    environment:
+      GATEWAY_URL: http://gateway:8080
+      MAILPIT_URL: http://mailpit:8025
+      OIDC_ISSUER: http://auth.openmarket.local:9000
+      ADMIN_SEED_EMAIL: ${ADMIN_SEED_EMAIL}
+      ADMIN_SEED_PASSWORD: ${ADMIN_SEED_PASSWORD}
+      SHOP_CLIENT_SECRET: ${SHOP_CLIENT_SECRET}
+      SELLER_CLIENT_SECRET: ${SELLER_CLIENT_SECRET}
+      ADMIN_CLIENT_SECRET: ${ADMIN_CLIENT_SECRET}
+      # 시나리오 크기(infra/k6/*.js의 기본값을 바꿀 때)
+      BROWSE_RATE: ${BROWSE_RATE:-}
+      BROWSE_DURATION: ${BROWSE_DURATION:-}
+      ORDER_RATE: ${ORDER_RATE:-}
+      ORDER_DURATION: ${ORDER_DURATION:-}
+      ORDER_BUYERS: ${ORDER_BUYERS:-}
+      COUPON_BUYERS: ${COUPON_BUYERS:-}
+      COUPON_QUANTITY: ${COUPON_QUANTITY:-}
+    mem_limit: 2g

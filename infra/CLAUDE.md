@@ -5,7 +5,7 @@
 ## 구조
 ```
 infra/
-├─ compose/        compose 파일. compose.yaml(기본, discovery·config·gateway·auth 포함), search.yaml, obs.yaml, apps.yaml(나머지 Spring 서비스), e2e.yaml(가짜 PG)
+├─ compose/        compose 파일. compose.yaml(기본, discovery·config·gateway·auth 포함), search.yaml, obs.yaml, apps.yaml(나머지 Spring 서비스), e2e.yaml(가짜 PG), load.yaml(k6)
 ├─ config-repo/    Spring Cloud Config native 저장소. application.yml(공통) + <service>.yml. config 컨테이너에 마운트된다
 ├─ postgres/init/  스키마, 서비스 계정, 복제 계정, publication과 outbox 자동 등록 트리거(서비스 목록 services.txt)
 ├─ debezium/       outbox 커넥터 설정과 등록 스크립트(connect 컨테이너가 기동할 때 실행). 커넥터는 하나
@@ -14,7 +14,7 @@ infra/
 ├─ grafana/        데이터 소스·대시보드 프로비저닝
 ├─ e2e/            마일스톤 E2E 실행 스크립트 run.sh(별도 Compose 프로젝트 + 앱 3개 + Playwright). 시나리오는 clients/e2e
 ├─ fake-pg/        E2E에서 토스 대신 쓰는 가짜 PG(ADR 0018). 의존성 없는 Node 서버, 테스트는 `node --test infra/fake-pg/*.test.mjs`
-├─ k6/             부하 테스트 시나리오 (M6)
+├─ k6/             부하 시험 실행 스크립트 run.sh(별도 Compose 프로젝트 + k6 컨테이너)와 시나리오 browse·order·coupon.js, 공통 lib/
 └─ elasticsearch/  nori 플러그인 커스텀 이미지(ADR 0016). search profile이 빌드한다
 ```
 
@@ -36,6 +36,7 @@ infra/
 | `docker compose --profile search --profile obs up -d --wait` | Elasticsearch와 관측성 스택까지 띄운다. 멈출 때도 같은 `--profile`을 붙인다 |
 | `docker compose --profile apps up -d --wait --build` | 나머지 Spring 서비스까지 컨테이너로 띄운다(E2E). search가 쓰는 Elasticsearch도 함께 뜬다. IDE로 띄울 서비스는 `docker compose stop <서비스>`로 멈춘다 |
 | `infra/e2e/run.sh m1` | 마일스톤 완료 기준 E2E. 빈 볼륨의 별도 프로젝트(`openmarket-e2e`)를 띄워 돌리고 지운다. 개발용 스택과 앱은 먼저 멈춘다 |
+| `infra/k6/run.sh [browse order coupon]` | 부하 시험(NFR-9). 빈 볼륨의 별도 프로젝트(`openmarket-load`)를 띄워 돌리고 지운다. 개발용 스택은 먼저 멈춘다([dev-setup.md](../docs/dev-setup.md) 9절) |
 | `docker compose ps` | 상태 확인 |
 | `docker compose down` | 멈춤(데이터 유지) |
 | `docker compose down -v` | 볼륨까지 지운다. `postgres/init`이나 `.env` 비밀번호를 바꾼 뒤 쓴다 |

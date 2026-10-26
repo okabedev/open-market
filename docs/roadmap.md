@@ -318,7 +318,8 @@
 ## M6 — 운영 성숙도
 - [x] 설계: DLT 재처리([messaging.md](architecture/messaging.md) "DLT 재처리", [ADR 0022](adr/0022-dead-letter-reprocessing.md)), 관리자 운영 조회([ADR 0023](adr/0023-admin-ops-queries.md), [order.md](architecture/order.md)·[payment.md](architecture/payment.md) "운영 지표", [data.md](architecture/data.md) "audit_log"), 관리자 2단계 인증([auth.md](architecture/auth.md)), 리스크 R13~R16
 - [ ] k6 부하 테스트(NFR-9)와 성능 개선 기록(README 표)
-  - [ ] `infra/k6/` 시나리오: 상품 조회, 검색, 주문 생성(PG 제외), 선착순 쿠폰 1,000건 동시 요청. 첫 측정과 부하 중 메모리·연결 풀(R6, R13)
+  - [x] `infra/k6/` 시나리오: 상품 조회, 검색, 주문 생성(PG 제외), 선착순 쿠폰 1,000건 동시 요청. 첫 측정과 부하 중 메모리·연결 풀(R6, R13). 기본 부하에서 NFR-9 만족, 결과는 [risks.md](architecture/risks.md) "부하 측정"
+  - [ ] auth 연결 풀 교착(동시 로그인이 풀 크기를 넘으면 500) 수정
   - [ ] 측정 결과에 따른 성능 개선. README 표(개선 전·후)
 - [ ] 장애 주입: Kafka 중지, DB 지연, 외부 PG 지연 상황에서 정합성 확인(R16). 복제 슬롯 무효(R5), 쿠폰 예약 실패 조합, Redis 장애 중 쿠폰 발급. 찾은 결함은 `fix/` PR로 고친다
 - [ ] 관리자 백오피스: 운영 지표, 감사 로그 조회, DLT 재처리(ADM-4, ADM-5)

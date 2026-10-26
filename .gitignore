@@ -35,5 +35,6 @@ infra/compose/data/
 
 # 마일스톤 E2E 산출물(infra/e2e/run.sh)
 infra/e2e/.out/
+infra/k6/.out/
 clients/e2e/playwright-report/
 clients/e2e/test-results/
