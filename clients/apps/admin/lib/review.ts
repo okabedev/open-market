@@ -20,6 +20,9 @@ export const NOTICES = {
   "coupon-created":
     "플랫폼 쿠폰을 만들었습니다. 발급 기간이 되면 구매자가 쿠폰 화면에서 받을 수 있습니다.",
   "coupon-stopped": "발급을 멈췄습니다. 이미 받은 쿠폰은 사용 기한까지 쓸 수 있습니다.",
+  "review-hidden":
+    "리뷰를 숨겼습니다. 상품 상세와 별점에서 빠지고, 검색의 별점은 몇 초 안에 바뀝니다.",
+  "review-shown": "리뷰를 다시 보입니다. 별점에 다시 들어가고, 검색의 별점은 몇 초 안에 바뀝니다.",
 } as const;
 
 export type Notice = keyof typeof NOTICES;
