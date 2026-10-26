@@ -2,6 +2,9 @@ pnpm-lock.yaml
 .next/
 coverage/
 next-env.d.ts
+# Playwright 결과(git이 무시한다). E2E를 돌린 뒤 format:check가 이 파일들로 실패하지 않게 한다
+e2e/playwright-report/
+e2e/test-results/
 *.md
 # OpenAPI에서 생성한 코드(packages/api-client)
 packages/api-client/src/generated/

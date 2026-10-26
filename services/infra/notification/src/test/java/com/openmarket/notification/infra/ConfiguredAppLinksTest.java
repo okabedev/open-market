@@ -36,11 +36,20 @@ class ConfiguredAppLinksTest {
     }
 
     @Test
-    @DisplayName("대상이 없거나 화면이 아직 없으면 앱의 첫 화면이다")
+    @DisplayName("목록 화면만 있는 대상은 앱의 알림 이동과 같은 목록이다")
+    void linksToListScreens() {
+        assertThat(links.linkFor(NotificationAudience.ADMIN, NotificationTarget.CLAIM, id))
+                .isEqualTo("http://admin/claims");
+        assertThat(links.linkFor(NotificationAudience.ADMIN, NotificationTarget.REFUND, id))
+                .isEqualTo("http://admin/payment-failures");
+        assertThat(links.linkFor(NotificationAudience.SELLER, NotificationTarget.CLAIM, id))
+                .isEqualTo("http://seller/orders?status=claims");
+    }
+
+    @Test
+    @DisplayName("이동 대상이 없으면 앱의 첫 화면이다")
     void fallsBackToAppHome() {
         assertThat(links.linkFor(NotificationAudience.SELLER, null, null))
                 .isEqualTo("http://seller/");
-        assertThat(links.linkFor(NotificationAudience.ADMIN, NotificationTarget.REFUND, id))
-                .isEqualTo("http://admin/");
     }
 }
