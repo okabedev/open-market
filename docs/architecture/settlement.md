@@ -88,14 +88,17 @@ M5 시작(2026-10-22)에 정한 규칙이다. API와 화면은 각 PR에서 이 
 
 ## 화면(seller)
 - 정산 `/settlements`: 위는 정산 예정 금액(`pending/summary`, 건수와 판매 금액 − 수수료 − 판매자 쿠폰 부담 = 정산 예정 금액), 아래는 확정된 정산(기간 최근 순 커서 목록). 상태는 `CONFIRMED` "지급 대기", `PAID_OUT` "지급 완료"다.
-- 기간은 한국 날짜로 쓰고 끝 날은 `periodEnd` 전날이다(예: `10월 26일~11월 1일`, 알림 문구와 같다). 한국 시간 자정에 나뉘지 않은 짧은 기간(E2E)은 시각까지 쓴다(`lib/settlement.ts` `periodLabel`).
+- 기간은 한국 날짜로 쓰고 끝 날은 `periodEnd` 전날이다(예: `10월 26일~11월 1일`, 알림 문구와 같다). 한국 시간 자정에 나뉘지 않은 짧은 기간(E2E)은 시각까지 쓴다(`packages/ui` `periodLabel`).
 - 정산 상세 `/settlements/{settlementId}`: 금액 계산, 상태, 지급 시각, 정산 계좌(member `/v1/seller/me`의 가린 번호)와 내역(커서). 정산 확정·지급 알림이 여기로 온다.
 - 정산 예정 내역 `/settlements/pending`: 확정되지 않은 대상(커서). 내역은 하위 주문마다 구매확정 시각(하위 주문 상세 링크), 주문 항목, 받은 때 고정한 요율과 수수료, 판매자 쿠폰 부담분, 정산 금액이다.
 
 ## 화면(admin)
 - 수수료율 `/commission-rates`: catalog 카테고리 트리의 소분류마다 지금 요율(정한 요율과 바꾼 시각, 없으면 "기본 n%")을 보이고 %로 바꾼다. 소수 둘째 자리까지 받아 bp로 보낸다(`lib/commission.ts`, 문자열로 계산해 부동소수 오차가 없다). 정한 요율은 확인한 뒤 "기본으로" 지운다.
 - settlement는 요율을 정한 카테고리만 주므로 이름은 트리로 붙인다. 트리에 없는 카테고리에 정한 요율은 "카테고리 트리에 없는 요율"로 따로 보이고 지울 수 있다.
-- 정산 목록·지급·즉시 실행은 M5 PR 15d에서 더한다.
+- 정산 `/settlements`: 확정된 정산을 최근 확정 순, 쪽 번호로 보인다. 상태 탭(전체·지급 대기·지급 완료), 판매자 필터(`?sellerId=`, 판매자 ID 앞 8자리를 누른다). 행마다 상호를 member에 묻지 않도록 목록은 판매자 ID로 보인다.
+- "정산 작업 지금 실행"은 확인한 뒤 `POST /v1/admin/settlement-runs`를 부르고 새로 확정한 건수를 보인다(`?notice=settlement-run&confirmed=n`).
+- 정산 상세 `/settlements/{settlementId}`: 금액 계산, 상태·지급 시각, 내역(커서), 판매자 상호와 정산 계좌. 계좌는 member `GET /v1/admin/sellers/{sellerId}`(대표자·예금주·계좌 번호를 가린 값)로 함께 보인다(위 "범위 결정"). 지급 대기면 확인한 뒤 지급 완료로 기록한다(`?notice=paid-out`).
+- 금액 요약·내역·기간 문구(`SettlementAmounts`, `SettlementItems`, `periodLabel`)는 seller와 함께 `packages/ui`에 있다. 내역의 하위 주문 링크는 seller만 단다(`orderHref`).
 
 ## 이벤트
 필드는 [context-map.md](context-map.md) "settlement.settlement".

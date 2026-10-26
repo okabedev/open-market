@@ -1,8 +1,7 @@
-import { Alert, Button, PageHeader } from "@openmarket/ui";
+import { Alert, Button, PageHeader, SettlementItems } from "@openmarket/ui";
 import Link from "next/link";
 import { bff } from "@/lib/bff";
 import { requireSeller } from "@/lib/session";
-import { SettlementItems } from "../settlement-parts";
 
 const PAGE_SIZE = 20;
 
@@ -36,6 +35,7 @@ export default async function PendingSettlementPage({
           items={data.items ?? []}
           basePath="/settlements/pending"
           cursor={typeof cursor === "string" ? cursor : undefined}
+          orderHref={(sellerOrderId) => `/orders/${sellerOrderId}`}
           nextCursor={data.nextCursor}
         />
       )}

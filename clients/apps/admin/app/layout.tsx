@@ -15,6 +15,7 @@ const NAV: NavItem[] = [
   { href: "/products", label: "상품" },
   { href: "/coupons", label: "쿠폰" },
   { href: "/reviews", label: "리뷰" },
+  { href: "/settlements", label: "정산" },
   { href: "/commission-rates", label: "수수료율" },
   { href: "/claims", label: "클레임 중재" },
   { href: "/payment-failures", label: "결제 실패" },
