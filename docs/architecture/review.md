@@ -60,6 +60,10 @@ M5 시작(2026-10-22)에 정한 규칙이다. API와 화면은 각 PR에서 이 
 - 리뷰마다 답글 폼이 있다. 답글이 있으면 그 본문을 채워 "답글 고치기"다. 저장하면 `/reviews?notice=replied#review-{reviewId}`로 돌아간다.
 - 새 리뷰 알림(`REVIEW`)은 `/reviews#review-{reviewId}`로 온다. 리뷰 한 건을 읽는 API가 없고, 새 리뷰는 첫 쪽 맨 위다.
 
+### 화면(admin)
+- 리뷰 `/reviews`: 모든 리뷰(`GET /v1/admin/reviews`)를 최근 작성 순, 쪽 번호로 보인다. 상태 탭(전체·보임·숨김), 상품(`?productId=`)과 판매자(`?sellerId=`)로 거른다. 상품 이름과 판매자 ID 앞 8자리를 누르면 그것으로 거른다.
+- 리뷰마다 사유(1~200자)를 적어 숨기거나 다시 보인다. 보던 목록(`returnTo`)으로 돌아가 `?notice=review-hidden|review-shown`을 보인다. 사유는 review의 감사 로그에만 남는다(아래 "숨김").
+
 ## 답글(`ReviewReply`, REV-3)
 - 리뷰 상품의 판매자만 단다. 1~1,000자. 리뷰마다 하나이고, 다시 쓰면 고친다(204). 다른 판매자의 리뷰면 404 `REVIEW_NOT_FOUND`다.
 - 숨긴 리뷰에도 답글을 쓸 수 있지만 공개 목록에는 리뷰와 함께 빠진다.

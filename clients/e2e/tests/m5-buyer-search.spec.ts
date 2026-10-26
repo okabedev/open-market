@@ -9,14 +9,15 @@ import { writeReview } from "../support/reviews";
 /**
  * M5 리뷰·검색(REV-1~3, SRC-2): 구매확정한 상품에 내 리뷰에서 사진과 함께 리뷰를 쓰면 검색의 별점순·판매량순·별점 필터와 상품 상세
  * 별점·리뷰에 보인다. 검색창은 입력하는 동안 자동완성을 보인다. 판매자는 새 리뷰 알림에서 그 리뷰로 가 답글을 달고, 답글은 상품 상세에
- * 보인다. 구매확정한 주문은 판매자 정산 예정(STL-2)에 들어간다. 정산 확정은 기간을 줄이는 M5 완료 E2E에서 본다. 구매확정은 배송 완료 30초 뒤 자동이다(run.sh
+ * 보인다. 구매확정한 주문은 판매자 정산 예정(STL-2)에 들어간다. 정산 확정은 기간을 줄이는 M5 완료 E2E에서 본다. 관리자가 리뷰를
+ * 숨기면 상품 상세에서 빠지고 작성자에게 숨김으로 보이며, 다시 보이면 돌아온다(REV-3, ADM-2). 구매확정은 배송 완료 30초 뒤 자동이다(run.sh
  * `FULFILLMENT_AUTO_CONFIRM_AFTER`).
  */
 test("M5: 구매확정한 상품에 쓴 리뷰가 검색 정렬·별점 필터·상품 상세에 보이고, 검색창이 자동완성을 보이고, 판매자가 알림에서 답글을 단다", async ({
   browser,
 }) => {
   test.setTimeout(360_000);
-  const { seller, tag } = await approvedSeller(browser);
+  const { seller, admin, tag } = await approvedSeller(browser);
   const reviewed = `린넨셔츠 ${tag} 오트밀`;
   const plain = `린넨셔츠 ${tag} 네이비`;
   let reviewedId = "";
@@ -153,5 +154,36 @@ test("M5: 구매확정한 상품에 쓴 리뷰가 검색 정렬·별점 필터·
     await seller.getByRole("link", { name: "정산 예정 내역" }).click();
     const items = seller.getByRole("list", { name: "정산 내역" });
     await expect(items.getByText(`${reviewed} × 2`)).toBeVisible();
+  });
+
+  await test.step("관리자: 리뷰를 숨기면 상품 상세에서 빠지고 작성자에게 숨김으로 보이며, 다시 보이면 돌아온다", async () => {
+    await admin.goto(`${env.admin}/reviews?productId=${reviewedId}`);
+    const row = admin.getByRole("listitem", { name: `${reviewed} 리뷰` });
+    await expect(row).toContainText("두께가 적당하고 구김이 적어요.");
+    await row.locator("summary", { hasText: "숨기기" }).click();
+    await row.getByLabel("숨기는 사유").fill("E2E 숨김 확인");
+    await row.getByRole("button", { name: "숨기기" }).click();
+    await expect(admin.getByText(/리뷰를 숨겼습니다/)).toBeVisible();
+    await expect(row.getByText("숨김", { exact: true })).toBeVisible();
+
+    await buyer.goto(`${env.shop}/products/${reviewedId}`);
+    await expect(
+      buyer.getByRole("region", { name: "리뷰" }).getByText("아직 리뷰가 없습니다."),
+    ).toBeVisible();
+    await buyer.goto(`${env.shop}/my/reviews`);
+    await expect(
+      buyer.getByRole("list", { name: "내가 쓴 리뷰" }).getByRole("listitem").first(),
+    ).toContainText("숨김");
+
+    await admin.goto(`${env.admin}/reviews?status=HIDDEN&productId=${reviewedId}`);
+    await row.locator("summary", { hasText: "다시 보이기" }).click();
+    await row.getByLabel("다시 보이는 사유").fill("E2E 다시 보임 확인");
+    await row.getByRole("button", { name: "다시 보이기" }).click();
+    await expect(admin.getByText(/리뷰를 다시 보입니다/)).toBeVisible();
+
+    await buyer.goto(`${env.shop}/products/${reviewedId}`);
+    await expect(
+      buyer.getByRole("region", { name: "리뷰" }).getByText("두께가 적당하고 구김이 적어요."),
+    ).toBeVisible();
   });
 });
