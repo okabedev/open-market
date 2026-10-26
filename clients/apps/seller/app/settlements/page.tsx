@@ -9,6 +9,9 @@ import {
   formatDateTime,
   formatPrice,
   PageHeader,
+  periodLabel,
+  SettlementAmounts,
+  settlementStatusLabel,
   Table,
   TableBody,
   TableCell,
@@ -19,8 +22,6 @@ import {
 import Link from "next/link";
 import { bff } from "@/lib/bff";
 import { requireSeller } from "@/lib/session";
-import { periodLabel, settlementStatusLabel } from "@/lib/settlement";
-import { SettlementAmounts } from "./settlement-parts";
 
 const PAGE_SIZE = 20;
 

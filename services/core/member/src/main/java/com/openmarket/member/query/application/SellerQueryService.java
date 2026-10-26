@@ -37,6 +37,22 @@ public class SellerQueryService {
                         () -> new NotFoundException("MEMBER_SELLER_NOT_FOUND", "판매자를 찾을 수 없습니다."));
     }
 
+    /** 관리자에게 주는 판매자 한 명(정산 지급 화면). 대표자·예금주를 마스킹한다. */
+    public SellerView sellerForAdmin(UUID sellerId) {
+        SellerView view = seller(sellerId);
+        return new SellerView(
+                view.sellerId(),
+                view.storeName(),
+                view.businessNumber(),
+                Masking.name(view.representativeName()),
+                view.bankName(),
+                Masking.name(view.accountHolder()),
+                view.accountNumberMasked(),
+                view.status(),
+                view.suspendReason(),
+                view.approvedAt());
+    }
+
     public PageView<SellerApplicationReviewView> applicationsForReview(
             @Nullable SellerApplicationStatus status, int page, int size) {
         PageView<SellerApplicationReviewView> found = dao.applicationsForReview(status, page, size);

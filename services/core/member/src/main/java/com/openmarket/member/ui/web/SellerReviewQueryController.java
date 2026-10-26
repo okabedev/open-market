@@ -6,15 +6,18 @@ import com.openmarket.member.query.dto.SellerApplicationReviewView;
 import com.openmarket.member.query.dto.SellerApplicationStatus;
 import com.openmarket.member.query.dto.SellerReviewView;
 import com.openmarket.member.query.dto.SellerStatus;
+import com.openmarket.member.query.dto.SellerView;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import java.util.UUID;
 import org.jspecify.annotations.Nullable;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/** 관리자 입점 심사·판매자 목록(ADM-1). 쪽 번호 목록이다. 개인정보는 마스킹해서 준다(NFR-7). */
+/** 관리자 입점 심사·판매자 목록(ADM-1)과 판매자 한 명. 목록은 쪽 번호다. 개인정보는 마스킹해서 준다(NFR-7). */
 @RestController
 @RequestMapping("/v1/admin")
 public class SellerReviewQueryController {
@@ -41,5 +44,11 @@ public class SellerReviewQueryController {
             @RequestParam(defaultValue = "0") @Min(0) int page,
             @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
         return sellers.sellers(status, page, size);
+    }
+
+    /** 판매자 한 명과 정산 계좌(마스킹). 정산 지급 화면이 쓴다(STL-3). 없으면 404 {@code MEMBER_SELLER_NOT_FOUND}. */
+    @GetMapping("/sellers/{sellerId}")
+    public SellerView seller(@PathVariable UUID sellerId) {
+        return sellers.sellerForAdmin(sellerId);
     }
 }

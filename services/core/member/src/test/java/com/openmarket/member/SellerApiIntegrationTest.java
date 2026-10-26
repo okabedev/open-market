@@ -191,6 +191,25 @@ class SellerApiIntegrationTest {
         assertThat(audits(memberId)).containsExactly("SELLER_SUSPENDED", "SELLER_REINSTATED");
     }
 
+    @Test
+    @DisplayName("관리자는 판매자 한 명을 정산 계좌와 함께 본다. 대표자·예금주는 마스킹하고, 관리자가 아니면 403, 없으면 404다")
+    void showsSellerToAdmin() throws Exception {
+        UUID applicationId = submitted("key-1");
+        review(applicationId, "approve", null).andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/v1/admin/sellers/" + memberId).with(buyer(memberId)))
+                .andExpect(status().isForbidden());
+        JsonNode found = json(get("/v1/admin/sellers/" + memberId).with(admin(adminId)));
+        assertThat(found.get("storeName").asString()).isEqualTo("길동상회");
+        assertThat(found.get("representativeName").asString()).isEqualTo("홍*동");
+        assertThat(found.get("accountHolder").asString()).isEqualTo("홍*동");
+        assertThat(found.get("accountNumberMasked").asString()).isEqualTo("********6789");
+        assertThat(found.get("bankName").asString()).isNotBlank();
+        mockMvc.perform(get("/v1/admin/sellers/" + UUID.randomUUID()).with(admin(adminId)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("MEMBER_SELLER_NOT_FOUND"));
+    }
+
     private UUID submitted(String key) throws Exception {
         String body =
                 submit(memberId, key)

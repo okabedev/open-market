@@ -207,4 +207,11 @@ test("M5: 구매확정한 상품에 쓴 리뷰가 검색 정렬·별점 필터·
     await expect(admin.getByText(/기본 수수료율로 돌렸습니다/)).toBeVisible();
     await expect(admin.getByRole("row", { name: /패션의류 > 여성의류/ })).toContainText("기본");
   });
+
+  await test.step("관리자: 정산 작업을 바로 돌린다(기간이 끝나지 않아 이 구매확정은 아직 정산 예정이다)", async () => {
+    await admin.goto(`${env.admin}/settlements`);
+    await admin.getByRole("button", { name: "정산 작업 지금 실행" }).click();
+    await admin.getByRole("alertdialog").getByRole("button", { name: "지금 실행" }).click();
+    await expect(admin.getByText(/정산 작업을 돌렸습니다\. 새로 확정한 정산 \d+건/)).toBeVisible();
+  });
 });

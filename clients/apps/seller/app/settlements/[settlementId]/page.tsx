@@ -6,13 +6,15 @@ import {
   CardContent,
   formatDateTime,
   PageHeader,
+  periodLabel,
+  SettlementAmounts,
+  SettlementItems,
+  settlementStatusLabel,
 } from "@openmarket/ui";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { bff } from "@/lib/bff";
 import { requireSeller } from "@/lib/session";
-import { periodLabel, settlementStatusLabel } from "@/lib/settlement";
-import { SettlementAmounts, SettlementItems } from "../settlement-parts";
 
 const PAGE_SIZE = 20;
 
@@ -93,6 +95,7 @@ export default async function SettlementPage({
             items={items.data.items ?? []}
             basePath={`/settlements/${settlementId}`}
             cursor={typeof cursor === "string" ? cursor : undefined}
+            orderHref={(sellerOrderId) => `/orders/${sellerOrderId}`}
             nextCursor={items.data.nextCursor}
           />
         )}

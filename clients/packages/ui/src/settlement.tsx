@@ -1,5 +1,6 @@
-import { Button, Card, CardContent, formatDateTime, formatPrice } from "@openmarket/ui";
-import Link from "next/link";
+import { Button } from "./button";
+import { Card, CardContent } from "./card";
+import { formatDateTime, formatPrice } from "./lib/format";
 
 type Amounts = {
   salesAmount?: number;
@@ -56,18 +57,22 @@ function rate(bp: number | undefined): string {
 }
 
 /**
- * 정산 내역(하위 주문마다 하나, 구매확정 최근 순). 주문 항목마다 받은 때 고정한 요율과 수수료를 보인다. 다음 쪽은 `?cursor=`다.
+ * 정산 내역(하위 주문마다 하나, 구매확정 최근 순). 주문 항목마다 받은 때 고정한 요율과 수수료를 보인다. 다음 쪽은 `?cursor=`다. 판매자
+ * 앱은 `orderHref`로 하위 주문 상세에 잇는다.
  */
 export function SettlementItems({
   items,
   basePath,
   cursor,
   nextCursor,
+  orderHref,
 }: {
   items: SettlementItem[];
   basePath: string;
   cursor: string | undefined;
   nextCursor: string | undefined;
+  /** 하위 주문 화면 주소. 없으면 구매확정 시각만 쓴다 */
+  orderHref?: (sellerOrderId: string) => string;
 }) {
   return (
     <section aria-labelledby="items-heading" className="grid gap-3">
@@ -85,12 +90,18 @@ export function SettlementItems({
               <Card>
                 <CardContent className="grid gap-3 pt-6 text-sm">
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
-                    <Link
-                      href={`/orders/${item.sellerOrderId}`}
-                      className="font-medium hover:underline"
-                    >
-                      {formatDateTime(item.confirmedAt)} 구매확정
-                    </Link>
+                    {orderHref && item.sellerOrderId ? (
+                      <a
+                        href={orderHref(item.sellerOrderId)}
+                        className="font-medium hover:underline"
+                      >
+                        {formatDateTime(item.confirmedAt)} 구매확정
+                      </a>
+                    ) : (
+                      <span className="font-medium">
+                        {formatDateTime(item.confirmedAt)} 구매확정
+                      </span>
+                    )}
                     <span className="font-semibold tabular-nums">
                       정산 {formatPrice(item.settlementAmount)}
                     </span>
@@ -122,14 +133,14 @@ export function SettlementItems({
       <div className="flex justify-between">
         {cursor ? (
           <Button asChild variant="outline" size="sm">
-            <Link href={basePath}>처음으로</Link>
+            <a href={basePath}>처음으로</a>
           </Button>
         ) : (
           <span />
         )}
         {nextCursor ? (
           <Button asChild variant="outline" size="sm">
-            <Link href={`${basePath}?cursor=${encodeURIComponent(nextCursor)}`}>다음</Link>
+            <a href={`${basePath}?cursor=${encodeURIComponent(nextCursor)}`}>다음</a>
           </Button>
         ) : null}
       </div>

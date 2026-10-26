@@ -4,7 +4,7 @@ import java.time.Instant;
 import java.util.UUID;
 import org.jspecify.annotations.Nullable;
 
-/** 판매자 본인 정보(판매자 앱). 계좌 번호는 마스킹한 값만 있다. */
+/** 판매자 정보. 판매자 본인(판매자 앱)과 관리자(정산 지급 화면)가 본다. 계좌 번호는 마스킹한 값만 있다. */
 public record SellerView(
         UUID sellerId,
         String storeName,

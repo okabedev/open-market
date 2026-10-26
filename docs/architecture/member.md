@@ -78,6 +78,7 @@ gateway 경로는 `/api/member` + 아래 경로다. 모두 사용자 토큰이 �
 | POST | `/v1/admin/seller-applications/{id}/approve` | 승인 |
 | POST | `/v1/admin/seller-applications/{id}/reject` | 반려. 본문 `{"reason"}` |
 | GET | `/v1/admin/sellers?status=&page=&size=` | 판매자 목록(최근 승인 순) |
+| GET | `/v1/admin/sellers/{id}` | 판매자 한 명과 정산 계좌(은행, 가린 계좌 번호, 예금주). 관리자 정산 지급 화면이 쓴다(M5). 없으면 404 `MEMBER_SELLER_NOT_FOUND` |
 | POST | `/v1/admin/sellers/{id}/suspend` | 정지. 본문 `{"reason"}` |
 | POST | `/v1/admin/sellers/{id}/reinstate` | 정지 해제 |
 
@@ -85,6 +86,6 @@ gateway 경로는 `/api/member` + 아래 경로다. 모두 사용자 토큰이 �
 
 ## 개인정보 (NFR-7)
 - 본인 프로필·배송지 응답은 원문이다. 본인이 고치려면 원래 값이 보여야 한다.
-- 다른 사람이 보는 응답(관리자 심사 화면, 판매자의 주문 화면)과 로그에서는 `common-core`의 `Masking`으로 가린다. 관리자 심사·판매자 목록은 신청자 이메일, 대표자, 예금주를 가린다. 상호와 사업자 등록 번호는 공개 정보라 원문이다.
+- 다른 사람이 보는 응답(관리자 심사 화면, 판매자의 주문 화면)과 로그에서는 `common-core`의 `Masking`으로 가린다. 관리자 심사·판매자 목록과 판매자 한 명 조회는 신청자 이메일, 대표자, 예금주를 가린다. 상호와 사업자 등록 번호는 공개 정보라 원문이다.
 - 정산 계좌 번호는 본인에게도 마스킹한 값만 준다(원문을 저장하지 않는다).
 - 요청·명령·조회 결과·엔티티의 `toString()`은 ID만 남긴다. 요청 로그에는 본문을 남기지 않는다(`common-web`).

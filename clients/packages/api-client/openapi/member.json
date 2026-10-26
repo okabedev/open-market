@@ -381,6 +381,33 @@
         }
       }
     },
+    "/v1/admin/sellers/{sellerId}" : {
+      "get" : {
+        "tags" : [ "seller-review-query-controller" ],
+        "operationId" : "seller",
+        "parameters" : [ {
+          "name" : "sellerId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SellerView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/seller-applications" : {
       "get" : {
         "tags" : [ "seller-review-query-controller" ],

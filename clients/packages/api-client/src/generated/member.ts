@@ -194,6 +194,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/sellers/{sellerId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["seller"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/seller-applications": {
         parameters: {
             query?: never;
@@ -728,6 +744,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PageViewSellerReviewView"];
+                };
+            };
+        };
+    };
+    seller: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sellerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SellerView"];
                 };
             };
         };
