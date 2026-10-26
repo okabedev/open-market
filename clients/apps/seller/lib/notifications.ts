@@ -7,7 +7,7 @@ type Target = Pick<
 
 /**
  * seller(판매자) 알림이 열 화면(docs/architecture/notification.md "인앱 알림"). 리뷰는 한 건을 읽는 API가 없어 리뷰 목록의 그
- * 리뷰로 간다(새 리뷰는 첫 쪽 맨 위다). 이 앱에 화면이 없는 대상(정산은 정산 화면 PR에서 연결)은 null이고 읽음 표시만 한다.
+ * 리뷰로 간다(새 리뷰는 첫 쪽 맨 위다). 이 앱에 화면이 없는 대상은 null이고 읽음 표시만 한다.
  */
 export function notificationHref({ targetType, targetId: id }: Target): string | null {
   switch (targetType) {
@@ -18,6 +18,8 @@ export function notificationHref({ targetType, targetId: id }: Target): string |
       return "/orders?status=claims";
     case "REVIEW":
       return id ? `/reviews#review-${id}` : null;
+    case "SETTLEMENT":
+      return id ? `/settlements/${id}` : null;
     case "PRODUCT":
       return id ? `/products/${id}` : null;
     default:

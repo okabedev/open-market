@@ -15,6 +15,7 @@ const NAV: NavItem[] = [
   { href: "/orders", label: "주문" },
   { href: "/coupons", label: "쿠폰" },
   { href: "/reviews", label: "리뷰" },
+  { href: "/settlements", label: "정산" },
 ];
 
 // 세션(쿠키)을 읽으므로 요청마다 그린다.
