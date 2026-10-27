@@ -1,0 +1,21 @@
+# fault profile: 장애 주입(R16). infra/fault/run.sh가 `--profile fault`를 더해 띄운다.
+
+services:
+  # 서비스와 Postgres 사이의 TCP 프록시. run.sh가 SERVICE_POSTGRES_HOST=toxiproxy로 서비스의 DB 연결을 이리로 돌리고,
+  # 제어 API(toxiproxy-cli)로 지연을 넣고 뺀다. Debezium은 프록시를 거치지 않고 Postgres에 바로 붙는다.
+  toxiproxy:
+    profiles: [fault]
+    image: ghcr.io/shopify/toxiproxy:2.12.0
+    command: ["-host=0.0.0.0", "-config=/config/toxiproxy.json"]
+    volumes:
+      - ../fault/toxiproxy.json:/config/toxiproxy.json:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    mem_limit: 128m
+    healthcheck:
+      # 이미지에 셸이 없어 CLI로 확인한다.
+      test: ["CMD", "/toxiproxy-cli", "list"]
+      interval: 2s
+      timeout: 2s
+      retries: 15

@@ -31,4 +31,11 @@ services:
       ORDER_BUYERS: ${ORDER_BUYERS:-}
       COUPON_BUYERS: ${COUPON_BUYERS:-}
       COUPON_QUANTITY: ${COUPON_QUANTITY:-}
+      # 장애 주입의 주문·결제 흐름(infra/k6/saga.js, infra/fault/run.sh). 가짜 PG는 e2e profile이다.
+      FAKE_PG_URL: http://fake-pg:8090
+      SAGA_RATE: ${SAGA_RATE:-}
+      SAGA_DURATION: ${SAGA_DURATION:-}
+      SAGA_BUYERS: ${SAGA_BUYERS:-}
+      SAGA_PG_DELAY_MS: ${SAGA_PG_DELAY_MS:-}
+      SAGA_PG_DELAY_EVERY: ${SAGA_PG_DELAY_EVERY:-}
     mem_limit: 2g

@@ -13,7 +13,8 @@ x-spring-service: &spring-service
   environment: &spring-env
     CONFIG_SERVER_URL: http://config:8888
     EUREKA_URL: http://discovery:8761/eureka/
-    POSTGRES_HOST: postgres
+    # 장애 주입(infra/fault/run.sh)만 toxiproxy를 준다. DB 연결이 프록시를 거쳐 지연을 넣을 수 있다.
+    POSTGRES_HOST: ${SERVICE_POSTGRES_HOST:-postgres}
     KAFKA_BOOTSTRAP_SERVERS: kafka:29092
     OTEL_COLLECTOR_HOST: otel-collector
     # 컨테이너 표준 출력은 JSON(ECS) 한 줄씩. IDE·bootRun은 Boot 기본 텍스트 로그다.
