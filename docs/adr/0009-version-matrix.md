@@ -57,6 +57,7 @@ Spring Authorization Server는 Spring Security 7.x에 포함되어 Boot BOM이 �
 | grafana/loki | 3.7.8 | `obs` profile |
 | grafana/grafana | 13.2.3 | `obs` profile |
 | node | 24.21.0-alpine3.24 | `e2e` profile의 가짜 PG(`infra/fake-pg`). 런타임 메이저는 `.nvmrc`와 같다. 24.22.0은 2026-10-14 릴리스라 2주가 지나지 않았다 |
+| ghcr.io/shopify/toxiproxy | 2.12.0 | `fault` profile의 장애 주입(`infra/fault`, M6). 서비스 → Postgres TCP 프록시로 지연·끊김을 넣는다. 2025-03-18 릴리스. 2.13.0(2026-10-14)은 2주가 지나지 않아 쓰지 않았다. 2026-10-27 추가 |
 | grafana/k6 | 2.3.0 | `load` profile의 부하 시험(`infra/k6`, M6). 2026-09-21 릴리스. 2.0에서 바뀐 것은 클라우드 명령과 실험 모듈 제거라 HTTP 시나리오에는 영향이 없다. 2026-10-26 추가 |
 | eclipse-temurin | 25.0.4.1_1-jdk-noble, 25.0.4.1_1-jre-noble | `services/Dockerfile`의 빌드·실행 단계. 실행 이미지에는 healthcheck용 curl만 더한다 |
 

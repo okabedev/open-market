@@ -275,7 +275,7 @@ services:
     environment:
       CONFIG_SERVER_URL: http://config:8888
       EUREKA_URL: http://discovery:8761/eureka/
-      POSTGRES_HOST: postgres
+      POSTGRES_HOST: ${SERVICE_POSTGRES_HOST:-postgres} # infra/compose/apps.yaml과 같다
       REDIS_HOST: redis
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       OTEL_COLLECTOR_HOST: otel-collector

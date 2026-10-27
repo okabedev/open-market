@@ -178,3 +178,24 @@ BROWSE_RATE=300 infra/k6/run.sh browse   # 부하 크기를 바꿔서
 - 결과: `infra/k6/.out/<이름>.log`(k6 출력), `-summary.json`(지표), `-stats.csv`(5초마다 컨테이너 CPU·메모리, k6 포함), `-memory.txt`(시나리오 뒤 cgroup `anon`·`peak`·상한 도달), `-pool.txt`(Prometheus의 서비스별 연결 풀 대기·사용 최대값).
 - k6가 임계값을 넘으면 종료 코드가 0이 아니고 `run.sh`도 실패로 끝난다. 남은 시나리오는 계속 돈다.
 
+## 10. 장애 주입
+장애 중에도 주문·결제 Saga가 끝 상태로 가고 데이터가 맞는지 본다(R16, NFR-1·4). 결과 기록은 [risks.md](architecture/risks.md) "장애 주입"이다.
+
+```bash
+docker compose --profile apps --profile obs --profile search stop   # 개발용 스택을 멈춘다(포트가 겹친다)
+infra/fault/run.sh               # kafka, db, db-down, pg를 차례로
+infra/fault/run.sh kafka         # 하나만
+FAULT_AT=30 FAULT_FOR=120 infra/fault/run.sh kafka   # 장애 시작 시점과 길이(초)
+```
+
+- 별도 Compose 프로젝트(`openmarket-fault`)를 빈 볼륨으로 띄운다(기본·`apps`·`e2e`(가짜 PG)·`fault`(Toxiproxy) profile). 서비스의 DB 연결은 Toxiproxy를 거친다(`SERVICE_POSTGRES_HOST=toxiproxy`). Debezium은 Postgres에 바로 붙는다. 결제 기한은 4분, 만료 작업은 10초마다로 줄인다.
+- 장애마다 k6 `infra/k6/saga.js`가 주문 생성 → 결제 준비 대기 → 가짜 PG 승인 → 결제 승인을 초당 2건, 3분 동안 흘린다(`SAGA_RATE`, `SAGA_DURATION`, `SAGA_BUYERS`). 실패하면 같은 멱등 키로 다시 부른다.
+
+  | 장애 | 넣는 방법 | 기본 |
+  |---|---|---|
+  | `kafka` | 브로커 컨테이너를 멈췄다가 다시 띄운다 | 시작 60초 뒤 60초 |
+  | `db` | Toxiproxy `latency` toxic(서비스 → Postgres 응답 지연) | 300ms ± 100ms(`FAULT_DB_LATENCY_MS`), 60초 |
+  | `db-down` | Toxiproxy 프록시를 꺼서 연결을 끊는다 | 60초 |
+  | `pg` | 세 번째 주문마다 가짜 PG가 승인 응답을 15초 늦게 준다(payment 읽기 타임아웃 10초) | 내내 |
+- k6가 끝나면 끝나지 않은 주문·결제가 없어질 때까지(최대 10분) 기다린 뒤 `infra/fault/check.sql`(슈퍼유저)과 `.DLT` 토픽 메시지 수를 센다. 검사는 주문 끝 상태, 결제·주문·재고 예약의 짝, 남은 재고 예약, SKU별 재고 차감이다.
+- 결과: `infra/fault/.out/<장애>.log`(k6 출력과 막힌 단계 수), `<장애>-check.txt`(검사). 위반이나 DLT 메시지가 있으면 종료 코드가 0이 아니다. 남겨서 보려면 `FAULT_KEEP=1`이다.
