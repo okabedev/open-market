@@ -87,7 +87,7 @@ sequenceDiagram
 - 클라이언트: `user-clients`(shop, seller, admin)와 `service-clients`(서비스 이름)를 기동할 때마다 DB(`oauth2_registered_client`)에 맞춘다. 행 ID는 클라이언트 ID이고, 시크릿은 바뀌었을 때만 다시 해시한다. 설정에서 빼도 행은 지우지 않는다.
   - 사용자 클라이언트: Authorization Code + PKCE 필수, 동의 화면 없음, 리프레시 토큰 rotation. `required-role`이 있으면 그 역할이 없는 계정의 인가 요청을 `access_denied`로 돌려보낸다(admin은 `ADMIN`).
   - 서비스 클라이언트: `client_credentials`만, scope `internal`. 다른 서비스를 동기 호출하는 서비스만 등록한다.
-- 인가·동의: `oauth2_authorization`, `oauth2_authorization_consent`(JDBC). 로그인 세션은 auth 인스턴스의 HTTP 세션이다.
+- 인가·동의: `oauth2_authorization`, `oauth2_authorization_consent`(JDBC). 로그인 세션은 auth 인스턴스의 HTTP 세션이다. 인가·동의 저장소 호출은 트랜잭션 하나로 감싼다. 행을 읽는 도중에 클라이언트를 조회해서, 트랜잭션이 없으면 요청 하나가 연결을 둘 잡고 동시 로그인이 풀 크기를 넘으면 교착된다(risks.md "부하 측정").
 - 서명 키: `signing_key` 표. 처음 기동할 때 RSA 2048 키를 만들고, 개인 키는 `AUTH_SIGNING_KEY_SECRET`(.env)으로 AES-256-GCM 암호화해 저장한다. 서명은 가장 최근의 ACTIVE 키로 하고, 헤더에 `kid`를 넣는다. JWK 세트에는 RETIRED가 아닌 키를 모두 싣는다. 회전 작업은 아직 없다.
 - `roles`는 토큰을 만들 때마다 DB에서 읽는다. 그래서 갱신하면 바뀐 역할이 반영된다.
 - 탈퇴: `member.member`의 `MemberWithdrawn`을 소비한다(`MemberEventsListener`). 계정을 `DEACTIVATED`로 바꾸고, 이메일을 `withdrawn-<id>@withdrawn.invalid`로, 비밀번호 해시를 무작위 값의 해시로 바꾸고, 인가 기록의 리프레시 토큰을 무효로 표시한다(행은 지우지 않는다. OIDC 로그아웃이 `id_token_hint`로 인가 기록을 찾는다). 브라우저에 남은 auth 로그인 세션은 다음 요청에서 `DeactivatedAccountSessionFilter`가 끝낸다. 그 뒤로는 로그인, 인가 코드 발급, 토큰 갱신이 안 되고, 같은 이메일로 새로 가입할 수 있다. 남은 액세스 토큰은 수명(10분)까지 유효하지만 member가 탈퇴한 회원을 404로 다룬다.

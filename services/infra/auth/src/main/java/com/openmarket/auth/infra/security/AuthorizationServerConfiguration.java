@@ -47,6 +47,7 @@ import org.springframework.security.web.authentication.LoginUrlAuthenticationEnt
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.context.SecurityContextHolderFilter;
 import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
+import org.springframework.transaction.support.TransactionOperations;
 
 /**
  * Spring Authorization Server 구성(docs/architecture/auth.md). 클라이언트, 인가, 동의는 auth 스키마에 JDBC로 저장한다.
@@ -173,16 +174,23 @@ public class AuthorizationServerConfiguration {
         return new JdbcRegisteredClientRepository(jdbc);
     }
 
+    /** 요청 하나가 연결 하나만 쓰도록 트랜잭션으로 감싼다({@link TransactionalAuthorizationService}). */
     @Bean
     OAuth2AuthorizationService authorizationService(
-            JdbcOperations jdbc, RegisteredClientRepository clients) {
-        return new JdbcOAuth2AuthorizationService(jdbc, clients);
+            JdbcOperations jdbc,
+            RegisteredClientRepository clients,
+            TransactionOperations transactions) {
+        return new TransactionalAuthorizationService(
+                new JdbcOAuth2AuthorizationService(jdbc, clients), transactions);
     }
 
     @Bean
     OAuth2AuthorizationConsentService authorizationConsentService(
-            JdbcOperations jdbc, RegisteredClientRepository clients) {
-        return new JdbcOAuth2AuthorizationConsentService(jdbc, clients);
+            JdbcOperations jdbc,
+            RegisteredClientRepository clients,
+            TransactionOperations transactions) {
+        return new TransactionalAuthorizationConsentService(
+                new JdbcOAuth2AuthorizationConsentService(jdbc, clients), transactions);
     }
 
     @Bean
