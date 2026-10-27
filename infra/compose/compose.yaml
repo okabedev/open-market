@@ -236,6 +236,9 @@ services:
       REDIS_HOST: redis
       OTEL_COLLECTOR_HOST: otel-collector
       LOGGING_STRUCTURED_FORMAT_CONSOLE: ecs # infra/compose/apps.yaml과 같다
+      # 모든 요청이 지나므로 GC 멈춤이 곧 지연이다. 2GB 미만 컨테이너에서 JVM이 고르는 SerialGC 대신 여러 스레드로 짧게 멈추는
+      # ParallelGC를 쓴다. 힙 비율은 services/Dockerfile과 같다(risks.md "부하 측정", R6).
+      JDK_JAVA_OPTIONS: "-XX:MaxRAMPercentage=40 -XX:+UseParallelGC"
       # E2E(infra/e2e/run.sh)만 준다. 값이 없으면 넘기지 않고 config-repo 기본값(1분에 5회)을 쓴다.
       GATEWAY_STRICT_RATE_LIMIT:
     # JWK를 issuer 주소로 받는다. auth가 컨테이너든 IDE든 호스트 포트 9000에 있다(ADR 0013).

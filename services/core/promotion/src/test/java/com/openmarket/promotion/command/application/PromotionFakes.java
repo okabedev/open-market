@@ -31,6 +31,9 @@ final class PromotionFakes {
         final Map<UUID, Coupon> rows = new LinkedHashMap<>();
         final Map<UUID, Integer> issuedCounts = new HashMap<>();
 
+        /** DB에서만 중지된 쿠폰. 발급 조회가 짧게 캐시한 쿠폰이 아직 발급 중인 상황을 흉내 낸다. */
+        final java.util.Set<UUID> stoppedInDb = new java.util.HashSet<>();
+
         @Override
         public Coupon save(Coupon coupon) {
             rows.put(coupon.id(), coupon);
@@ -54,6 +57,9 @@ final class PromotionFakes {
 
         @Override
         public Optional<CouponStatus> findStatusById(UUID id) {
+            if (stoppedInDb.contains(id)) {
+                return Optional.of(CouponStatus.STOPPED);
+            }
             return findById(id).map(Coupon::status);
         }
 
@@ -61,7 +67,10 @@ final class PromotionFakes {
         public boolean incrementIssuedCount(UUID id, Instant now) {
             Coupon coupon = rows.get(id);
             int count = issuedCount(id);
-            if (coupon == null || !coupon.isIssuableAt(now) || count >= coupon.terms().quantity()) {
+            if (coupon == null
+                    || stoppedInDb.contains(id)
+                    || !coupon.isIssuableAt(now)
+                    || count >= coupon.terms().quantity()) {
                 return false;
             }
             issuedCounts.put(id, count + 1);
