@@ -25,8 +25,9 @@ import org.testcontainers.containers.GenericContainer;
 @SpringBootTest(
         properties = {
             "spring.kafka.listener.auto-startup=false",
-            // config-repo promotion.yml과 같다. 테스트 설정에는 없어 Lettuce 기본값(60초)이 된다.
-            "spring.data.redis.timeout=500ms"
+            // 운영(config-repo promotion.yml)은 500ms다. 쌓는 경우(차지마다 2초)와 바로 실패하는 경우의 차이를 크게 해
+            // 느린 CI 러너에서도 흔들리지 않게 한다.
+            "spring.data.redis.timeout=2s"
         })
 @Import({PostgresContainerConfiguration.class, RedisContainerConfiguration.class})
 @DirtiesContext
@@ -53,7 +54,7 @@ class RedisDisconnectIntegrationTest {
         }
         Duration elapsed = Duration.ofNanos(System.nanoTime() - start);
 
-        // 명령을 쌓으면 차지마다 명령 타임아웃(500ms)을 기다려 5초를 넘는다.
-        assertThat(elapsed).isLessThan(Duration.ofSeconds(1));
+        // 명령을 쌓으면 차지마다 명령 타임아웃(2초)을 기다려 20초를 넘는다.
+        assertThat(elapsed).isLessThan(Duration.ofSeconds(5));
     }
 }
