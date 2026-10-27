@@ -54,6 +54,7 @@ sequenceDiagram
 ## 인가
 1. **gateway**: 서명, `iss`, `exp`, `aud`(`shop`, `seller`, `admin` 중 하나)를 검증한다. 경로 접두어로 역할을 검사한다. `/v1/seller/**`는 `SELLER`, `/v1/admin/**`는 `ADMIN`이 필요하다. 공개 경로는 config-repo `gateway.yml`의 `openmarket.gateway.public-paths`에 적고, 나머지는 토큰이 있어야 한다. 서비스의 `/internal/**`와 `/actuator/**`는 넘기지 않는다. 바깥에서 들어온 내부 헤더(`X-Internal-*`)는 지운다. 규칙 순서와 근거는 [ADR 0011](../adr/0011-gateway-webflux.md).
 2. **서비스**: 같은 검증을 한 번 더 한다. gateway를 우회한 호출도 막기 위해서다. `services/libs/common-security`(자동설정)가 맡는다. `/internal/**`는 `internal` scope, `/v1/seller/**`는 `SELLER`, `/v1/admin/**`는 `ADMIN`, 나머지 `/v1/**`는 역할이 있는 사용자 토큰이 필요하고, 그 밖의 경로는 막는다(actuator, OpenAPI 문서, `/error`는 연다). 서비스 간 토큰은 역할이 없어 `/v1`을 부르지 못한다. 토큰 없이 여는 서비스 경로(공개 이미지 `/files/**`, 상품 조회)는 config-repo `<service>.yml`의 `openmarket.security.public-paths`(메서드, 서비스 기준 패턴)에 적는다. 역할·내부 경로는 여기에 적어도 열리지 않는다. gateway의 `public-paths`에도 gateway 기준 경로로 같이 적어야 바깥에서 열린다. 소유권은 유스케이스에서 검사한다(예: 하위 주문의 `sellerId`가 토큰의 `sub`와 같은지).
+   - auth는 common-security를 쓰지 않는다. `/v1/**` 체인이 가입 API만 열고, 관리자 API(`/v1/admin/**`, DLT 메시지)는 auth가 발급한 액세스 토큰의 `roles`에 `ADMIN`이 있어야 한다. 토큰이 없으면 401, 그 밖의 막힌 경로는 403이다.
 3. **서비스 간 호출**: 각 서비스는 자기 이름을 클라이언트 ID로 쓰는 `client_credentials` 토큰을 받는다. 내부 API는 `/internal/v1/**`에 두고 `internal` scope를 요구한다. gateway는 `/internal/**`를 라우팅하지 않는다.
 
 ## 보안 기본값
