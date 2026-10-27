@@ -94,16 +94,15 @@ class SearchRatingSalesIntegrationTest {
         UUID popular = index("반팔 티셔츠 C", base.plusSeconds(20));
         UUID none = index("반팔 티셔츠 D", base.plusSeconds(30));
 
-        rating(good, 1, "4.0", 1);
-        rating(best, 3, "4.7", 3);
-        rating(popular, 10, "4.0", 10);
-        // 늦게 온 오래된 리비전은 무시한다
-        rating(best, 1, "1.0", 1);
-        await().atMost(Duration.ofSeconds(30))
-                .untilAsserted(
-                        () ->
-                                assertThat(ids(category().param("sort", "RATING")))
-                                        .containsExactly(best, popular, good, none));
+        // 늦게 온 오래된 리비전(best의 1.0)은 무시한다. 이벤트는 파티션이 달라 처리 순서가 섞인다.
+        awaitProcessed(
+                rating(good, 1, "4.0", 1),
+                rating(best, 3, "4.7", 3),
+                rating(popular, 10, "4.0", 10),
+                rating(best, 1, "1.0", 1));
+        // 순서만 기다리면 별점이 반영되기 전에도 productId 순서가 우연히 맞아(1/24) 통과했다.
+        assertThat(ids(category().param("sort", "RATING")))
+                .containsExactly(best, popular, good, none);
 
         JsonNode first = search(category().param("sort", "RATING")).get("items").get(0);
         assertThat(first.get("ratingAverage").decimalValue()).isEqualByComparingTo("4.7");
@@ -197,7 +196,8 @@ class SearchRatingSalesIntegrationTest {
         return productId;
     }
 
-    private void rating(UUID productId, long count, String average, long revision)
+    /** 보낸 이벤트의 ID. */
+    private UUID rating(UUID productId, long count, String average, long revision)
             throws Exception {
         ObjectNode node =
                 (ObjectNode)
@@ -208,11 +208,31 @@ class SearchRatingSalesIntegrationTest {
         node.put("ratingCount", count);
         node.put("ratingAverage", new java.math.BigDecimal(average));
         node.put("revision", revision);
+        UUID eventId = UUID.randomUUID();
         send(
                 "review.rating-summary",
                 "RatingSummaryChanged",
-                UUID.randomUUID(),
+                eventId,
                 json.writeValueAsString(node));
+        return eventId;
+    }
+
+    /** 이벤트를 모두 처리할 때까지(멱등 소비 기록) 기다린 뒤 검색에 보이게 인덱스를 새로 고친다. */
+    private void awaitProcessed(UUID... eventIds) throws Exception {
+        List<UUID> ids = List.of(eventIds);
+        await().atMost(Duration.ofSeconds(30))
+                .untilAsserted(
+                        () ->
+                                assertThat(
+                                                jdbc.sql(
+                                                                "SELECT count(DISTINCT event_id)"
+                                                                        + " FROM processed_event"
+                                                                        + " WHERE event_id IN (:ids)")
+                                                        .param("ids", ids)
+                                                        .query(Long.class)
+                                                        .single())
+                                        .isEqualTo(ids.size()));
+        elasticsearch.indices().refresh(r -> r.index("products"));
     }
 
     /** 발행자 예시를 읽어 하위 주문과 항목(상품, 수량)을 바꾼다. */
