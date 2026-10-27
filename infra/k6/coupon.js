@@ -56,6 +56,7 @@ export default function (data) {
       params: { headers: { Authorization: `Bearer ${token}` }, tags: { name: "coupon-issue" } },
     })),
   );
+  const unexpected = {};
   responses.forEach((r) => {
     if (r.status === 200 || r.status === 201) {
       issued.add(1);
@@ -63,8 +64,15 @@ export default function (data) {
       soldOut.add(1);
     } else {
       other.add(1);
+      // 상태와 오류 코드별로 세어 로그에 남긴다. 본문 전체는 남기지 않는다.
+      const code = (/"code"\s*:\s*"([A-Z_]+)"/.exec(String(r.body)) || [])[1] || r.error_code || "-";
+      const key = `${r.status} ${code}`;
+      unexpected[key] = (unexpected[key] || 0) + 1;
     }
   });
+  if (Object.keys(unexpected).length > 0) {
+    console.warn(`그 밖의 응답: ${JSON.stringify(unexpected)}`);
+  }
   const coupon = http.get(`${env.gateway}/api/promotion/v1/coupons/${data.couponId}`, { tags: { name: "seed" } });
   check(coupon, { "DB 발급 수가 수량과 같다": (r) => r.status === 200 && r.json("issuedCount") === QUANTITY });
 }

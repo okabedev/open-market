@@ -7,9 +7,6 @@ import { sleep } from "k6";
 import { env, clientAddress } from "./env.js";
 
 const BATCH = 50;
-// 로그인은 auth 연결 풀(5개)보다 적게 동시에 보낸다. 인가 기록을 읽는 중에 클라이언트를 다시 읽느라 연결을 둘 잡아서,
-// 동시 로그인이 풀 크기를 넘으면 서로 기다리다 30초 뒤 500이 된다(2026-10-26 부하 시험에서 발견, risks.md "부하 측정").
-const LOGIN_BATCH = 4;
 const PASSWORD = "load-test-1234";
 
 export function uuid() {
@@ -95,7 +92,7 @@ export function login(clientName, users) {
   const client = env.clients[clientName];
   const redirectUri = `${client.app}/auth/callback`;
   const tokens = [];
-  chunks(users, LOGIN_BATCH).forEach((group) => {
+  chunks(users, BATCH).forEach((group) => {
     const sessions = group.map((u) => {
       const verifier = encoding.b64encode(crypto.randomBytes(48), "rawurl");
       const query = [
