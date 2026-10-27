@@ -189,7 +189,9 @@ order는 `payment.payment`에서 결제 결과를 받는다([payment.md](payment
 
 - 주문 수: 그날 주문 시각(`placed_at`)인 주문. 상태와 상관없다(만료·취소 포함).
 - 결제된 주문 수, GMV: 그날 결제 시각(`paid_at`)인 주문의 수와 주문 금액(쿠폰 할인 뒤 결제 금액)의 합. 뒤에 취소·환불돼도 빼지 않는다(총 거래액). 환불 금액은 payment가 갖는다.
-- 인덱스는 `placed_at`, `paid_at`(값이 있는 행)이다.
+- 인덱스는 `placed_at`, `paid_at`(값이 있는 행)이다(`V8`).
+- 응답은 `{from, to, days: [{date, orderCount, paidOrderCount, gmv}]}`이다. `from`·`to`는 `yyyy-MM-dd`이고 필수다. `from`이 `to`보다 늦으면 400 `ORDER_INVALID_INPUT`이다. 날짜 경계는 KST 00:00이다.
+- 날짜로 묶는 집계라 조회 DAO를 QueryDSL 대신 SQL(`JdbcClient`)로 쓴다(`OrderMetricsQueryDao`).
 
 ## 내부 API
 서비스 간 조회다. `internal` scope 토큰만 부를 수 있고 gateway는 넘기지 않는다. 프론트 api-client(OpenAPI 문서)에 넣지 않는다.

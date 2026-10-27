@@ -198,4 +198,6 @@ gateway 경로는 `/api/payment` + 아래 경로다.
 - 결제 상태로 세지 않는다. `FAILED`는 같은 주문으로 다시 승인할 수 있어 나중에 `APPROVED`가 되기 때문이다. 원장의 승인 시도로 센다.
 - 승인 시도는 원장의 `CONFIRM` 한 줄이다. 날짜는 그 줄의 `occurred_at`(KST)이다. 결과는 `outcome`이 `APPROVED`면 승인, `REJECTED`면 거절이다. `PENDING`·`UNKNOWN`이면 같은 결제 키의 뒤 `QUERY` 중 승인·거절로 정해진 첫 결과를 쓰고, 없으면 미정이다.
 - 응답은 날짜별 승인 수, 거절 수, 미정 수, 실패율(거절 ÷ (승인 + 거절), 시도가 없으면 비움)이다. 시도가 없는 날도 0으로 준다. 기간은 31일까지이고 넘으면 400 `PAYMENT_METRICS_PERIOD_TOO_LONG`.
-- 인덱스는 원장 `(kind, occurred_at)`이다.
+- 인덱스는 원장 `(kind, occurred_at)`이다(`V5`). 뒤 조회는 `(payment_id, occurred_at)`으로 찾는다.
+- 응답은 `{from, to, days: [{date, approvedCount, rejectedCount, undecidedCount, failureRate}]}`이다. `failureRate`는 0~1, 소수 넷째 자리(반올림)이고 정해진 시도가 없으면 비어 있다. `from`·`to`는 `yyyy-MM-dd`이고 필수다. `from`이 `to`보다 늦으면 400 `PAYMENT_INVALID_INPUT`이다. 날짜 경계는 KST 00:00이다.
+- 시도마다 뒤 조회를 찾는 집계라 조회 DAO를 QueryDSL 대신 SQL(`JdbcClient`)로 쓴다(`PaymentMetricsQueryDao`).
