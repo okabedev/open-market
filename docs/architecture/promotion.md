@@ -89,6 +89,7 @@ M5 시작(2026-10-22)에 정한 규칙이다. API와 화면은 각 PR에서 이 
 ### 선착순 발급
 구매자가 `POST /v1/coupons/{couponId}/issue`로 내려받는다. 새로 받으면 201, 이미 받았으면 200이고 둘 다 `{issuedCouponId}`다(다시 눌러도 같은 결과).
 1. 쿠폰이 `ISSUING`이고 발급 기간 안이어야 한다. 아니면 409 `PROMOTION_COUPON_NOT_ISSUING`이다. 없는 쿠폰은 404 `PROMOTION_COUPON_NOT_FOUND`다.
+   - 이 확인에 쓰는 쿠폰은 promotion 인스턴스 메모리에 둔다. 같은 쿠폰을 동시에 처음 찾으면 DB는 한 번만 읽고, 1초가 지나면 지금 값을 주면서 뒤에서 새로 읽는다(새로 읽지 못하면 10초 뒤 버린다). 없는 쿠폰은 두지 않는다. 몰린 요청이 쿠폰을 읽느라 DB 연결 앞에 줄을 서서 Redis에서 끝나는 매진 응답까지 늦어졌기 때문이다([risks.md](risks.md) "부하 측정"). 조건은 바뀌지 않고 상태는 중지로만 바뀌며, 3의 조건부 UPDATE가 상태와 기간을 다시 본다. 그래서 중지 직후 잠깐 동안의 요청은 차지했다가 되돌리고 409 `PROMOTION_COUPON_NOT_ISSUING`이 될 뿐 발급되지 않는다.
 2. Redis Lua 스크립트 하나로 1인 1매와 수량을 함께 확인하고 차지한다. 키는 발급 수 `promotion:coupon-stock:<couponId>`와 발급한 회원 집합 `promotion:coupon-issued:<couponId>`이고, 발급 기간 끝 + 1시간에 사라진다.
    - 이미 집합에 있으면 차지하지 않는다. DB의 발급 쿠폰을 찾아 200으로 준다. DB에 없으면(차지한 요청이 저장 전에 끝남) 3으로 간다.
    - 발급 수가 수량 이상이면 409 `PROMOTION_COUPON_SOLD_OUT`이다. DB에 가지 않는다.

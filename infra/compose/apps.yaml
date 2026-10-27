@@ -63,6 +63,8 @@ services:
     environment:
       <<: *spring-env
       CATALOG_DB_PASSWORD: ${CATALOG_DB_PASSWORD:?}
+      # 상품 상세가 몰리는 서비스라 gateway처럼 ParallelGC를 쓴다(compose.yaml gateway 참고).
+      JDK_JAVA_OPTIONS: "-XX:MaxRAMPercentage=40 -XX:+UseParallelGC"
     healthcheck:
       test: ["CMD", "curl", "-fs", "http://localhost:8102/actuator/health"]
       interval: 5s

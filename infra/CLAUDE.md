@@ -25,7 +25,7 @@ infra/
 - 서비스를 추가하면 함께 고친다: `postgres/init`(스키마·계정), `kafka/topics.txt`, `config-repo/<service>.yml`, gateway 라우트(`config-repo/gateway.yml`). Debezium은 고치지 않는다(outbox 테이블은 트리거가 publication에 넣는다). 절차는 `add-service` skill에 있다.
 - `context-map.md`에 토픽을 추가하면 `kafka/topics.txt`에도 `<토픽>`과 `<토픽>.DLT`를 더한다. 선언하지 않은 토픽으로 outbox에 쓰면 커넥터 태스크가 멈춘다.
 - auth issuer(`auth.openmarket.local:9000`)에 닿아야 하는 컨테이너에는 `extra_hosts: auth.openmarket.local:host-gateway`를 준다. auth 컨테이너에는 별칭을 주지 않는다. auth가 컨테이너든 IDE든 호스트 포트 9000에 있다([ADR 0013](../docs/adr/0013-auth-issuer-host.md)).
-- Spring 서비스 컨테이너에는 `mem_limit: 640m`을 둔다. 힙 비율(40%, 256MB)은 `services/Dockerfile`에 있다. file만 이미지 처리 때문에 768m, 힙 40%다(apps.yaml). 상한 없이 띄우면 JVM이 VM 메모리 기준으로 힙을 잡는다. 근거와 실측은 [risks.md](../docs/architecture/risks.md) R6.
+- Spring 서비스 컨테이너에는 `mem_limit: 640m`을 둔다. 힙 비율(40%, 256MB)은 `services/Dockerfile`에 있다. gateway·catalog만 `JDK_JAVA_OPTIONS`로 ParallelGC를 쓴다(나머지는 JVM이 고르는 SerialGC). file만 이미지 처리 때문에 768m, 힙 40%다(apps.yaml). 상한 없이 띄우면 JVM이 VM 메모리 기준으로 힙을 잡는다. 근거와 실측은 [risks.md](../docs/architecture/risks.md) R6.
 
 ## 명령
 레포 루트에서 실행한다. 루트 `compose.yaml`이 `infra/compose`의 파일들을 포함하고 루트 `.env`를 읽는다.

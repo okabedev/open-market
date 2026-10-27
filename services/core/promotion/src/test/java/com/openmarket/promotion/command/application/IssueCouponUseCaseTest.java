@@ -31,6 +31,7 @@ class IssueCouponUseCaseTest {
     final IssueCouponUseCase issue =
             new IssueCouponUseCase(
                     coupons,
+                    coupons::findById,
                     issued,
                     gate,
                     TransactionOperations.withoutTransaction(),
@@ -80,6 +81,21 @@ class IssueCouponUseCaseTest {
                                         new IssueCouponCommand(
                                                 UUID.randomUUID(), UUID.randomUUID())))
                 .isInstanceOf(CouponNotFoundException.class);
+    }
+
+    @Test
+    @DisplayName(
+            "발급 조회가 중지 전 쿠폰을 주어도(짧은 캐시) DB 저장에서 중지를 확인해 409 PROMOTION_COUPON_NOT_ISSUING이고 차지를 되돌린다")
+    void staleIssuableCouponIsCheckedByDb() {
+        UUID memberId = UUID.randomUUID();
+        coupons.stoppedInDb.add(coupon.id());
+
+        assertThatThrownBy(() -> issue.execute(command(memberId)))
+                .isInstanceOf(CouponNotIssuingException.class);
+
+        assertThat(issued.rows).isEmpty();
+        assertThat(gate.stock.get(coupon.id())).isZero();
+        assertThat(gate.issued.get(coupon.id())).doesNotContain(memberId);
     }
 
     @Test

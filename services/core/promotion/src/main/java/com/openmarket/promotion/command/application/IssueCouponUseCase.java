@@ -27,7 +27,8 @@ import org.springframework.transaction.support.TransactionOperations;
  *   <li>DB 트랜잭션에서 발급 수를 조건부로 올리고 발급 쿠폰을 넣는다. 수량과 1인 1매는 여기서 최종으로 정해진다. 실패하면 Redis에서 차지한 것을 되돌린다.
  * </ol>
  *
- * Redis 호출은 트랜잭션 밖에서 해서 DB 연결을 잡고 기다리지 않는다. 이미 받은 회원은 같은 발급 쿠폰을 받는다(다시 눌러도 같은 결과).
+ * Redis 호출은 트랜잭션 밖에서 해서 DB 연결을 잡고 기다리지 않는다. 앞의 쿠폰 조회도 캐시해서({@link IssuableCouponPort}) 매진 응답은 DB에
+ * 가지 않는다. 이미 받은 회원은 같은 발급 쿠폰을 받는다(다시 눌러도 같은 결과).
  */
 @Service
 public class IssueCouponUseCase {
@@ -36,6 +37,7 @@ public class IssueCouponUseCase {
     static final Duration KEY_GRACE = Duration.ofHours(1);
 
     private final CouponRepository coupons;
+    private final IssuableCouponPort issuableCoupons;
     private final IssuedCouponRepository issuedCoupons;
     private final CouponIssueGatePort gate;
     private final TransactionOperations transaction;
@@ -43,11 +45,13 @@ public class IssueCouponUseCase {
 
     public IssueCouponUseCase(
             CouponRepository coupons,
+            IssuableCouponPort issuableCoupons,
             IssuedCouponRepository issuedCoupons,
             CouponIssueGatePort gate,
             TransactionOperations transaction,
             Clock clock) {
         this.coupons = coupons;
+        this.issuableCoupons = issuableCoupons;
         this.issuedCoupons = issuedCoupons;
         this.gate = gate;
         this.transaction = transaction;
@@ -55,8 +59,11 @@ public class IssueCouponUseCase {
     }
 
     public Result execute(IssueCouponCommand command) {
+        // 짧게 캐시한 쿠폰일 수 있다. 상태와 기간은 저장할 때 DB가 다시 확인한다.
         Coupon coupon =
-                coupons.findById(command.couponId()).orElseThrow(CouponNotFoundException::new);
+                issuableCoupons
+                        .findById(command.couponId())
+                        .orElseThrow(CouponNotFoundException::new);
         IssuedCoupon candidate = IssuedCoupon.issue(coupon, command.memberId(), clock.instant());
         UUID couponId = coupon.id();
         int quantity = coupon.terms().quantity();
