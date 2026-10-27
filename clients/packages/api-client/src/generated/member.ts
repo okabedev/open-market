@@ -274,6 +274,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/audit-logs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listAuditLogs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/internal/v1/members/{memberId}/contact": {
         parameters: {
             query?: never;
@@ -467,6 +483,22 @@ export interface components {
             resolvedAt?: string;
             resolvedBy?: string;
             discardReason?: string;
+        };
+        AuditLogPage: {
+            items?: components["schemas"]["AuditLogView"][];
+            nextCursor?: string;
+        };
+        AuditLogView: {
+            /** Format: uuid */
+            id?: string;
+            actorId?: string;
+            action?: string;
+            targetType?: string;
+            targetId?: string;
+            detail?: string;
+            traceId?: string;
+            /** Format: date-time */
+            occurredAt?: string;
         };
         MemberContactView: {
             email?: string;
@@ -936,6 +968,33 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DeadLetterPage"];
+                };
+            };
+        };
+    };
+    listAuditLogs: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+                actorId?: string;
+                action?: string;
+                before?: string;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditLogPage"];
                 };
             };
         };

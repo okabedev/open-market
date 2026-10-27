@@ -100,7 +100,11 @@ PK는 `(principal, idempotency_key)`다. 처리 중에 같은 키가 또 오면 
 
 인덱스는 `(target_type, target_id)`, `occurred_at`이다.
 
-조회(ADM-4, M6): `common-web`이 서비스마다 `GET /v1/admin/audit-logs?from&to&actorId&action&before&size`를 연다. `(occurred_at, id)` 내림차순 커서이고, admin BFF가 서비스들의 결과를 합친다([ADR 0023](../adr/0023-admin-ops-queries.md)).
+조회(ADM-4, M6): `common-web`이 서비스마다 `GET /v1/admin/audit-logs?from&to&actorId&action&before&size`를 연다(`AuditLogAdminController`). admin BFF가 서비스들의 결과를 합친다([ADR 0023](../adr/0023-admin-ops-queries.md)).
+- `(occurred_at, id)` 내림차순이고 `{items, nextCursor}`를 준다. 항목은 ID, 작업한 사람, 작업, 대상 종류·ID, 부가 설명, trace id, 시각이다.
+- 기간은 `from` 이상 `to` 미만(ISO-8601)이고 둘 다 선택이다. `size`는 1~100(기본 20)이다. 기간이 거꾸로이거나 크기·커서 형식이 틀리면 400 `AUDIT_LOG_INVALID_INPUT`이다.
+- 커서는 `<시각(ISO-8601)>,<id>`를 base64url(패딩 없음)로 감싼 값이다. admin BFF는 합친 목록의 마지막 행으로 커서를 만들어 모든 서비스에 같이 보낸다. DLT 메시지 목록(`dead_letter`)도 같은 형식이다.
+- 감사 대상은 관리자 작업이다(용어집 "감사 로그"). 판매자 작업(클레임 승인, 판매자 쿠폰, 상품 가격 등)은 남기지 않고 각 서비스의 이력과 이벤트로 본다. M6에서 금액을 바꾸는 관리자 작업을 점검해, 빠져 있던 정산 즉시 실행에 `SETTLEMENT_RUN_EXECUTED`를 더했다([settlement.md](settlement.md) "정산 확정").
 
 ### dead_letter
 리스너 그룹이 처리하지 못해 DLT로 간 메시지(ADM-5, 용어집 "DLT 메시지"). `common-messaging`의 DLT 수집기가 넣는다. 규칙은 [messaging.md](messaging.md#dlt-재처리).

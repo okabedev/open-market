@@ -2,6 +2,7 @@ package com.openmarket.settlement.ui.web;
 
 import com.openmarket.settlement.command.application.PayOutSettlementCommand;
 import com.openmarket.settlement.command.application.PayOutSettlementUseCase;
+import com.openmarket.settlement.command.application.RunSettlementCommand;
 import com.openmarket.settlement.command.application.RunSettlementUseCase;
 import java.security.Principal;
 import java.util.UUID;
@@ -28,8 +29,9 @@ public class AdminSettlementCommandController {
 
     /** 정산 작업을 바로 한 번 돌린다. 정기 작업과 같은 규칙(마감 지연이 지난 기간)이고, 다시 돌려도 이미 확정한 판매자·기간은 넘겨 결과가 같다. */
     @PostMapping("/settlement-runs")
-    public RunSettlementResponse run() {
-        return new RunSettlementResponse(run.execute());
+    public RunSettlementResponse run(Principal principal) {
+        return new RunSettlementResponse(
+                run.execute(new RunSettlementCommand(UUID.fromString(principal.getName()))));
     }
 
     /** 확정된 정산을 지급 완료로 기록한다. 이미 지급했으면 204이고 아무것도 바뀌지 않는다. 없으면 404 {@code SETTLEMENT_NOT_FOUND}. */

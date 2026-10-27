@@ -1,6 +1,7 @@
 package com.openmarket.common.web;
 
 import com.openmarket.common.core.audit.AuditLog;
+import com.openmarket.common.web.audit.AuditLogAdminController;
 import com.openmarket.common.web.audit.JdbcAuditLog;
 import com.openmarket.common.web.error.GlobalExceptionHandler;
 import com.openmarket.common.web.idempotency.IdempotencyCleanupJob;
@@ -82,6 +83,12 @@ public class CommonWebAutoConfiguration {
                 JdbcClient jdbcClient, ObjectProvider<Clock> clock, ObjectProvider<Tracer> tracer) {
             return new JdbcAuditLog(
                     jdbcClient, clock.getIfAvailable(Clock::systemUTC), tracer.getIfAvailable());
+        }
+
+        /** 감사 로그 조회(ADM-4). 서비스마다 같은 API를 연다(ADR 0023). */
+        @Bean
+        AuditLogAdminController auditLogAdminController(JdbcClient jdbcClient) {
+            return new AuditLogAdminController(jdbcClient);
         }
 
         /** 락 실행기는 common-messaging이 등록한다. */
