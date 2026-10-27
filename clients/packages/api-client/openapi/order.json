@@ -341,6 +341,41 @@
         }
       }
     },
+    "/v1/admin/metrics/orders" : {
+      "get" : {
+        "tags" : [ "order-metrics-query-controller" ],
+        "operationId" : "orderMetrics",
+        "parameters" : [ {
+          "name" : "from",
+          "in" : "query",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "date"
+          }
+        }, {
+          "name" : "to",
+          "in" : "query",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "date"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/OrderMetricsView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/dead-letters" : {
       "get" : {
         "tags" : [ "dead-letter-admin-controller" ],
@@ -961,6 +996,46 @@
             "items" : {
               "type" : "string",
               "format" : "uuid"
+            }
+          }
+        }
+      },
+      "OrderDailyMetricsView" : {
+        "type" : "object",
+        "properties" : {
+          "date" : {
+            "type" : "string",
+            "format" : "date"
+          },
+          "orderCount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "paidOrderCount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "gmv" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }
+      },
+      "OrderMetricsView" : {
+        "type" : "object",
+        "properties" : {
+          "from" : {
+            "type" : "string",
+            "format" : "date"
+          },
+          "to" : {
+            "type" : "string",
+            "format" : "date"
+          },
+          "days" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/OrderDailyMetricsView"
             }
           }
         }

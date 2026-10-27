@@ -130,6 +130,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/metrics/payments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["paymentMetrics"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/dead-letters": {
         parameters: {
             query?: never;
@@ -244,6 +260,24 @@ export interface components {
             page?: number;
             /** Format: int32 */
             size?: number;
+        };
+        PaymentDailyMetricsView: {
+            /** Format: date */
+            date?: string;
+            /** Format: int64 */
+            approvedCount?: number;
+            /** Format: int64 */
+            rejectedCount?: number;
+            /** Format: int64 */
+            undecidedCount?: number;
+            failureRate?: number;
+        };
+        PaymentMetricsView: {
+            /** Format: date */
+            from?: string;
+            /** Format: date */
+            to?: string;
+            days?: components["schemas"]["PaymentDailyMetricsView"][];
         };
         DeadLetterPage: {
             items?: components["schemas"]["DeadLetterView"][];
@@ -468,6 +502,29 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PageViewCancelFailureView"];
+                };
+            };
+        };
+    };
+    paymentMetrics: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentMetricsView"];
                 };
             };
         };

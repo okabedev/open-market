@@ -162,6 +162,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/metrics/orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["orderMetrics"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/dead-letters": {
         parameters: {
             query?: never;
@@ -398,6 +414,23 @@ export interface components {
         CartView: {
             sellers?: components["schemas"]["CartSellerGroupView"][];
             missingSkuIds?: string[];
+        };
+        OrderDailyMetricsView: {
+            /** Format: date */
+            date?: string;
+            /** Format: int64 */
+            orderCount?: number;
+            /** Format: int64 */
+            paidOrderCount?: number;
+            /** Format: int64 */
+            gmv?: number;
+        };
+        OrderMetricsView: {
+            /** Format: date */
+            from?: string;
+            /** Format: date */
+            to?: string;
+            days?: components["schemas"]["OrderDailyMetricsView"][];
         };
         DeadLetterPage: {
             items?: components["schemas"]["DeadLetterView"][];
@@ -712,6 +745,29 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CartView"];
+                };
+            };
+        };
+    };
+    orderMetrics: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderMetricsView"];
                 };
             };
         };

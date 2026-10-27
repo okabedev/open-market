@@ -230,6 +230,41 @@
         }
       }
     },
+    "/v1/admin/metrics/payments" : {
+      "get" : {
+        "tags" : [ "payment-metrics-query-controller" ],
+        "operationId" : "paymentMetrics",
+        "parameters" : [ {
+          "name" : "from",
+          "in" : "query",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "date"
+          }
+        }, {
+          "name" : "to",
+          "in" : "query",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "date"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PaymentMetricsView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/dead-letters" : {
       "get" : {
         "tags" : [ "dead-letter-admin-controller" ],
@@ -525,6 +560,49 @@
           "size" : {
             "type" : "integer",
             "format" : "int32"
+          }
+        }
+      },
+      "PaymentDailyMetricsView" : {
+        "type" : "object",
+        "properties" : {
+          "date" : {
+            "type" : "string",
+            "format" : "date"
+          },
+          "approvedCount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "rejectedCount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "undecidedCount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "failureRate" : {
+            "type" : "number"
+          }
+        }
+      },
+      "PaymentMetricsView" : {
+        "type" : "object",
+        "properties" : {
+          "from" : {
+            "type" : "string",
+            "format" : "date"
+          },
+          "to" : {
+            "type" : "string",
+            "format" : "date"
+          },
+          "days" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/PaymentDailyMetricsView"
+            }
           }
         }
       },

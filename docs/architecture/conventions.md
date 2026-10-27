@@ -20,7 +20,7 @@ com.openmarket.<service>
 │  └─ domain        집계, 엔티티, 값 객체, 도메인 이벤트, 저장소 인터페이스
 ├─ query
 │  ├─ application   조회 서비스
-│  ├─ dao           QueryDSL 조회 구현
+│  ├─ dao           QueryDSL 조회 구현(날짜별 집계처럼 SQL이 분명하면 JdbcClient)
 │  └─ dto           View, 조회용 enum
 ├─ infra            JPA 저장소 구현, 외부 API 어댑터(Feign, 토스), Outbox 기록, 설정
 └─ ui
@@ -36,7 +36,7 @@ com.openmarket.<service>
 | `command.domain` | `libs/common-core`, JDK, Jakarta Persistence 애노테이션, JSpecify |
 | `command.application` | `command.domain`, `common-core`, `common-messaging`(outbox 기록 인터페이스), Spring 트랜잭션 |
 | `query.application` | `query.dao`, `query.dto` |
-| `query.dao` | `query.dto`, QueryDSL, `command.domain`의 Q-타입(`Q*` 클래스)만 |
+| `query.dao` | `query.dto`, QueryDSL, `command.domain`의 Q-타입(`Q*` 클래스)만. 시간대 변환·`GROUP BY`·상관 서브쿼리처럼 SQL이 분명한 집계는 Spring `JdbcClient`로 쓴다(예: order·payment 운영 지표). 테이블 이름은 자기 스키마 것만 쓴다 |
 | `query.dto` | JDK, JSpecify, Jackson·OpenAPI 애노테이션 |
 | `infra` | `command.domain`, `command.application`(포트 구현), 외부 라이브러리 |
 | `ui` | `command.application`, `query.application`, `query.dto`, `common-web`, `common-messaging`(리스너의 멱등 소비, `EventEnvelope`) |
