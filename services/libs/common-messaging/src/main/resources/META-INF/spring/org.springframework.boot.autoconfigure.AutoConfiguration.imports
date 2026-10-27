@@ -1,2 +1,3 @@
 com.openmarket.common.messaging.CommonMessagingAutoConfiguration
 com.openmarket.common.messaging.KafkaConsumerAutoConfiguration
+com.openmarket.common.messaging.DeadLetterAutoConfiguration

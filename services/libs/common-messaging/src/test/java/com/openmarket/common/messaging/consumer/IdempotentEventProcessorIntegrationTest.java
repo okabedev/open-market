@@ -7,11 +7,13 @@ import com.openmarket.common.messaging.TestEvents;
 import com.openmarket.common.messaging.TestEvents.OrderPlacedMessage;
 import com.openmarket.common.messaging.outbox.Outbox;
 import com.openmarket.common.test.container.PostgresContainerConfiguration;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -19,6 +21,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.kafka.support.KafkaUtils;
 
 @SpringBootTest
 @Import(PostgresContainerConfiguration.class)
@@ -106,6 +109,58 @@ class IdempotentEventProcessorIntegrationTest {
 
         assertThat(handled).isEmpty();
         assertThat(processedCount(id)).isZero();
+    }
+
+    @Test
+    @DisplayName("관리자가 다른 그룹을 대상으로 다시 보낸 메시지(dlt-target-group)는 처리하지 않고 기록도 남기지 않는다")
+    void skipsMessageRetriedForAnotherGroup() {
+        UUID id = UUID.randomUUID();
+        List<EventEnvelope<OrderPlacedMessage>> handled = new ArrayList<>();
+
+        boolean processed =
+                inGroup(
+                        "catalog",
+                        () -> process(LISTENER, retriedFor("settlement", id), handled::add));
+
+        assertThat(processed).isFalse();
+        assertThat(handled).isEmpty();
+        assertThat(processedCount(id)).isZero();
+    }
+
+    @Test
+    @DisplayName("자기 그룹을 대상으로 다시 보낸 메시지는 처음 보는 이벤트처럼 처리한다")
+    void processesMessageRetriedForOwnGroup() {
+        UUID id = UUID.randomUUID();
+        List<EventEnvelope<OrderPlacedMessage>> handled = new ArrayList<>();
+
+        boolean processed =
+                inGroup(
+                        "catalog",
+                        () -> process(LISTENER, retriedFor("catalog", id), handled::add));
+
+        assertThat(processed).isTrue();
+        assertThat(handled).hasSize(1);
+        assertThat(processedCount(id)).isEqualTo(1);
+    }
+
+    /** 다시 보낸 메시지. 수집기가 저장한 원래 메시지에 대상 그룹 헤더를 더한 것이다. */
+    private static ConsumerRecord<String, String> retriedFor(String group, UUID id) {
+        ConsumerRecord<String, String> record = TestEvents.orderPlaced(id, "order-1");
+        record.headers()
+                .add(
+                        IdempotentEventProcessor.TARGET_GROUP_HEADER,
+                        group.getBytes(StandardCharsets.UTF_8));
+        return record;
+    }
+
+    /** 리스너 컨테이너가 리스너 스레드에 소비자 그룹을 두는 것과 같게 한다. */
+    private static <T> T inGroup(String group, Supplier<T> action) {
+        KafkaUtils.setConsumerGroupId(group);
+        try {
+            return action.get();
+        } finally {
+            KafkaUtils.clearConsumerGroupId();
+        }
     }
 
     private boolean process(
