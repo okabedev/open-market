@@ -139,3 +139,5 @@ PK는 `(principal, idempotency_key)`다. 처리 중에 같은 키가 또 오면 
 | 로컬 볼륨 | file의 원본과 썸네일. 컨테이너는 볼륨 `file-data`, IDE는 `infra/compose/data/file`([file.md](file.md)) |
 
 Redis 키는 `<서비스>:<용도>:<id>`로 짓는다. 예: `promotion:coupon-stock:<couponId>`.
+
+Redis를 쓰는 서비스(gateway, auth, promotion)는 Redis 클라이언트(Lettuce) 옵션을 같게 둔다(`RedisClientConfiguration`). 연결이 끊긴 동안 명령을 쌓지 않고 바로 실패시키고(`REJECT_COMMANDS`), 응답을 기다리는 명령은 연결마다 1,024개까지다. Lettuce 기본값은 끊긴 동안 명령을 무제한 쌓았다가 다시 연결되면 보내서, 장애 주입에서 gateway 힙이 차고 promotion이 다시 연결되는 순간 멈췄다([risks.md](risks.md) "장애 주입"). Redis에 닿지 못하면 레이트 리밋(gateway, auth 로그인)은 요청을 통과시키고 선착순 발급은 503 `PROMOTION_UNAVAILABLE`이다.
