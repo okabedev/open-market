@@ -12,6 +12,9 @@ SELECT status, count(*) FROM payment.payment GROUP BY 1 ORDER BY 1;
 \echo '## 재고 예약 상태'
 SELECT status, count(*) FROM catalog.stock_reservation GROUP BY 1 ORDER BY 1;
 
+\echo '## 발급 쿠폰 상태'
+SELECT status, count(*) FROM promotion.issued_coupon GROUP BY 1 ORDER BY 1;
+
 \echo '## 위반(모두 0이어야 한다)'
 SELECT check_name, violations FROM (
   -- 끝나지 않은 주문. 결제 기한이 지났으므로 결제 완료나 취소여야 한다.
@@ -65,4 +68,27 @@ SELECT check_name, violations FROM (
                      WHERE r.status = 'COMMITTED' AND l.sku_id = s.sku_id)
                  - (SELECT coalesce(sum(a.delta), 0) FROM catalog.stock_adjustment a WHERE a.sku_id = s.sku_id)
                  <> :initial_stock)
+  UNION ALL
+  -- 선착순 발급: 쿠폰의 발급 수는 발급 쿠폰 행 수와 같고 수량을 넘지 않는다(1인 1매는 유니크 인덱스가 지킨다).
+  SELECT 9, 'coupon_issued_count_mismatch',
+         (SELECT count(*) FROM promotion.coupon c
+           WHERE c.issued_count > c.quantity
+              OR c.issued_count <> (SELECT count(*) FROM promotion.issued_coupon i WHERE i.coupon_id = c.id))
+  UNION ALL
+  -- 묶인 쿠폰. 모든 주문이 끝났으므로 사용됐거나(결제) 풀렸다(취소).
+  SELECT 10, 'coupon_still_reserved',
+         (SELECT count(*) FROM promotion.issued_coupon WHERE status = 'RESERVED')
+  UNION ALL
+  -- 사용된 쿠폰은 결제 완료 주문의 것이다. 한 쿠폰은 주문 하나에만 쓰인다(order_id 하나).
+  SELECT 11, 'used_coupon_without_paid_order',
+         (SELECT count(*) FROM promotion.issued_coupon i
+           WHERE i.status = 'USED'
+             AND NOT EXISTS (SELECT 1 FROM "order".orders o WHERE o.id = i.order_id AND o.status = 'PAID'))
+  UNION ALL
+  -- 결제 완료 주문에 쓴 플랫폼 쿠폰은 그 주문에 사용됐다.
+  SELECT 12, 'paid_order_coupon_not_used',
+         (SELECT count(*) FROM "order".orders o
+           WHERE o.status = 'PAID' AND o.platform_issued_coupon_id IS NOT NULL
+             AND NOT EXISTS (SELECT 1 FROM promotion.issued_coupon i
+                              WHERE i.id = o.platform_issued_coupon_id AND i.status = 'USED' AND i.order_id = o.id))
 ) checks ORDER BY n;

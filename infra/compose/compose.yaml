@@ -32,8 +32,9 @@ services:
       - -c
       - max_wal_senders=4
       # Debezium이 멈춰 복제 슬롯이 WAL을 붙잡아도 디스크가 차지 않게 상한을 둔다(R5).
+      # 장애 주입(infra/fault/run.sh)만 작게 줄여 슬롯 무효를 재현한다. 명령행 값은 ALTER SYSTEM보다 우선이라 변수로 받는다.
       - -c
-      - max_slot_wal_keep_size=1GB
+      - max_slot_wal_keep_size=${POSTGRES_MAX_SLOT_WAL_KEEP_SIZE:-1GB}
     ports:
       - "5432:5432"
     volumes:

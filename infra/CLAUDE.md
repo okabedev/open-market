@@ -14,8 +14,8 @@ infra/
 ├─ grafana/        데이터 소스·대시보드 프로비저닝
 ├─ e2e/            마일스톤 E2E 실행 스크립트 run.sh(별도 Compose 프로젝트 + 앱 3개 + Playwright). 시나리오는 clients/e2e
 ├─ fake-pg/        E2E에서 토스 대신 쓰는 가짜 PG(ADR 0018). 의존성 없는 Node 서버, 테스트는 `node --test infra/fake-pg/*.test.mjs`
-├─ k6/             부하 시험 실행 스크립트 run.sh(별도 Compose 프로젝트 + k6 컨테이너)와 시나리오 browse·order·coupon.js, 장애 주입용 saga.js, 공통 lib/
-├─ fault/          장애 주입 실행 스크립트 run.sh(별도 Compose 프로젝트 + Toxiproxy + 가짜 PG + k6 saga.js), 정합성 검사 check.sql, Toxiproxy 설정
+├─ k6/             부하 시험 실행 스크립트 run.sh(별도 Compose 프로젝트 + k6 컨테이너)와 시나리오 browse·order·coupon.js, 장애 주입용 saga·coupon-saga·coupon-issue.js, 공통 lib/
+├─ fault/          장애 주입 실행 스크립트 run.sh(별도 Compose 프로젝트 + Toxiproxy + 가짜 PG + k6 시나리오), 정합성 검사 check.sql, Toxiproxy 설정
 └─ elasticsearch/  nori 플러그인 커스텀 이미지(ADR 0016). search profile이 빌드한다
 ```
 
@@ -38,7 +38,7 @@ infra/
 | `docker compose --profile apps up -d --wait --build` | 나머지 Spring 서비스까지 컨테이너로 띄운다(E2E). search가 쓰는 Elasticsearch도 함께 뜬다. IDE로 띄울 서비스는 `docker compose stop <서비스>`로 멈춘다 |
 | `infra/e2e/run.sh m1` | 마일스톤 완료 기준 E2E. 빈 볼륨의 별도 프로젝트(`openmarket-e2e`)를 띄워 돌리고 지운다. 개발용 스택과 앱은 먼저 멈춘다 |
 | `infra/k6/run.sh [browse order coupon]` | 부하 시험(NFR-9). 빈 볼륨의 별도 프로젝트(`openmarket-load`)를 띄워 돌리고 지운다. 개발용 스택은 먼저 멈춘다([dev-setup.md](../docs/dev-setup.md) 9절) |
-| `infra/fault/run.sh [kafka db db-down pg]` | 장애 주입(R16). 빈 볼륨의 별도 프로젝트(`openmarket-fault`)에서 주문·결제를 흘리며 장애를 넣고 풀어 정합성을 센다. 개발용 스택은 먼저 멈춘다([dev-setup.md](../docs/dev-setup.md) 10절) |
+| `infra/fault/run.sh [kafka db db-down pg slot redis coupon]` | 장애 주입(R16). 빈 볼륨의 별도 프로젝트(`openmarket-fault`)에서 주문·결제를 흘리며 장애를 넣고 풀어 정합성을 센다. 개발용 스택은 먼저 멈춘다([dev-setup.md](../docs/dev-setup.md) 10절) |
 | `docker compose ps` | 상태 확인 |
 | `docker compose down` | 멈춤(데이터 유지) |
 | `docker compose down -v` | 볼륨까지 지운다. `postgres/init`이나 `.env` 비밀번호를 바꾼 뒤 쓴다 |
