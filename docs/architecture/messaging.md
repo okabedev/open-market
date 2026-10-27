@@ -120,7 +120,7 @@
 관리자 API(서비스마다, `common-messaging`)
 | 메서드 | 경로 | 내용 |
 |---|---|---|
-| GET | `/v1/admin/dead-letters?status&topic&before&size` | 목록(쌓인 시각 내림차순, 커서 `{items, nextCursor}`). `status`는 `PENDING`·`RETRIED`·`DISCARDED`, `topic`은 원래 토픽, `size`는 1~100(기본 20). 항목은 ID, 그룹, 이벤트 `id`·`type`, 원래 토픽·파티션·오프셋, 예외 클래스, trace id, 상태, 쌓인 시각, 다시 보내거나 버린 시각·사람·사유 |
+| GET | `/v1/admin/dead-letters?status&topic&before&size` | 목록(쌓인 시각 내림차순, 커서 `{items, nextCursor}`. 커서 형식은 감사 로그와 같다, [data.md](data.md) "audit_log"). `status`는 `PENDING`·`RETRIED`·`DISCARDED`, `topic`은 원래 토픽, `size`는 1~100(기본 20). 항목은 ID, 그룹, 이벤트 `id`·`type`, 원래 토픽·파티션·오프셋, 예외 클래스, trace id, 상태, 쌓인 시각, 다시 보내거나 버린 시각·사람·사유 |
 | POST | `/v1/admin/dead-letters/{id}/retry` | 다시 보내기. 204. 이미 처리한 행이면 409 `DEAD_LETTER_NOT_PENDING`. 전송이 10초 안에 끝나지 않거나 실패하면 503 `DEAD_LETTER_PUBLISH_FAILED`(상태는 그대로) |
 | POST | `/v1/admin/dead-letters/{id}/discard` | 버리기(`{reason}`, 1~500자). 204. 상태 검사는 다시 보내기와 같다 |
 

@@ -64,7 +64,7 @@ class SettlementRunUseCasesTest {
                         Duration.ofDays(7),
                         1_000);
         confirm = new ConfirmSettlementUseCase(items, settlements, sellerLock, outbox, clock);
-        run = new RunSettlementUseCase(items, confirm, clock, Duration.ofHours(3));
+        run = new RunSettlementUseCase(items, confirm, auditLog, clock, Duration.ofHours(3));
         payOut = new PayOutSettlementUseCase(settlements, outbox, auditLog, clock);
     }
 
@@ -109,6 +109,28 @@ class SettlementRunUseCasesTest {
                 .filteredOn(i -> i.confirmedAt().equals(THIS_WEEK))
                 .allMatch(i -> !i.isSettled());
         assertThat(sellerLock.locked).contains(sellerA, sellerB);
+    }
+
+    @Test
+    @DisplayName("관리자가 즉시 실행하면 감사 로그 SETTLEMENT_RUN_EXECUTED(확정 건수)를 남긴다. 정기 실행은 남기지 않는다(NFR-8)")
+    void adminRunIsAudited() {
+        UUID adminId = UUID.randomUUID();
+        purchase(sellerA, LAST_WEEK, 30_000);
+        purchase(sellerB, LAST_WEEK, 20_000);
+
+        int confirmed = run.execute(new RunSettlementCommand(adminId));
+        run.execute();
+
+        assertThat(confirmed).isEqualTo(2);
+        assertThat(auditLog.entries)
+                .singleElement()
+                .satisfies(
+                        entry -> {
+                            assertThat(entry.actorId()).isEqualTo(adminId.toString());
+                            assertThat(entry.action()).isEqualTo("SETTLEMENT_RUN_EXECUTED");
+                            assertThat(entry.targetType()).isEqualTo("SETTLEMENT_RUN");
+                            assertThat(entry.detail()).isEqualTo("확정 2건");
+                        });
     }
 
     @Test
