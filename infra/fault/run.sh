@@ -1,13 +1,19 @@
 #!/usr/bin/env bash
-# 장애 주입(R16, NFR-1·4). 레포 루트에서 `infra/fault/run.sh [장애...]`. 장애는 kafka, db, db-down, pg이고 없으면 넷 다 차례로 돈다.
+# 장애 주입(R16, NFR-1·4). 레포 루트에서 `infra/fault/run.sh [장애...]`. 장애는 kafka, db, db-down, pg, slot, redis, coupon이고
+# 없으면 모두 차례로 돈다.
 #
 # 1. 별도 Compose 프로젝트(openmarket-fault)를 빈 볼륨으로 띄운다. 기본·apps·e2e(가짜 PG)·fault(Toxiproxy) profile이다.
 #    서비스의 DB 연결은 Toxiproxy를 거친다(SERVICE_POSTGRES_HOST). 결제 기한 등은 짧게 줄인다.
-# 2. 장애마다 k6 saga.js(주문 → 결제 준비 → 가짜 PG 승인 → 결제 승인)를 돌리고, 시작 FAULT_AT초 뒤 장애를 FAULT_FOR초 넣었다가 푼다.
+# 2. 장애마다 k6 시나리오를 돌리고, 시작 FAULT_AT초 뒤 장애를 FAULT_FOR초 넣었다가 푼다.
+#    saga.js(주문 → 결제 준비 → 가짜 PG 승인 → 결제 승인)를 돌리는 장애
 #    - kafka: 브로커를 멈춘다(M6 완료 기준: 1분)
 #    - db: 서비스 → Postgres에 지연(FAULT_DB_LATENCY_MS, 기본 300ms ± 100ms)
 #    - db-down: 서비스 → Postgres 연결을 끊는다
 #    - pg: 세 번째 주문마다 가짜 PG가 승인 응답을 15초 늦게 준다(payment 읽기 타임아웃 10초보다 길다). 시간을 정해 넣지 않는다
+#    - slot: Debezium을 멈추고 WAL을 쌓아 복제 슬롯을 무효로 만든 뒤(이 스택은 max_slot_wal_keep_size가 64MB) 다시 띄운다(R5)
+#    그 밖의 장애
+#    - redis: coupon-issue.js(선착순 발급)가 도는 동안 Redis를 죽였다가(SIGKILL, 마지막 스냅숏 뒤 키를 잃는다) 다시 띄운다
+#    - coupon: coupon-saga.js(쿠폰 예약 실패 조합). 장애를 넣지 않는다
 # 3. k6가 끝나면 끝나지 않은 주문·결제가 없어질 때까지(결제 기한, 재조회 작업, 보상 취소) 기다린 뒤 check.sql과 DLT 메시지 수를 센다.
 # 4. 끝나면 Compose 프로젝트를 볼륨째 지운다. 남겨서 들여다보려면 FAULT_KEEP=1.
 #
@@ -18,10 +24,10 @@ ROOT=$(cd "$(dirname "$0")/../.." && pwd)
 PROJECT=openmarket-fault
 OUT="$ROOT/infra/fault/.out"
 FAULTS=("$@")
-[[ ${#FAULTS[@]} -gt 0 ]] || FAULTS=(kafka db db-down pg)
+[[ ${#FAULTS[@]} -gt 0 ]] || FAULTS=(kafka db db-down pg slot redis coupon)
 FAULT_AT=${FAULT_AT:-60}
 FAULT_FOR=${FAULT_FOR:-60}
-# saga.js가 상품을 만들 때 SKU마다 두는 재고. check.sql이 재고 차감을 맞춰 본다.
+# 시나리오가 상품을 만들 때 SKU마다 두는 재고(saga.js, coupon-saga.js). check.sql이 재고 차감을 맞춰 본다.
 INITIAL_STOCK=100000
 
 log() { printf '\n[fault] %s\n' "$*"; }
@@ -36,8 +42,12 @@ export ORDER_PAYMENT_TIMEOUT=4m
 export ORDER_EXPIRY_INTERVAL=10s
 export PAYMENT_CANCEL_INTERVAL=5s
 export PAYMENT_REFUND_INTERVAL=5s
+# 복제 슬롯 상한(기본 1GB). slot 장애가 몇 초 만에 넘길 수 있게 줄인다. 다른 장애의 1분 트래픽은 이보다 훨씬 작다.
+export POSTGRES_MAX_SLOT_WAL_KEEP_SIZE=64MB
 # k6 컨테이너 하나에서 구매자가 모두 로그인한다(infra/k6/run.sh와 같다).
 export AUTH_LOGIN_RATE_LIMIT=100000
+# 쿠폰 발급의 사용자별 한도(기본 1분에 5회). Redis 장애 중 503을 받은 구매자가 1초마다 다시 누른다.
+export GATEWAY_STRICT_RATE_LIMIT=600
 export LOAD_UID LOAD_GID
 LOAD_UID=$(id -u)
 LOAD_GID=$(id -g)
@@ -60,7 +70,7 @@ cleanup() {
 [[ -f "$ROOT/.env" ]] || fail "레포 루트에 .env가 없다. cp .env.example .env"
 getent hosts auth.openmarket.local >/dev/null || fail "hosts에 auth.openmarket.local이 없다(docs/dev-setup.md 3절)"
 for f in "${FAULTS[@]}"; do
-  [[ "$f" =~ ^(kafka|db|db-down|pg)$ ]] || fail "모르는 장애: $f(kafka, db, db-down, pg)"
+  [[ "$f" =~ ^(kafka|db|db-down|pg|slot|redis|coupon)$ ]] || fail "모르는 장애: $f(kafka, db, db-down, pg, slot, redis, coupon)"
 done
 if [[ -n "$(docker ps -q --filter "publish=8080")" && -z "$(docker ps -q --filter "label=com.docker.compose.project=$PROJECT" --filter "publish=8080")" ]]; then
   fail "다른 스택이 8080을 쓰고 있다. 개발용 스택(docker compose --profile apps stop)이나 E2E·부하 스택을 먼저 멈춘다"
@@ -93,6 +103,46 @@ wait_for "gateway → catalog" "http://localhost:8080/api/catalog/v1/categories"
 
 toxic() { compose exec -T toxiproxy /toxiproxy-cli "$@" >/dev/null; }
 
+slot_status() { psql -At -c "SELECT slot_name || ' ' || coalesce(wal_status, '-') FROM pg_replication_slots"; }
+connector_status() {
+  for _ in $(seq 60); do
+    curl -sf http://localhost:8083/connectors/outbox/status >/dev/null && break
+    sleep 2
+  done
+  curl -s http://localhost:8083/connectors/outbox/status | tr -d '\n' | cut -c1-600
+  echo
+}
+
+# 복제 슬롯을 무효로 만든다. Debezium을 멈춘 뒤 슬롯 상한(64MB)보다 큰 WAL을 쓰고 체크포인트로 슬롯을 끊는다.
+break_slot() {
+  compose stop connect >/dev/null
+  psql -q -c "CREATE TABLE IF NOT EXISTS public.fault_wal_filler (x text)" \
+       -c "INSERT INTO public.fault_wal_filler SELECT repeat(md5(g::text), 32) FROM generate_series(1, 200000) g" \
+       -c "CHECKPOINT" >/dev/null
+  log "복제 슬롯: $(slot_status)"
+}
+
+# Debezium을 다시 띄운다.
+restore_slot() {
+  psql -q -c "DROP TABLE IF EXISTS public.fault_wal_filler" >/dev/null
+  compose start connect >/dev/null
+  log "커넥터: $(connector_status)"
+  sleep 20
+  log "복제 슬롯: $(slot_status)"
+  # 무효(lost)가 된 슬롯은 Debezium이 스스로 복구하지 못한다. 커넥터는 RUNNING인 채 슬롯을 다시 얻으려고만 하고 발행은 멈춘다
+  # (2026-10-27 확인, risks.md "장애 주입"). 운영 절차대로 슬롯을 지우면 Debezium이 새 슬롯을 만들고, 오프셋이 없어진 것을 보고
+  # snapshot.mode=when_needed로 남아 있는 outbox 행을 다시 보낸다(소비자는 멱등).
+  if [[ "$(slot_status)" == *" lost" ]]; then
+    log "복구: 무효가 된 복제 슬롯을 지운다"
+    psql -q -c "SELECT pg_drop_replication_slot('openmarket_outbox')" >/dev/null
+    for _ in $(seq 60); do
+      [[ "$(slot_status)" == *" reserved" ]] && break
+      sleep 2
+    done
+    log "복제 슬롯: $(slot_status)"
+  fi
+}
+
 # 장애를 FAULT_AT초 뒤에 넣고 FAULT_FOR초 뒤에 푼다. k6와 함께 뒤에서 돈다.
 inject() {
   local fault=$1
@@ -102,12 +152,16 @@ inject() {
     kafka) compose stop kafka >/dev/null ;;
     db) toxic toxic add -t latency -a "latency=${FAULT_DB_LATENCY_MS:-300}" -a jitter=100 -n fault_latency postgres ;;
     db-down) toxic toggle postgres ;;
+    slot) break_slot ;;
+    redis) compose kill redis >/dev/null ;;
   esac
   sleep "$FAULT_FOR"
   case "$fault" in
     kafka) compose start kafka >/dev/null ;;
     db) toxic toxic remove -n fault_latency postgres ;;
     db-down) toxic toggle postgres ;;
+    slot) restore_slot ;;
+    redis) compose start redis >/dev/null ;;
   esac
   log "장애 끝: $fault ($(date +%H:%M:%S))"
 }
@@ -135,16 +189,23 @@ dlt_messages() {
 
 STATUS=0
 for fault in "${FAULTS[@]}"; do
-  log "장애 $fault: 주문·결제 흐름을 돌린다"
+  case "$fault" in
+    redis) script=coupon-issue.js ;;
+    coupon) script=coupon-saga.js ;;
+    *) script=saga.js ;;
+  esac
+  log "장애 $fault: $script를 돌린다"
   delay_env=()
-  if [[ "$fault" == "pg" ]]; then
-    delay_env=(-e SAGA_PG_DELAY_MS=15000 -e SAGA_PG_DELAY_EVERY=3)
-  else
-    inject "$fault" &
-    FAULT_PID=$!
-  fi
+  case "$fault" in
+    pg) delay_env=(-e SAGA_PG_DELAY_MS=15000 -e SAGA_PG_DELAY_EVERY=3) ;;
+    coupon) ;;
+    *)
+      inject "$fault" &
+      FAULT_PID=$!
+      ;;
+  esac
   set +e
-  docker compose -p "$PROJECT" --profile load run --rm --no-deps "${delay_env[@]}" k6 run saga.js 2>&1 | tee "$OUT/$fault.log"
+  docker compose -p "$PROJECT" --profile load run --rm --no-deps "${delay_env[@]}" k6 run "$script" 2>&1 | tee "$OUT/$fault.log"
   set -e
   if [[ -n "$FAULT_PID" ]]; then
     wait "$FAULT_PID" || true
@@ -157,6 +218,10 @@ for fault in "${FAULTS[@]}"; do
     psql -v initial_stock="$INITIAL_STOCK" -f - <"$ROOT/infra/fault/check.sql"
     echo "## DLT 메시지"
     dlt_messages
+    echo "## Redis 발급 수(참고: DB 발급 수와 다를 수 있다. Redis는 앞단 필터이고 수량은 DB가 지킨다)"
+    for key in $(compose exec -T redis redis-cli --scan --pattern 'promotion:coupon-stock:*'); do
+      echo "$key $(compose exec -T redis redis-cli GET "$key")"
+    done
   } | tee "$OUT/$fault-check.txt"
 
   violations=$(awk '/^## 위반/ { on = 1; next } /^## / { on = 0 } on && $NF ~ /^[0-9]+$/ && $NF > 0' "$OUT/$fault-check.txt")

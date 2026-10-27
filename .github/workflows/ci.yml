@@ -125,7 +125,7 @@ jobs:
       - run: |
           mkdir -p infra/k6/.out
           bash -n infra/fault/run.sh
-          for s in browse order coupon saga; do
+          for s in browse order coupon saga coupon-saga coupon-issue; do
             docker compose --profile load run --rm --no-deps k6 inspect "$s.js" >/dev/null
           done
       # 가짜 PG(ADR 0018)는 의존성 없는 Node 서버다. 테스트도 Node 표준 테스트 러너로 돈다.

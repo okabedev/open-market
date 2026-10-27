@@ -64,5 +64,5 @@ infra/       compose/, config-repo/, postgres/, debezium/, kafka/, elasticsearch
 - 서비스 실행: `services/`에서 `./gradlew :core:<service>:bootRun`. 루트 `.env`를 환경 변수로 읽는다.
 - 마일스톤 E2E: 레포 루트에서 `infra/e2e/run.sh m<n>`. 빈 볼륨의 별도 Compose 프로젝트와 앱 3개를 띄워 Playwright를 돌리고 지운다. 개발용 스택과 앱은 먼저 멈춘다.
 - 부하 시험: 레포 루트에서 `infra/k6/run.sh [시나리오]`. 빈 볼륨의 별도 Compose 프로젝트에서 k6를 돌리고 지운다. 개발용 스택은 먼저 멈춘다.
-- 장애 주입: 레포 루트에서 `infra/fault/run.sh [장애]`. 별도 Compose 프로젝트에서 주문·결제를 흘리며 Kafka 중지, DB 지연·끊김, PG 지연을 넣고 정합성을 센다.
+- 장애 주입: 레포 루트에서 `infra/fault/run.sh [장애]`. 별도 Compose 프로젝트에서 주문·결제를 흘리며 Kafka 중지, DB 지연·끊김, PG 지연, 복제 슬롯 무효, Redis 장애, 쿠폰 예약 실패 조합을 넣고 정합성을 센다.
 - 프론트: `clients/`에서 `pnpm install`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`(pnpm 버전은 corepack이 맞춘다). 앱 하나만 띄우려면 `pnpm --filter @openmarket/shop dev`. 자세한 것은 [clients/CLAUDE.md](clients/CLAUDE.md).

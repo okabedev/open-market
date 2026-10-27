@@ -323,7 +323,9 @@
   - [x] 측정 결과에 따른 성능 개선. README 표(개선 전·후). 남은 병목(gateway 레이트 리밋 Redis 호출, 드문 60초 무응답)은 risks.md "부하 측정"
 - [ ] 장애 주입: Kafka 중지, DB 지연, 외부 PG 지연 상황에서 정합성 확인(R16). 복제 슬롯 무효(R5), 쿠폰 예약 실패 조합, Redis 장애 중 쿠폰 발급. 찾은 결함은 `fix/` PR로 고친다
   - [x] `infra/fault/run.sh`(Toxiproxy `fault` profile, 가짜 PG, k6 `saga.js`, `check.sql`). Kafka 1분 중지, DB 지연·끊김, PG 지연에서 위반 0, DLT 0. 결과는 [risks.md](architecture/risks.md) "장애 주입"
-  - [ ] 복제 슬롯 무효(R5), 쿠폰 예약 실패 조합, Redis 장애 중 쿠폰 발급
+  - [x] 복제 슬롯 무효(R5, 운영자가 슬롯을 지워야 복구), 쿠폰 예약 실패 조합, Redis 장애 중 쿠폰 발급. 위반 0, DLT 0
+  - [ ] Redis 장애 중 gateway OOM, Redis 복귀 순간 promotion 지연 수정(`fix/`)
+  - [ ] 복제 슬롯 무효 경보(대시보드·알림)와 복구 절차(런북)
 - [ ] 관리자 백오피스: 운영 지표, 감사 로그 조회, DLT 재처리(ADM-4, ADM-5)
   - [ ] `common-messaging` DLT 수집·다시 보내기·버리기(R14)
   - [ ] `common-web` 감사 로그 조회 API. 금액 변경(결제, 환불, 정산)의 감사 누락 점검(NFR-8)
