@@ -10,8 +10,9 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.scheduling.annotation.Scheduled;
 
 /**
- * 보관 기간이 지난 {@code outbox_event}(7일)와 {@code processed_event}(30일) 행을 하루에 한 번 지운다. ShedLock으로 인스턴스가
- * 여러 개여도 한 번만 실행된다. 다시 실행해도 결과가 같다.
+ * 보관 기간이 지난 {@code outbox_event}(7일), {@code processed_event}(30일), 처리가 끝난 {@code dead_letter}(다시
+ * 보내거나 버린 지 30일) 행을 하루에 한 번 지운다. 처리하지 않은 DLT 메시지({@code PENDING})는 지우지 않는다. ShedLock으로 인스턴스가 여러 개여도
+ * 한 번만 실행된다. 다시 실행해도 결과가 같다.
  *
  * <p>잠금을 오래 잡지 않도록 일정 행 수씩 나눠 지운다.
  */
@@ -19,6 +20,7 @@ public class MessagingCleanupJob {
 
     static final Duration OUTBOX_RETENTION = Duration.ofDays(7);
     static final Duration PROCESSED_EVENT_RETENTION = Duration.ofDays(30);
+    static final Duration DEAD_LETTER_RETENTION = Duration.ofDays(30);
     static final String LOCK_NAME = "common-messaging-cleanup";
 
     private static final Logger log = LoggerFactory.getLogger(MessagingCleanupJob.class);
@@ -48,8 +50,14 @@ public class MessagingCleanupJob {
         int outbox = deleteInBatches("outbox_event", "occurred_at", OUTBOX_RETENTION);
         int processed =
                 deleteInBatches("processed_event", "processed_at", PROCESSED_EVENT_RETENTION);
-        log.info("메시징 테이블 정리: outbox_event {}행, processed_event {}행", outbox, processed);
-        return new Result(outbox, processed);
+        // resolved_at은 PENDING이면 비어 있어 지워지지 않는다.
+        int deadLetters = deleteInBatches("dead_letter", "resolved_at", DEAD_LETTER_RETENTION);
+        log.info(
+                "메시징 테이블 정리: outbox_event {}행, processed_event {}행, dead_letter {}행",
+                outbox,
+                processed,
+                deadLetters);
+        return new Result(outbox, processed, deadLetters);
     }
 
     private int deleteInBatches(String table, String timeColumn, Duration retention) {
@@ -75,5 +83,5 @@ public class MessagingCleanupJob {
         return total;
     }
 
-    public record Result(int outboxEvents, int processedEvents) {}
+    public record Result(int outboxEvents, int processedEvents, int deadLetters) {}
 }

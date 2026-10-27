@@ -42,10 +42,15 @@ import org.springframework.security.oauth2.server.authorization.client.Registere
 import org.springframework.security.oauth2.server.authorization.settings.AuthorizationServerSettings;
 import org.springframework.security.oauth2.server.authorization.token.JwtEncodingContext;
 import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenCustomizer;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
+import org.springframework.security.oauth2.server.resource.web.BearerTokenAuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.context.SecurityContextHolderFilter;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
+import org.springframework.security.web.util.matcher.AnyRequestMatcher;
 import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
 import org.springframework.transaction.support.TransactionOperations;
 
@@ -56,7 +61,8 @@ import org.springframework.transaction.support.TransactionOperations;
  *
  * <ol>
  *   <li>OAuth2·OIDC 엔드포인트
- *   <li>가입 API({@code /v1/**}): 세션·CSRF 없이 공개 경로만 연다. BFF 서버가 gateway를 거쳐 부른다
+ *   <li>가입 API({@code /v1/**}): 세션·CSRF 없이 공개 경로만 연다. BFF 서버가 gateway를 거쳐 부른다. 관리자 API({@code
+ *       /v1/admin/**}, DLT 메시지)는 auth가 발급한 액세스 토큰의 {@code roles}에 ADMIN이 있어야 한다
  *   <li>로그인 화면, actuator, OpenAPI 문서
  * </ol>
  */
@@ -92,7 +98,7 @@ public class AuthorizationServerConfiguration {
 
     @Bean
     @Order(2)
-    SecurityFilterChain apiSecurityFilterChain(HttpSecurity http) {
+    SecurityFilterChain apiSecurityFilterChain(HttpSecurity http, JwtDecoder jwtDecoder) {
         http.securityMatcher("/v1/**")
                 .authorizeHttpRequests(
                         authorize ->
@@ -103,18 +109,36 @@ public class AuthorizationServerConfiguration {
                                                 "/v1/accounts/email-verification",
                                                 "/v1/accounts/email-verification/resend")
                                         .permitAll()
+                                        .requestMatchers("/v1/admin/**")
+                                        .hasRole("ADMIN")
                                         .anyRequest()
                                         .denyAll())
+                // 관리자 API는 다른 서비스와 같게 액세스 토큰으로 인증한다(common-security와 같은 roles → ROLE_ 변환).
+                .oauth2ResourceServer(
+                        resource ->
+                                resource.jwt(
+                                        jwt ->
+                                                jwt.decoder(jwtDecoder)
+                                                        .jwtAuthenticationConverter(
+                                                                rolesConverter())))
                 // 쿠키 세션을 쓰지 않는 JSON API다. 브라우저가 아니라 BFF 서버가 부른다.
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(
                         session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .requestCache(cache -> cache.disable())
+                // 관리자 API는 다른 서비스처럼 토큰이 없으면 401, 그 밖의 막힌 경로는 403이다.
                 .exceptionHandling(
                         exceptions ->
-                                exceptions.authenticationEntryPoint(
-                                        (request, response, e) ->
-                                                response.sendError(HttpStatus.FORBIDDEN.value())));
+                                exceptions
+                                        .defaultAuthenticationEntryPointFor(
+                                                new BearerTokenAuthenticationEntryPoint(),
+                                                PathPatternRequestMatcher.withDefaults()
+                                                        .matcher("/v1/admin/**"))
+                                        .defaultAuthenticationEntryPointFor(
+                                                (request, response, e) ->
+                                                        response.sendError(
+                                                                HttpStatus.FORBIDDEN.value()),
+                                                AnyRequestMatcher.INSTANCE));
         return http.build();
     }
 
@@ -150,6 +174,15 @@ public class AuthorizationServerConfiguration {
                                         .permitAll())
                 .addFilterBefore(loginRateLimitFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
+    }
+
+    private static JwtAuthenticationConverter rolesConverter() {
+        JwtGrantedAuthoritiesConverter roles = new JwtGrantedAuthoritiesConverter();
+        roles.setAuthoritiesClaimName("roles");
+        roles.setAuthorityPrefix("ROLE_");
+        JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
+        converter.setJwtGrantedAuthoritiesConverter(roles);
+        return converter;
     }
 
     private static void addRequiredRoleCheck(List<AuthenticationProvider> providers) {

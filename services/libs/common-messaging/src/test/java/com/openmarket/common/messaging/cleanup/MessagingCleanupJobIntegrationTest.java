@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.openmarket.common.test.container.PostgresContainerConfiguration;
 import java.util.UUID;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,6 +36,21 @@ class MessagingCleanupJobIntegrationTest {
         assertThat(count("outbox_event", "id", keptOutbox)).isEqualTo(1);
         assertThat(count("processed_event", "event_id", expiredProcessed)).isZero();
         assertThat(count("processed_event", "event_id", keptProcessed)).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("처리가 끝난 DLT 메시지는 30일 뒤 지우고, 처리하지 않은(PENDING) 메시지는 오래돼도 남긴다")
+    void deletesResolvedDeadLettersAfterRetention() {
+        UUID expiredRetried = insertDeadLetter("RETRIED", "31 days");
+        UUID keptDiscarded = insertDeadLetter("DISCARDED", "29 days");
+        UUID oldPending = insertDeadLetter("PENDING", null);
+
+        MessagingCleanupJob.Result result = job.cleanUp();
+
+        assertThat(result.deadLetters()).isGreaterThanOrEqualTo(1);
+        assertThat(count("dead_letter", "id", expiredRetried)).isZero();
+        assertThat(count("dead_letter", "id", keptDiscarded)).isEqualTo(1);
+        assertThat(count("dead_letter", "id", oldPending)).isEqualTo(1);
     }
 
     @Test
@@ -74,6 +90,23 @@ class MessagingCleanupJobIntegrationTest {
                                 + " VALUES (:id, 'test', now() - CAST(:age AS interval))")
                 .param("id", id)
                 .param("age", age)
+                .update();
+        return id;
+    }
+
+    /** resolvedAge가 null이면 처리하지 않은 행(60일 전에 쌓임)이다. */
+    private UUID insertDeadLetter(String status, @Nullable String resolvedAge) {
+        UUID id = UUID.randomUUID();
+        jdbc.sql(
+                        "INSERT INTO dead_letter (id, consumer_group, dlt_topic, dlt_partition, dlt_offset,"
+                                + " original_topic, original_partition, original_offset, headers, status,"
+                                + " dead_lettered_at, resolved_at) VALUES (:id, 'catalog', 'order.order.DLT', 0,"
+                                + " :offset, 'order.order', 0, 0, '[]', :status, now() - interval '60 days',"
+                                + " now() - CAST(:age AS interval))")
+                .param("id", id)
+                .param("offset", id.getMostSignificantBits() & Long.MAX_VALUE)
+                .param("status", status)
+                .param("age", resolvedAge, java.sql.Types.VARCHAR)
                 .update();
         return id;
     }

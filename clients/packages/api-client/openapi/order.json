@@ -157,6 +157,56 @@
         }
       }
     },
+    "/v1/admin/dead-letters/{id}/retry" : {
+      "post" : {
+        "tags" : [ "dead-letter-admin-controller" ],
+        "operationId" : "retryDeadLetter",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        }
+      }
+    },
+    "/v1/admin/dead-letters/{id}/discard" : {
+      "post" : {
+        "tags" : [ "dead-letter-admin-controller" ],
+        "operationId" : "discardDeadLetter",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/DiscardDeadLetterRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        }
+      }
+    },
     "/v1/seller/orders" : {
       "get" : {
         "tags" : [ "seller-order-query-controller" ],
@@ -290,6 +340,55 @@
           }
         }
       }
+    },
+    "/v1/admin/dead-letters" : {
+      "get" : {
+        "tags" : [ "dead-letter-admin-controller" ],
+        "operationId" : "listDeadLetters",
+        "parameters" : [ {
+          "name" : "status",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "topic",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "before",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "size",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 20
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DeadLetterPage"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components" : {
@@ -390,6 +489,14 @@
           }
         },
         "required" : [ "quantity", "skuId" ]
+      },
+      "DiscardDeadLetterRequest" : {
+        "type" : "object",
+        "properties" : {
+          "reason" : {
+            "type" : "string"
+          }
+        }
       },
       "PageViewSellerOrderSummaryView" : {
         "type" : "object",
@@ -792,6 +899,73 @@
               "type" : "string",
               "format" : "uuid"
             }
+          }
+        }
+      },
+      "DeadLetterPage" : {
+        "type" : "object",
+        "properties" : {
+          "items" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/DeadLetterView"
+            }
+          },
+          "nextCursor" : {
+            "type" : "string"
+          }
+        }
+      },
+      "DeadLetterView" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "consumerGroup" : {
+            "type" : "string"
+          },
+          "eventId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "eventType" : {
+            "type" : "string"
+          },
+          "originalTopic" : {
+            "type" : "string"
+          },
+          "originalPartition" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "originalOffset" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "exceptionClass" : {
+            "type" : "string"
+          },
+          "traceId" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "deadLetteredAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "resolvedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "resolvedBy" : {
+            "type" : "string"
+          },
+          "discardReason" : {
+            "type" : "string"
           }
         }
       }

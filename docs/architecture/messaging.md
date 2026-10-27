@@ -120,9 +120,13 @@
 관리자 API(서비스마다, `common-messaging`)
 | 메서드 | 경로 | 내용 |
 |---|---|---|
-| GET | `/v1/admin/dead-letters?status&topic&before&size` | 목록(쌓인 시각 내림차순, 커서). 이벤트 `type`·`id`, 원래 토픽·파티션·오프셋, 그룹, 예외 클래스, 쌓인 시각, trace id, 상태 |
-| POST | `/v1/admin/dead-letters/{id}/retry` | 다시 보내기. 이미 처리한 행이면 409 `DEAD_LETTER_NOT_PENDING` |
-| POST | `/v1/admin/dead-letters/{id}/discard` | 버리기(`{reason}`). 상태 검사는 다시 보내기와 같다 |
+| GET | `/v1/admin/dead-letters?status&topic&before&size` | 목록(쌓인 시각 내림차순, 커서 `{items, nextCursor}`). `status`는 `PENDING`·`RETRIED`·`DISCARDED`, `topic`은 원래 토픽, `size`는 1~100(기본 20). 항목은 ID, 그룹, 이벤트 `id`·`type`, 원래 토픽·파티션·오프셋, 예외 클래스, trace id, 상태, 쌓인 시각, 다시 보내거나 버린 시각·사람·사유 |
+| POST | `/v1/admin/dead-letters/{id}/retry` | 다시 보내기. 204. 이미 처리한 행이면 409 `DEAD_LETTER_NOT_PENDING`. 전송이 10초 안에 끝나지 않거나 실패하면 503 `DEAD_LETTER_PUBLISH_FAILED`(상태는 그대로) |
+| POST | `/v1/admin/dead-letters/{id}/discard` | 버리기(`{reason}`, 1~500자). 204. 상태 검사는 다시 보내기와 같다 |
+
+- 없는 행은 404 `DEAD_LETTER_NOT_FOUND`, 형식이 틀린 상태·크기·커서·사유는 400 `DEAD_LETTER_INVALID_INPUT`이다.
+- `ADMIN` 역할 검사는 서비스의 보안 설정이 한다(common-security). auth는 자기 `/v1/**` 체인에서 같은 규칙을 둔다([auth.md](auth.md) "인가").
+- 감사 로그의 대상은 `DEAD_LETTER`와 행 ID다. 다시 보내기는 원래 토픽·파티션, 버리기는 사유를 부가 설명에 남긴다.
 
 - 페이로드와 예외 메시지는 응답에 넣지 않는다. 개인정보가 들어갈 수 있다(NFR-7). 원인은 trace id로 로그와 트레이스에서 찾는다.
 

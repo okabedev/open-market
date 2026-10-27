@@ -192,6 +192,37 @@ class AuthorizationServerIntegrationTest {
     }
 
     @Test
+    @DisplayName("DLT 메시지 관리자 API는 ADMIN 역할 토큰만 부른다. 구매자 토큰은 403, 토큰이 없으면 401")
+    void deadLetterAdminApiRequiresAdmin() throws Exception {
+        MockHttpSession adminSession = login("admin@openmarket.local", "admin-test-pass-1");
+        String adminToken =
+                JsonPath.read(
+                        exchange(
+                                "admin",
+                                "admin-test-secret",
+                                authorize(adminSession, "admin", 3002)),
+                        "$.access_token");
+        String email = "buyer-" + UUID.randomUUID() + "@example.com";
+        insertBuyer(email, "buyer-pass-1234");
+        MockHttpSession buyerSession = login(email, "buyer-pass-1234");
+        String buyerToken =
+                JsonPath.read(
+                        exchange("shop", "shop-test-secret", authorize(buyerSession, "shop", 3000)),
+                        "$.access_token");
+
+        mockMvc.perform(
+                        get("/v1/admin/dead-letters")
+                                .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items").isArray());
+        mockMvc.perform(
+                        get("/v1/admin/dead-letters")
+                                .header("Authorization", "Bearer " + buyerToken))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/v1/admin/dead-letters")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
     @DisplayName("로그인하지 않은 브라우저가 admin 클라이언트로 인가 요청하면 거절하지 않고 로그인 화면으로 보낸다")
     void adminClientSendsAnonymousUserToLogin() throws Exception {
         String redirect =

@@ -14,8 +14,14 @@ dependencies {
     implementation("tools.jackson.core:jackson-databind")
     implementation("io.micrometer:micrometer-tracing")
     implementation(libs.shedlock.jdbc)
+    // DLT 메시지 관리자 API(DeadLetterAdminController). MVC 서비스에만 켜지므로 웹을 강제하지 않는다.
+    compileOnly("org.springframework:spring-web")
 
     testImplementation(project(":libs:common-test"))
+    // 관리자 API 테스트: ProblemDetail 변환과 감사 로그 저장
+    testImplementation(project(":libs:common-web"))
+    testImplementation("org.springframework.boot:spring-boot-starter-webmvc")
+    testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
     testImplementation("org.springframework.boot:spring-boot-starter-flyway")
     testImplementation("org.springframework.boot:spring-boot-starter-opentelemetry")
     testImplementation("org.springframework.boot:spring-boot-micrometer-tracing-test")

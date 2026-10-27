@@ -1,7 +1,9 @@
 package com.openmarket.common.messaging;
 
+import com.openmarket.common.core.audit.AuditLog;
 import com.openmarket.common.messaging.deadletter.DeadLetterCollector;
 import com.openmarket.common.messaging.deadletter.DeadLetterRecorder;
+import com.openmarket.common.messaging.deadletter.DeadLetterService;
 import java.time.Clock;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -14,11 +16,14 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.kafka.config.KafkaListenerConfigUtils;
 import org.springframework.kafka.config.KafkaListenerEndpointRegistry;
 import org.springframework.kafka.core.ConsumerFactory;
+import org.springframework.kafka.core.KafkaOperations;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * DLT 수집기(ADR 0022). 서비스 이름({@code spring.application.name})으로 수집 그룹을 정하므로 이름이 있어야 켜진다. 리스너처럼
- * {@code spring.kafka.listener.auto-startup}을 따른다(Kafka 없이 도는 테스트에서는 띄우지 않는다).
+ * DLT 수집기와 관리자 API(ADR 0022). 수집기는 서비스 이름({@code spring.application.name})으로 수집 그룹을 정하므로 이름이 있어야
+ * 켜진다. 리스너처럼 {@code spring.kafka.listener.auto-startup}을 따른다(Kafka 없이 도는 테스트에서는 띄우지 않는다).
  */
 @AutoConfiguration(
         after = CommonMessagingAutoConfiguration.class,
@@ -33,6 +38,25 @@ public class DeadLetterAutoConfiguration {
             ObjectProvider<Clock> clock) {
         return new DeadLetterRecorder(
                 jdbcClient,
+                jsonMapper.getIfAvailable(JsonMapper::shared),
+                clock.getIfAvailable(Clock::systemUTC));
+    }
+
+    @Bean
+    @ConditionalOnBean(KafkaOperations.class)
+    @SuppressWarnings("unchecked")
+    DeadLetterService deadLetterService(
+            JdbcClient jdbcClient,
+            KafkaOperations<?, ?> kafkaOperations,
+            PlatformTransactionManager transactionManager,
+            ObjectProvider<AuditLog> auditLog,
+            ObjectProvider<JsonMapper> jsonMapper,
+            ObjectProvider<Clock> clock) {
+        return new DeadLetterService(
+                jdbcClient,
+                (KafkaOperations<String, String>) kafkaOperations,
+                new TransactionTemplate(transactionManager),
+                auditLog,
                 jsonMapper.getIfAvailable(JsonMapper::shared),
                 clock.getIfAvailable(Clock::systemUTC));
     }

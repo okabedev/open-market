@@ -50,6 +50,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/dead-letters/{id}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["retryDeadLetter"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/dead-letters/{id}/discard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["discardDeadLetter"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/payments/orders/{orderId}": {
         parameters: {
             query?: never;
@@ -98,6 +130,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/dead-letters": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listDeadLetters"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -119,6 +167,9 @@ export interface components {
             /** Format: int64 */
             amount?: number;
             method?: string;
+        };
+        DiscardDeadLetterRequest: {
+            reason?: string;
         };
         PaymentView: {
             /** Format: uuid */
@@ -177,6 +228,32 @@ export interface components {
             page?: number;
             /** Format: int32 */
             size?: number;
+        };
+        DeadLetterPage: {
+            items?: components["schemas"]["DeadLetterView"][];
+            nextCursor?: string;
+        };
+        DeadLetterView: {
+            /** Format: uuid */
+            id?: string;
+            consumerGroup?: string;
+            /** Format: uuid */
+            eventId?: string;
+            eventType?: string;
+            originalTopic?: string;
+            /** Format: int32 */
+            originalPartition?: number;
+            /** Format: int64 */
+            originalOffset?: number;
+            exceptionClass?: string;
+            traceId?: string;
+            status?: string;
+            /** Format: date-time */
+            deadLetteredAt?: string;
+            /** Format: date-time */
+            resolvedAt?: string;
+            resolvedBy?: string;
+            discardReason?: string;
         };
     };
     responses: never;
@@ -251,6 +328,50 @@ export interface operations {
             };
         };
     };
+    retryDeadLetter: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    discardDeadLetter: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DiscardDeadLetterRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     payment: {
         parameters: {
             query?: never;
@@ -315,6 +436,31 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PageViewCancelFailureView"];
+                };
+            };
+        };
+    };
+    listDeadLetters: {
+        parameters: {
+            query?: {
+                status?: string;
+                topic?: string;
+                before?: string;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeadLetterPage"];
                 };
             };
         };
