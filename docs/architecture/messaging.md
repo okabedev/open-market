@@ -104,6 +104,8 @@
 - `common-messaging`의 DLT 수집기가 서비스마다 하나 돈다. 그 서비스의 리스너가 구독하는 토픽의 DLT(`<토픽>.DLT`)를 그룹 `<서비스>-dead-letter`로 읽는다. 구독 토픽은 기동할 때 리스너 등록 정보에서 얻는다.
 - 헤더 `kafka_dlt-original-consumer-group`이 그 서비스의 리스너 그룹인 메시지만 `dead_letter` 테이블([data.md](data.md#dead_letter))에 넣는다. 다른 그룹 메시지는 넘긴다.
 - `(DLT 토픽, 파티션, 오프셋)`이 이미 있으면 넣지 않는다. 수집기가 같은 메시지를 다시 읽어도 한 행이다.
+- 넣지 못하면(DB 장애) 오프셋을 넘기지 않고 5초마다 다시 시도한다. 실패할 때마다 경고 로그를 남긴다. 모은 메시지도 경고 로그(DLT 위치, 그룹)를 남긴다.
+- 수집기는 리스너처럼 `spring.kafka.listener.auto-startup`을 따르고, 서비스 이름(`spring.application.name`)이 있어야 켜진다. DLT 토픽을 직접 읽는 리스너는 수집 대상이 아니다.
 - DLT 토픽 보관 기간(7일)과 상관없이 행이 남는다. 처리가 끝난 행(`RETRIED`, `DISCARDED`)은 30일 뒤 정리 작업이 지운다. `PENDING`은 지우지 않는다.
 
 다시 처리

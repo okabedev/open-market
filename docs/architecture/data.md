@@ -42,7 +42,7 @@
 
 - 서비스는 `spring.flyway.locations`에 자기 `classpath:db/migration`과 위 위치를 함께 적는다.
 - 라이브러리 마이그레이션 버전은 `V0_<n>`이다. 서비스 마이그레이션은 `V1`부터 시작하므로 겹치지 않는다.
-- 라이브러리들이 한 스키마의 Flyway 이력을 같이 쓰므로 `<n>`은 라이브러리 전체에서 이어 매긴다. 지금은 `V0_1` common-web, `V0_2`~`V0_4` common-messaging, `V0_5` common-web이다. 다음 번호는 `V0_6`이다.
+- 라이브러리들이 한 스키마의 Flyway 이력을 같이 쓰므로 `<n>`은 라이브러리 전체에서 이어 매긴다. 지금은 `V0_1` common-web, `V0_2`~`V0_4` common-messaging, `V0_5` common-web, `V0_6` common-messaging(`dead_letter`)이다. 다음 번호는 `V0_7`이다.
 - 공통 테이블을 바꿀 때는 새 `V0_<n>` 파일을 추가한다. 이미 `V1` 이상이 적용된 서비스에도 들어가도록 config-repo 공통 설정에 `spring.flyway.out-of-order=true`를 둔다.
 
 ### outbox_event
@@ -110,11 +110,11 @@ PK는 `(principal, idempotency_key)`다. 처리 중에 같은 키가 또 오면 
 | id | uuid | UUID v7 |
 | consumer_group | varchar(100) | 실패한 리스너 그룹 |
 | dlt_topic, dlt_partition, dlt_offset | varchar, integer, bigint | DLT 위치. 함께 유니크 |
-| original_topic, original_partition, original_offset | varchar, integer, bigint | 원래 위치 |
+| original_topic, original_partition, original_offset | varchar, integer, bigint | 원래 위치(`kafka_dlt-original-*` 헤더). 헤더가 없으면 DLT 토픽 이름에서 `.DLT`를 뺀 토픽, DLT 파티션, 오프셋 -1 |
 | event_id, event_type | uuid, varchar(100) | 헤더 `id`, `type`. 읽을 수 없으면 비어 있다 |
 | message_key | varchar | 원래 키 |
 | payload | text | 원래 값. API로 내보내지 않는다 |
-| headers | jsonb | 원래 헤더와 `kafka_dlt-*` 헤더(값은 UTF-8 문자열, 읽을 수 없으면 base64) |
+| headers | jsonb | 원래 헤더와 `kafka_dlt-*` 헤더. 순서대로 `[{key, value, base64}]`다. 같은 이름이 여럿일 수 있고 다시 보낼 때 그대로 되살린다. 값은 UTF-8 문자열이고, 읽을 수 없거나 탭·줄바꿈 밖의 제어 문자가 있으면(원래 파티션·오프셋 같은 바이너리 정수. jsonb는 `\u0000`을 받지 않는다) base64다 |
 | exception_class | varchar(300) | `kafka_dlt-exception-cause-fqcn`, 없으면 `kafka_dlt-exception-fqcn` |
 | trace_id | varchar(32) | `traceparent`의 trace id |
 | status | varchar(20) | `PENDING`, `RETRIED`, `DISCARDED` |
