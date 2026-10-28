@@ -4,7 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.openmarket.common.messaging.TestEvents.OrderPlacedMessage;
+import com.openmarket.common.messaging.metrics.MessagingMetrics;
 import com.openmarket.common.test.container.PostgresContainerConfiguration;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.tracing.Span;
 import io.micrometer.tracing.Tracer;
 import java.sql.Timestamp;
@@ -34,6 +37,27 @@ class OutboxIntegrationTest {
     @Autowired JdbcClient jdbc;
 
     @Autowired Tracer tracer;
+
+    @Autowired MeterRegistry registry;
+
+    @Test
+    @DisplayName("커밋된 outbox 이벤트만 이벤트 이름별로 센다")
+    void countsCommittedEvents() {
+        String type = "Committed" + UUID.randomUUID();
+
+        transaction.execute(
+                status ->
+                        outbox.append(
+                                "order.order", "o-1", type, new OrderPlacedMessage("o-1", 1)));
+        transaction.executeWithoutResult(
+                status -> {
+                    outbox.append("order.order", "o-2", type, new OrderPlacedMessage("o-2", 1));
+                    status.setRollbackOnly();
+                });
+
+        Counter counter = registry.get(MessagingMetrics.OUTBOX_EVENTS).tag("type", type).counter();
+        assertThat(counter.count()).isEqualTo(1);
+    }
 
     @Test
     @DisplayName("트랜잭션 안에서 쌓은 이벤트는 Debezium이 읽는 형식으로 저장된다")

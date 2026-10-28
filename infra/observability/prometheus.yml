@@ -17,6 +17,10 @@ scrape_configs:
   - job_name: loki
     static_configs:
       - targets: ["loki:3100"]
+  # 복제 슬롯과 Postgres 통계(postgres-exporter). 복제 슬롯 무효, outbox 발행 지연 알림이 읽는다.
+  - job_name: postgres
+    static_configs:
+      - targets: ["postgres-exporter:9187"]
   - job_name: discovery
     metrics_path: /actuator/prometheus
     static_configs:

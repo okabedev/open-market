@@ -5,8 +5,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.openmarket.common.messaging.TestEvents;
 import com.openmarket.common.messaging.TestEvents.OrderPlacedMessage;
+import com.openmarket.common.messaging.metrics.MessagingMetrics;
 import com.openmarket.common.messaging.outbox.Outbox;
 import com.openmarket.common.test.container.PostgresContainerConfiguration;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -17,6 +21,8 @@ import java.util.function.Supplier;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
@@ -28,12 +34,16 @@ import org.springframework.kafka.support.KafkaUtils;
 class IdempotentEventProcessorIntegrationTest {
 
     private static final String LISTENER = "catalog.order-placed";
+    private static final Logger log =
+            LoggerFactory.getLogger(IdempotentEventProcessorIntegrationTest.class);
 
     @Autowired IdempotentEventProcessor processor;
 
     @Autowired Outbox outbox;
 
     @Autowired JdbcClient jdbc;
+
+    @Autowired MeterRegistry registry;
 
     @Test
     @DisplayName("같은 이벤트가 다시 와도 핸들러는 한 번만 실행된다")
@@ -141,6 +151,33 @@ class IdempotentEventProcessorIntegrationTest {
         assertThat(processed).isTrue();
         assertThat(handled).hasSize(1);
         assertThat(processedCount(id)).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("처리한 이벤트는 발생 시각부터 걸린 시간을 리스너별로 재고, 이미 처리한 이벤트는 재지 않는다")
+    void recordsDelayOfHandledEvents() {
+        String listener = "catalog.delay-" + UUID.randomUUID();
+        UUID id = UUID.randomUUID();
+
+        process(listener, TestEvents.orderPlaced(id, "order-1"), e -> {});
+        process(listener, TestEvents.orderPlaced(id, "order-1"), e -> {});
+
+        Timer timer = registry.get(MessagingMetrics.EVENT_DELAY).tag("listener", listener).timer();
+        assertThat(timer.count()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("핸들러가 상태가 맞지 않아 넘긴 이벤트를 리스너 이름으로 센다")
+    void countsIgnoredEventsByListener() {
+        String listener = "catalog.ignore-" + UUID.randomUUID();
+
+        process(
+                listener,
+                TestEvents.orderPlaced(UUID.randomUUID(), "order-1"),
+                e -> IgnoredEvents.warn(log, "예약이 없는 주문이라 넘긴다: orderId={}", "order-1"));
+
+        Counter counter = registry.get(IgnoredEvents.METRIC).tag("listener", listener).counter();
+        assertThat(counter.count()).isEqualTo(1);
     }
 
     /** 다시 보낸 메시지. 수집기가 저장한 원래 메시지에 대상 그룹 헤더를 더한 것이다. */

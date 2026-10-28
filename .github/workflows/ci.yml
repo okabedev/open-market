@@ -121,6 +121,10 @@ jobs:
       # compose 파일은 .env 값을 필수로 읽는다. 예시 값으로 문법과 변수 참조만 검사한다.
       - run: cp .env.example .env
       - run: docker compose --profile search --profile obs --profile apps --profile e2e --profile load --profile fault config --quiet
+      # Prometheus 스크레이프 설정과 Grafana 대시보드 JSON의 문법만 본다. 알림 규칙은 Grafana가 기동할 때 읽는다(docs/architecture/observability.md).
+      - run: |
+          docker compose --profile obs run --rm --no-deps --entrypoint promtool prometheus check config /etc/prometheus/prometheus.yml
+          for f in infra/grafana/provisioning/dashboards/openmarket/*.json; do python3 -m json.tool "$f" >/dev/null; done
       # 부하 시험·장애 주입 스크립트(infra/k6, infra/fault)는 CI에서 돌리지 않는다. 문법과 옵션(시나리오, 임계값)만 실행 없이 확인한다.
       - run: |
           mkdir -p infra/k6/.out

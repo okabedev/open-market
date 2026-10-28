@@ -2,7 +2,11 @@ package com.openmarket.common.messaging;
 
 import com.openmarket.common.messaging.consumer.FailedEventLogger;
 import com.openmarket.common.messaging.consumer.InvalidEventException;
+import com.openmarket.common.messaging.metrics.MessagingMetrics;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Metrics;
 import org.apache.kafka.common.TopicPartition;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
@@ -34,7 +38,10 @@ public class KafkaConsumerAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean(CommonErrorHandler.class)
-    DefaultErrorHandler kafkaErrorHandler(KafkaOperations<?, ?> kafkaOperations) {
+    DefaultErrorHandler kafkaErrorHandler(
+            KafkaOperations<?, ?> kafkaOperations,
+            ObjectProvider<MessagingMetrics> metrics,
+            ObjectProvider<MeterRegistry> registry) {
         ExponentialBackOffWithMaxRetries backOff =
                 new ExponentialBackOffWithMaxRetries(MAX_RETRIES);
         backOff.setInitialInterval(INITIAL_INTERVAL_MS);
@@ -48,7 +55,14 @@ public class KafkaConsumerAutoConfiguration {
                                         record.topic() + DLT_SUFFIX, record.partition()));
         DefaultErrorHandler handler = new DefaultErrorHandler(recoverer, backOff);
         handler.addNotRetryableExceptions(InvalidEventException.class);
-        handler.setRetryListeners(new FailedEventLogger());
+        // JDBC가 없어 CommonMessagingAutoConfiguration이 꺼진 앱도 DLT 유입을 센다.
+        handler.setRetryListeners(
+                new FailedEventLogger(
+                        metrics.getIfAvailable(
+                                () ->
+                                        new MessagingMetrics(
+                                                registry.getIfAvailable(
+                                                        () -> Metrics.globalRegistry)))));
         return handler;
     }
 }

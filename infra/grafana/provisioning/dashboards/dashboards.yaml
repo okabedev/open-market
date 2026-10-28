@@ -1,0 +1,11 @@
+# 대시보드 프로비저닝. JSON은 openmarket/에 있다(docs/architecture/observability.md "대시보드 관리").
+# 화면에서 고칠 수 있지만 재시작하면 파일 내용으로 돌아간다. 고친 대시보드는 JSON으로 내보내 이 디렉터리에 커밋한다.
+apiVersion: 1
+
+providers:
+  - name: openmarket
+    folder: Open Market
+    type: file
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/provisioning/dashboards/openmarket

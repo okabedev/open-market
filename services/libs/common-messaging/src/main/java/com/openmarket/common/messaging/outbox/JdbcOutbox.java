@@ -1,6 +1,7 @@
 package com.openmarket.common.messaging.outbox;
 
 import com.openmarket.common.core.id.Ids;
+import com.openmarket.common.messaging.metrics.MessagingMetrics;
 import com.openmarket.common.messaging.trace.TraceparentSupplier;
 import java.sql.Timestamp;
 import java.time.Clock;
@@ -11,7 +12,7 @@ import tools.jackson.databind.json.JsonMapper;
 
 /**
  * PostgreSQL {@code outbox_event} 테이블 구현. 테이블은 Flyway 위치 {@code classpath:db/common/messaging}이
- * 만든다.
+ * 만든다. 커밋된 이벤트는 이름별로 센다({@link MessagingMetrics#OUTBOX_EVENTS}).
  */
 public class JdbcOutbox implements Outbox {
 
@@ -19,13 +20,19 @@ public class JdbcOutbox implements Outbox {
     private final JsonMapper jsonMapper;
     private final TraceparentSupplier traceparent;
     private final Clock clock;
+    private final MessagingMetrics metrics;
 
     public JdbcOutbox(
-            JdbcClient jdbc, JsonMapper jsonMapper, TraceparentSupplier traceparent, Clock clock) {
+            JdbcClient jdbc,
+            JsonMapper jsonMapper,
+            TraceparentSupplier traceparent,
+            Clock clock,
+            MessagingMetrics metrics) {
         this.jdbc = jdbc;
         this.jsonMapper = jsonMapper;
         this.traceparent = traceparent;
         this.clock = clock;
+        this.metrics = metrics;
     }
 
     @Override
@@ -55,6 +62,7 @@ public class JdbcOutbox implements Outbox {
                 .param("traceparent", traceparent.current())
                 .param("occurredAt", Timestamp.from(clock.instant()))
                 .update();
+        metrics.outboxAppended(type);
         return id;
     }
 }

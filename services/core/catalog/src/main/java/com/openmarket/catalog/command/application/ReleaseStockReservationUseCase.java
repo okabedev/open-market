@@ -5,6 +5,7 @@ import com.openmarket.catalog.command.domain.Stock;
 import com.openmarket.catalog.command.domain.StockRepository;
 import com.openmarket.catalog.command.domain.StockReservation;
 import com.openmarket.catalog.command.domain.StockReservationRepository;
+import com.openmarket.common.messaging.consumer.IgnoredEvents;
 import com.openmarket.common.messaging.outbox.Outbox;
 import java.time.Clock;
 import java.time.Instant;
@@ -73,7 +74,8 @@ public class ReleaseStockReservationUseCase {
             }
             case ALREADY -> {}
             case INVALID ->
-                    log.warn(
+                    IgnoredEvents.warn(
+                            log,
                             "예약을 해제할 수 없는 상태라 넘긴다: orderId={}, status={}",
                             command.orderId(),
                             found.status());

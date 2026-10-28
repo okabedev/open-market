@@ -1,5 +1,6 @@
 package com.openmarket.fulfillment.command.application;
 
+import com.openmarket.common.messaging.consumer.IgnoredEvents;
 import com.openmarket.common.messaging.outbox.Outbox;
 import com.openmarket.fulfillment.command.domain.Claim;
 import com.openmarket.fulfillment.command.domain.ClaimCompleted;
@@ -40,7 +41,7 @@ public class CompleteClaimUseCase {
     public void execute(CompleteClaimCommand command) {
         Optional<Claim> found = claims.findForUpdateById(command.claimId());
         if (found.isEmpty()) {
-            log.warn("모르는 클레임의 환불 완료라 넘긴다: claimId={}", command.claimId());
+            IgnoredEvents.warn(log, "모르는 클레임의 환불 완료라 넘긴다: claimId={}", command.claimId());
             return;
         }
         Claim claim = found.get();

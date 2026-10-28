@@ -6,6 +6,7 @@
 - 계정은 자기 스키마에만 권한이 있다. 다른 스키마는 `USAGE` 권한이 없어서 실수로 조인해도 실패한다.
 - 만드는 곳은 `infra/postgres/init/`의 초기화 스크립트다. 서비스 목록은 `services.txt`에 있다. 스키마 안의 테이블은 각 서비스의 Flyway가 만든다.
 - 스키마의 소유자는 서비스 계정이고, 계정의 `search_path`도 자기 스키마로 둔다. 서비스 설정의 `hikari.schema`(아래)와 같은 값이다.
+- postgres-exporter(관측성)는 계정 `monitor`(`pg_monitor` 역할)를 쓴다. 통계 뷰와 복제 슬롯 상태만 읽고 업무 테이블은 읽지 못한다([observability.md](observability.md) "지표").
 - Debezium은 복제 전용 계정(`debezium`)을 쓴다. 이 계정은 각 스키마의 `outbox_event` 테이블만 `SELECT`할 수 있다. 발행(publication) `openmarket_outbox`는 `outbox_event` 테이블들과 heartbeat 테이블만 포함하고, INSERT와 UPDATE만 복제한다.
   - `outbox_event`는 Flyway가 나중에 만들므로 초기화 때는 스키마 `USAGE` 권한만 준다.
   - 테이블 `SELECT` 권한과 publication 등록은 event trigger `publish_outbox_table`이 한다. 어느 스키마든 `outbox_event`라는 테이블이 생기면(`CREATE TABLE`) 바로 실행된다. 함수는 `SECURITY DEFINER`라 서비스 계정의 Flyway가 만들어도 관리자 권한으로 등록한다.

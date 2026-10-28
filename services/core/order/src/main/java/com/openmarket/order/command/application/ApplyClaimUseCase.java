@@ -1,5 +1,6 @@
 package com.openmarket.order.command.application;
 
+import com.openmarket.common.messaging.consumer.IgnoredEvents;
 import com.openmarket.order.command.domain.ClaimStatus;
 import com.openmarket.order.command.domain.ClaimType;
 import com.openmarket.order.command.domain.Order;
@@ -32,7 +33,7 @@ public class ApplyClaimUseCase {
     public void execute(ApplyClaimCommand command) {
         Optional<Order> found = orders.findForUpdateById(command.orderId());
         if (found.isEmpty()) {
-            log.warn("모르는 주문의 클레임이라 넘긴다: orderId={}", command.orderId());
+            IgnoredEvents.warn(log, "모르는 주문의 클레임이라 넘긴다: orderId={}", command.orderId());
             return;
         }
         Order order = found.get();
@@ -45,7 +46,8 @@ public class ApplyClaimUseCase {
             case APPLIED -> orders.save(order);
             case ALREADY -> {}
             case INVALID ->
-                    log.warn(
+                    IgnoredEvents.warn(
+                            log,
                             "하위 주문 클레임을 바꿀 수 없어 넘긴다: orderId={}, sellerOrderId={}, status={}",
                             order.id(),
                             command.sellerOrderId(),
