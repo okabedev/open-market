@@ -2,6 +2,7 @@ import { expect, type Browser, type Page } from "@playwright/test";
 import { env, uniqueTag } from "./env";
 import { verificationLink } from "./mailpit";
 import { OAuthClient, rolesOf } from "./oauth";
+import { passSecondFactor } from "./totp";
 
 /** shop에서 가입하고, 인증 메일 링크를 눌러 인증한 뒤 로그인한다. 내 정보 화면에서 끝난다. */
 export async function signUpVerifyAndLogin(
@@ -37,11 +38,12 @@ export async function loginAtAuth(page: Page, email: string, password: string): 
   await page.locator("button[type=submit]").click();
 }
 
-/** 관리자 앱에 로그인한다. 입점 심사 화면에서 끝난다. */
+/** 관리자 앱에 로그인한다. 비밀번호 다음에 2단계 인증을 거친다(첫 로그인이면 등록한다). 입점 심사 화면에서 끝난다. */
 export async function loginAsAdmin(page: Page): Promise<void> {
   await page.goto(env.admin);
   await page.getByRole("main").getByRole("link", { name: "로그인" }).click();
   await loginAtAuth(page, env.adminEmail, env.adminPassword);
+  await passSecondFactor(page);
   await page.waitForURL(`${env.admin}/seller-applications`);
 }
 

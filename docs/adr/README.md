@@ -27,6 +27,7 @@
 | [0021](0021-order-reservation-join.md) | 재고·쿠폰 예약 결과는 주문에 따로 기록하고 주문 행 잠금으로 합류한다 | 승인 |
 | [0022](0022-dead-letter-reprocessing.md) | DLT 메시지는 소비한 서비스가 자기 스키마에 모으고, 그 그룹만 받도록 원래 토픽으로 다시 보낸다 | 승인 |
 | [0023](0023-admin-ops-queries.md) | 감사 로그와 DLT 메시지는 admin BFF가 서비스마다 물어 합치고, 운영 지표는 업무 DB에서 센다 | 승인 |
+| [0024](0024-admin-totp-mfa.md) | 관리자 TOTP는 Spring Security 7 다중 요소 인증의 요소 권한으로 요구한다 | 승인 |
 
 
 ## 템플릿

@@ -7,6 +7,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.time.Clock;
 import java.time.Duration;
+import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
@@ -14,8 +15,8 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
- * 로그인 시도(POST /login)를 IP 단위로 제한한다(NFR-5). 로그인 화면은 브라우저가 auth에 직접 오므로 gateway의 레이트 리밋을 거치지
- * 않는다(docs/architecture/auth.md "보안 기본값").
+ * 로그인 시도(POST /login)와 2단계 확인(POST /login/totp, /login/totp/enroll)을 IP 단위로 한 카운터로 제한한다(NFR-5). 로그인
+ * 화면은 브라우저가 auth에 직접 오므로 gateway의 레이트 리밋을 거치지 않는다(docs/architecture/auth.md "보안 기본값").
  *
  * <p>1분 고정 창 카운터({@code auth:login-rate:<ip>:<분>})를 Redis에 둔다. 한도를 넘으면 인증을 하지 않고 안내 화면으로 보내므로 계정 잠금
  * 횟수도 늘지 않는다. Redis가 응답하지 않으면 통과시킨다(fail-open). 명령 타임아웃(200ms)으로 요청이 멈추지 않게 한다.
@@ -24,6 +25,8 @@ public class LoginRateLimitFilter extends OncePerRequestFilter {
 
     private static final Logger log = LoggerFactory.getLogger(LoginRateLimitFilter.class);
     private static final Duration WINDOW = Duration.ofMinutes(1);
+    private static final Set<String> LIMITED_PATHS =
+            Set.of("/login", "/login/totp", "/login/totp/enroll");
 
     private final StringRedisTemplate redis;
     private final int perMinute;
@@ -38,7 +41,7 @@ public class LoginRateLimitFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI().substring(request.getContextPath().length());
-        return !("POST".equals(request.getMethod()) && "/login".equals(path));
+        return !("POST".equals(request.getMethod()) && LIMITED_PATHS.contains(path));
     }
 
     @Override
@@ -47,7 +50,9 @@ public class LoginRateLimitFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
         if (exceeded(request.getRemoteAddr())) {
             response.setStatus(HttpServletResponse.SC_SEE_OTHER);
-            response.setHeader("Location", request.getContextPath() + "/login?limited");
+            String path = request.getRequestURI().substring(request.getContextPath().length());
+            String page = path.startsWith("/login/totp") ? "/login/totp" : "/login";
+            response.setHeader("Location", request.getContextPath() + page + "?limited");
             return;
         }
         chain.doFilter(request, response);

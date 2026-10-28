@@ -1,11 +1,15 @@
 package com.openmarket.auth.infra;
 
 import com.openmarket.auth.command.application.PasswordHasherPort;
+import com.openmarket.auth.command.application.RecoveryCodeHasherPort;
 import com.openmarket.auth.command.application.SeedAdminCommand;
 import com.openmarket.auth.command.application.SeedAdminUseCase;
+import com.openmarket.auth.command.application.TotpSecretCipherPort;
 import com.openmarket.auth.command.application.VerificationLinkPort;
+import com.openmarket.auth.infra.key.AesGcmTotpSecretCipherAdapter;
 import com.openmarket.auth.infra.key.JdbcSigningKeyStore;
 import com.openmarket.auth.infra.key.SigningKeyCipher;
+import com.openmarket.auth.infra.security.PasswordEncoderRecoveryCodeHasherAdapter;
 import com.openmarket.auth.infra.security.RegisteredClientSynchronizer;
 import java.time.Clock;
 import org.slf4j.Logger;
@@ -41,6 +45,16 @@ public class AuthInfraConfiguration {
     @Bean
     PasswordHasherPort passwordHasher(PasswordEncoder passwordEncoder) {
         return passwordEncoder::encode;
+    }
+
+    @Bean
+    TotpSecretCipherPort totpSecretCipher(AuthProperties properties) {
+        return new AesGcmTotpSecretCipherAdapter(properties.totpSecretKey());
+    }
+
+    @Bean
+    RecoveryCodeHasherPort recoveryCodeHasher(PasswordEncoder passwordEncoder) {
+        return new PasswordEncoderRecoveryCodeHasherAdapter(passwordEncoder);
     }
 
     /** 인증 메일 링크: shop 앱의 인증 화면 주소 + {@code ?token=}. 토큰은 Base64URL이라 인코딩할 문자가 없다. */

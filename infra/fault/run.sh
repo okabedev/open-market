@@ -98,6 +98,17 @@ wait_for() {
 }
 wait_for "gateway → member" "http://localhost:8080/api/member/v1/members/me" 401
 wait_for "gateway → order" "http://localhost:8080/api/order/v1/orders" 401
+
+# 시드 관리자의 2단계 인증을 한 번 등록하고 비밀 값을 시나리오에 넘긴다(관리자 로그인은 비밀번호 다음에 TOTP를 확인한다, ADR 0024).
+enroll_admin() {
+  rm -f "$ROOT/infra/k6/.out/admin-totp.json"
+  docker compose -p "$PROJECT" --profile load run --rm --no-deps k6 run --quiet admin-totp.js >/dev/null
+  ADMIN_TOTP_SECRET=$(grep -o '"secret":"[A-Z2-7]*"' "$ROOT/infra/k6/.out/admin-totp.json" | cut -d'"' -f4)
+  [[ -n "$ADMIN_TOTP_SECRET" ]] || fail "관리자 2단계 인증을 등록하지 못했다"
+  export ADMIN_TOTP_SECRET
+  log "관리자 2단계 인증을 등록했다"
+}
+enroll_admin
 wait_for "gateway → payment" "http://localhost:8080/api/payment/v1/payments/orders/00000000-0000-0000-0000-000000000000" 401
 wait_for "gateway → catalog" "http://localhost:8080/api/catalog/v1/categories" 200
 

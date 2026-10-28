@@ -1,7 +1,7 @@
 package com.openmarket.auth;
 
+import static com.openmarket.auth.SecondFactorLogins.enrolledAdmin;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -19,7 +19,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
+import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.mock.web.MockHttpSession;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -43,17 +45,14 @@ class AuthorizationConnectionPoolIntegrationTest {
 
     @Autowired MockMvc mockMvc;
 
+    @Autowired JdbcClient jdbc;
+
+    @Autowired PasswordEncoder passwordEncoder;
+
     @Test
-    @DisplayName("연결 풀이 1개여도 로그인, 코드 교환, 토큰 갱신이 된다")
+    @DisplayName("연결 풀이 1개여도 로그인, 2단계 인증 등록, 코드 교환, 토큰 갱신이 된다")
     void authorizationFlowUsesOneConnectionPerRequest() throws Exception {
-        MockHttpSession session = new MockHttpSession();
-        mockMvc.perform(
-                        post("/login")
-                                .session(session)
-                                .with(csrf())
-                                .param("username", "admin@openmarket.local")
-                                .param("password", "admin-test-pass-1"))
-                .andExpect(status().is3xxRedirection());
+        MockHttpSession session = enrolledAdmin(mockMvc, jdbc, passwordEncoder).session();
 
         String redirect =
                 mockMvc.perform(

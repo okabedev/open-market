@@ -21,6 +21,7 @@ openmarket:
     # 브라우저·IDE·컨테이너가 같은 주소로 닿는다(hosts + 네트워크 별칭). 요청 주소와 상관없이 토큰 iss는 이 값이다(R7).
     issuer: http://auth.openmarket.local:9000
     signing-key-secret: ${AUTH_SIGNING_KEY_SECRET}
+    totp-secret-key: ${AUTH_TOTP_SECRET_KEY}
     access-token-ttl: 10m
     # 인증 메일 링크(shop 앱 화면). 뒤에 ?token=을 붙인다.
     email-verification-url: http://localhost:3000/verify-email

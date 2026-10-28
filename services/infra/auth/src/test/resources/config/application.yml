@@ -41,6 +41,7 @@ openmarket:
     login-rate-limit:
       per-minute: 8
     signing-key-secret: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+    totp-secret-key: AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=
     admin-seed:
       email: admin@openmarket.local
       password: admin-test-pass-1

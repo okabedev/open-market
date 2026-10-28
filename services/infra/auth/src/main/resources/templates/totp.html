@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>2단계 인증 - 오픈 마켓</title>
+    <style>
+      /* 로그인 화면과 같은 최소 스타일. 외부 리소스를 불러오지 않는다. */
+      body { font-family: system-ui, sans-serif; background: #f6f7f9; margin: 0; color: #1f2328; }
+      main { max-width: 400px; margin: 8vh auto; padding: 32px; background: #fff; border-radius: 12px; box-shadow: 0 1px 3px rgb(0 0 0 / 0.1); }
+      h1 { font-size: 1.4rem; margin: 0 0 16px; }
+      p { font-size: 0.95rem; line-height: 1.5; }
+      label { display: block; font-size: 0.9rem; margin: 16px 0 6px; }
+      input { width: 100%; box-sizing: border-box; padding: 10px 12px; font-size: 1rem; border: 1px solid #d0d7de; border-radius: 8px; }
+      button, .button { display: block; box-sizing: border-box; width: 100%; margin-top: 24px; padding: 12px; font-size: 1rem; border: 0; border-radius: 8px; background: #1f6feb; color: #fff; cursor: pointer; text-align: center; text-decoration: none; }
+      .message { margin: 0 0 16px; padding: 12px; border-radius: 8px; background: #fff1f0; color: #a40e26; font-size: 0.9rem; }
+      .qr { display: flex; justify-content: center; margin: 16px 0; }
+      code { font-family: ui-monospace, monospace; font-size: 1rem; letter-spacing: 0.05em; word-break: break-all; }
+      .codes { columns: 2; padding: 12px 12px 12px 32px; background: #f6f8fa; border-radius: 8px; }
+      .codes li { margin: 4px 0; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>2단계 인증</h1>
+      <p class="message" role="alert" th:if="${message}" th:text="${message}">안내</p>
+      <p>인증 앱에 보이는 6자리 코드를 입력해 주세요. 기기를 잃었으면 복구 코드를 입력합니다.</p>
+      <form method="post" th:action="@{/login/totp}">
+        <label for="code">인증 코드 또는 복구 코드</label>
+        <input id="code" name="code" type="text" autocomplete="one-time-code" required autofocus maxlength="20" />
+        <button type="submit">확인</button>
+      </form>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>복구 코드 - 오픈 마켓</title>
+    <style>
+      /* 로그인 화면과 같은 최소 스타일. 외부 리소스를 불러오지 않는다. */
+      body { font-family: system-ui, sans-serif; background: #f6f7f9; margin: 0; color: #1f2328; }
+      main { max-width: 400px; margin: 8vh auto; padding: 32px; background: #fff; border-radius: 12px; box-shadow: 0 1px 3px rgb(0 0 0 / 0.1); }
+      h1 { font-size: 1.4rem; margin: 0 0 16px; }
+      p { font-size: 0.95rem; line-height: 1.5; }
+      label { display: block; font-size: 0.9rem; margin: 16px 0 6px; }
+      input { width: 100%; box-sizing: border-box; padding: 10px 12px; font-size: 1rem; border: 1px solid #d0d7de; border-radius: 8px; }
+      button, .button { display: block; box-sizing: border-box; width: 100%; margin-top: 24px; padding: 12px; font-size: 1rem; border: 0; border-radius: 8px; background: #1f6feb; color: #fff; cursor: pointer; text-align: center; text-decoration: none; }
+      .message { margin: 0 0 16px; padding: 12px; border-radius: 8px; background: #fff1f0; color: #a40e26; font-size: 0.9rem; }
+      .qr { display: flex; justify-content: center; margin: 16px 0; }
+      code { font-family: ui-monospace, monospace; font-size: 1rem; letter-spacing: 0.05em; word-break: break-all; }
+      .codes { columns: 2; padding: 12px 12px 12px 32px; background: #f6f8fa; border-radius: 8px; }
+      .codes li { margin: 4px 0; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>복구 코드</h1>
+      <p>2단계 인증을 등록했습니다. 아래 복구 코드는 지금 한 번만 보여 줍니다. 인증 앱을 쓸 수 없을 때 코드 대신 하나씩 한 번 쓸 수 있으니 안전한 곳에 적어 두세요.</p>
+      <ol class="codes" aria-label="복구 코드">
+        <li th:each="code : ${recoveryCodes}"><code th:text="${code}">AAAAA-AAAAA</code></li>
+      </ol>
+      <a class="button" th:href="${continueUrl}">계속</a>
+    </main>
+  </body>
+</html>

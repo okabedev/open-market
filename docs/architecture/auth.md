@@ -66,15 +66,15 @@ sequenceDiagram
 - 세션 쿠키는 운영 기준과 같게 `HttpOnly`를 켠다. `Secure`는 로컬 HTTP에서 끄고 설정으로 바꿀 수 있게 한다.
 
 ## 관리자 2단계 인증(M6)
-`ADMIN` 역할 계정은 비밀번호 다음에 TOTP(RFC 6238) 코드를 확인해야 로그인이 끝난다. 구현 방식(Spring Security 7의 다중 요소 인증 지원을 쓸지)은 TOTP PR에서 확인하고 ADR로 남긴다(R15).
+`ADMIN` 역할 계정은 비밀번호 다음에 TOTP(RFC 6238) 코드를 확인해야 로그인이 끝난다. Spring Security 7 다중 요소 인증의 요소 권한(`FACTOR_TOTP`)으로 요구한다([ADR 0024](../adr/0024-admin-totp-mfa.md), R15).
 - 대상: `ADMIN` 역할이 있는 계정은 어느 클라이언트(shop, seller, admin)로 로그인하든 거친다. 토큰의 `roles`에 `ADMIN`이 실리므로 클라이언트로 나누지 않는다. 다른 계정은 바뀌지 않는다.
-- 흐름: 비밀번호가 맞으면 아직 인가 코드를 내지 않고 auth의 TOTP 화면으로 보낸다. 코드가 맞아야 로그인 세션이 완성되고 원래 인가 요청으로 돌아간다. 리프레시 토큰 갱신은 다시 묻지 않는다(admin 리프레시 토큰 8시간).
-- 등록: 등록하지 않은 관리자는 비밀번호 다음에 등록 화면을 본다. 비밀 값(160비트)을 QR과 문자열로 보여 주고, 코드 하나를 맞게 입력해야 등록된다. 이때 복구 코드 10개를 한 번만 보여 준다. 시드 관리자(`ADMIN_SEED_*`)도 첫 로그인 때 등록한다.
+- 흐름: 비밀번호가 맞으면 아직 인가 코드를 내지 않고 auth의 TOTP 화면(`/login/totp`)으로 보낸다. 인가 엔드포인트 체인의 권한 규칙이 ADMIN 로그인에 `FACTOR_TOTP` 요소를 요구하고, 없으면 인가 요청을 저장해 이 화면으로 보낸다. 코드가 맞으면 인증에 요소를 더하고 세션 ID를 바꾼 뒤 저장한 인가 요청으로 돌아간다. 리프레시 토큰 갱신은 다시 묻지 않는다(admin 리프레시 토큰 8시간).
+- 등록: 등록하지 않은 관리자는 비밀번호 다음에 등록 화면을 본다. 비밀 값(160비트)을 QR과 문자열(Base32)로 보여 주고, 코드 하나를 맞게 입력해야 등록된다. 등록 전에 화면을 다시 열면 같은 비밀 값이다(코드를 틀려도 다시 스캔하지 않는다). 등록하면 복구 코드 10개(`XXXXX-XXXXX`)를 한 번만 보여 주고 "계속"으로 인가 요청에 돌아간다. 시드 관리자(`ADMIN_SEED_*`)도 첫 로그인 때 등록한다.
 - 코드: 6자리, 30초 단계, 앞뒤 한 단계까지 받는다. 마지막으로 받은 단계를 저장해 같은 코드를 다시 받지 않는다.
 - 복구 코드: 코드 대신 한 번 쓸 수 있다. 해시만 저장한다. 다 쓰거나 기기를 잃으면 런북의 등록 해제 절차를 따른다.
-- 시도 제한: 틀린 코드는 비밀번호 실패와 같은 횟수에 더해 5회째에 계정을 15분 잠근다. TOTP 화면도 로그인 레이트 리밋(IP)을 받는다.
-- 저장: 비밀 값은 서명 키와 같은 방식(AES-256-GCM)으로 암호화해 auth 스키마에 둔다. 암호화 키는 `.env`의 별도 값이고 이름은 TOTP PR에서 `.env.example`에 정한다. 로그에 비밀 값, 코드, 복구 코드를 남기지 않는다.
-- E2E: 등록 화면의 비밀 값 문자열로 시험 코드에서 코드를 만든다.
+- 시도 제한: 틀린 코드(등록 확인 포함)는 비밀번호 실패와 같은 횟수에 더해 5회째에 계정을 15분 잠그고 세션을 끝낸다(`/login?locked`). 관리자는 비밀번호가 맞아도 횟수를 지우지 않고 2단계가 맞아야 지운다. TOTP 화면의 `POST`도 `POST /login`과 같은 IP 카운터로 레이트 리밋을 받는다(넘으면 `/login/totp?limited`).
+- 저장: 비밀 값은 서명 키와 같은 방식(AES-256-GCM)으로 `AUTH_TOTP_SECRET_KEY`(.env, 서명 키와 다른 값)로 암호화해 `totp_credential`(상태 `PENDING`/`ACTIVE`, 마지막으로 받은 단계)에 둔다. 복구 코드는 bcrypt 해시만 `totp_recovery_code`에 둔다. 키를 바꾸면 `totp_credential`을 지우고 다시 등록한다. 로그에 비밀 값, 코드, 복구 코드를 남기지 않는다.
+- 시험 도구: E2E는 등록 화면의 비밀 값 문자열로 코드를 만든다(`clients/e2e/support/totp.ts`, 실행 안에서 `test-results/`에 비밀 값을 둔다). 부하·장애 시험은 `run.sh`가 `infra/k6/admin-totp.js`로 시드 관리자를 한 번 등록하고 비밀 값을 `ADMIN_TOTP_SECRET`으로 시나리오에 넘긴다. 같은 30초 단계는 다시 받지 않으므로 연달아 로그인하면 다음 단계에 한다.
 
 ## issuer 호스트 이름
 토큰의 `iss`는 브라우저, IDE, 컨테이너 모두에서 같은 주소로 보여야 한다. 근거와 실측은 [ADR 0013](../adr/0013-auth-issuer-host.md)에 있다.
@@ -95,8 +95,8 @@ sequenceDiagram
 - 판매자 역할: `member.seller` 토픽을 소비한다(`SellerEventsListener`). `SellerApproved`, `SellerReinstated`는 `SELLER`를 붙이고 `SellerSuspended`는 뗀다. 이미 그 상태면 그대로다. 계정 행을 잠그고 바꾼다.
 - 관리자 계정은 `ADMIN_SEED_EMAIL`, `ADMIN_SEED_PASSWORD`(.env)로 기동할 때 한 번 만든다. 이미 있으면 바꾸지 않는다.
 - 로그인 화면은 auth의 Thymeleaf 템플릿(`templates/login.html`)이다. 실패 안내는 계정이 있는지 드러내지 않는다. 잠김(`?locked`)과 시도 초과(`?limited`)는 따로 안내한다.
-- 잠금: 비밀번호가 틀리면(`AuthenticationFailureBadCredentialsEvent`) 입력한 이메일의 계정을 행 잠금으로 읽어 센다. 5회째에 15분 잠근다. 잠긴 계정은 비밀번호를 확인하기 전에 거절하므로 잠긴 동안의 시도는 세지 않는다. 폼 로그인에 성공하면 횟수를 지운다.
-- 로그인 레이트 리밋: `POST /login`을 IP마다 1분에 `login-rate-limit.per-minute`(기본 10)회로 제한한다. Redis 고정 창 카운터이고, Redis가 응답하지 않으면 통과시킨다. 넘으면 인증하지 않고 `/login?limited`로 보낸다.
+- 잠금: 비밀번호가 틀리면(`AuthenticationFailureBadCredentialsEvent`) 입력한 이메일의 계정을 행 잠금으로 읽어 센다. 5회째에 15분 잠근다. 잠긴 계정은 비밀번호를 확인하기 전에 거절하므로 잠긴 동안의 시도는 세지 않는다. 폼 로그인에 성공하면 횟수를 지운다. 관리자는 2단계가 맞을 때 지운다(위 "관리자 2단계 인증").
+- 로그인 레이트 리밋: `POST /login`과 2단계 확인(`POST /login/totp`, `/login/totp/enroll`)을 한 카운터로 IP마다 1분에 `login-rate-limit.per-minute`(기본 10)회로 제한한다. Redis 고정 창 카운터이고, Redis가 응답하지 않으면 통과시킨다. 넘으면 인증하지 않고 `/login?limited`로 보낸다.
 - 가입 레이트 리밋: gateway의 `auth-signup` 라우트(가입, 인증, 인증 메일 재발송)에 기본 한도와 함께 엄격한 한도를 건다. IP마다 1분에 `openmarket.gateway.strict-rate-limit.requests-per-minute`(5)회이고 세 API가 한 버킷을 쓴다. 넘으면 본문 없는 429다. Redis 키는 `strict:` 접두어로 기본 한도와 나눈다.
 - 가입 API(`/v1/**`)는 세션·CSRF 없이 공개 경로 세 개만 연다. 나머지 `/v1` 경로는 막는다. 로컬에서는 auth 포트(9000)로도 닿지만, 운영 배치에서는 auth의 `/v1`을 바깥에 열지 않고 gateway로만 받는다(gateway 레이트 리밋을 우회하지 못하게).
 - 이메일 인증 토큰은 256비트 무작위 값이다. auth는 SHA-256 해시만 저장하고, 원문은 이벤트의 `verificationUrl`에만 들어간다. 24시간 뒤 만료되고 한 번 쓰면 끝난다. outbox 행은 7일 뒤 지워진다.

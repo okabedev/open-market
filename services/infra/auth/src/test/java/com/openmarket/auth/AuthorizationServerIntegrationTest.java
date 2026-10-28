@@ -1,5 +1,6 @@
 package com.openmarket.auth;
 
+import static com.openmarket.auth.SecondFactorLogins.enrolledAdmin;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
@@ -12,6 +13,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.jayway.jsonpath.JsonPath;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
+import com.openmarket.auth.SecondFactorLogins.EnrolledAdmin;
 import com.openmarket.auth.command.application.DeactivateAccountCommand;
 import com.openmarket.auth.command.application.DeactivateAccountUseCase;
 import com.openmarket.auth.infra.key.JdbcSigningKeyStore;
@@ -120,18 +122,15 @@ class AuthorizationServerIntegrationTest {
 
     @Test
     @DisplayName(
-            "관리자 시드 계정이 PKCE로 로그인하면 sub=accountId, roles, aud=클라이언트, 10분 토큰을 받고 갱신하면 리프레시 토큰이 바뀐다")
+            "관리자가 2단계 인증을 마치고 PKCE로 로그인하면 sub=accountId, roles, aud=클라이언트, 10분 토큰을 받고 갱신하면 리프레시 토큰이 바뀐다(갱신은 2단계를 다시 묻지 않는다)")
     void authorizationCodeWithPkceAndRefreshRotation() throws Exception {
-        MockHttpSession session = login("admin@openmarket.local", "admin-test-pass-1");
+        EnrolledAdmin admin = enrolledAdmin(mockMvc, jdbc, passwordEncoder);
 
-        String tokens = exchange("admin", "admin-test-secret", authorize(session, "admin", 3002));
+        String tokens =
+                exchange("admin", "admin-test-secret", authorize(admin.session(), "admin", 3002));
 
         Jwt access = decode(JsonPath.read(tokens, "$.access_token"));
-        String adminId =
-                jdbc.sql("SELECT id::text FROM account WHERE email = 'admin@openmarket.local'")
-                        .query(String.class)
-                        .single();
-        assertThat(access.getSubject()).isEqualTo(adminId);
+        assertThat(access.getSubject()).isEqualTo(admin.id().toString());
         assertThat(access.getIssuer()).hasToString(ISSUER);
         assertThat(access.getAudience()).containsExactly("admin");
         assertThat(access.getClaimAsStringList("roles")).containsExactly("ADMIN");
@@ -194,7 +193,7 @@ class AuthorizationServerIntegrationTest {
     @Test
     @DisplayName("DLT 메시지 관리자 API는 ADMIN 역할 토큰만 부른다. 구매자 토큰은 403, 토큰이 없으면 401")
     void deadLetterAdminApiRequiresAdmin() throws Exception {
-        MockHttpSession adminSession = login("admin@openmarket.local", "admin-test-pass-1");
+        MockHttpSession adminSession = enrolledAdmin(mockMvc, jdbc, passwordEncoder).session();
         String adminToken =
                 JsonPath.read(
                         exchange(
@@ -317,7 +316,9 @@ class AuthorizationServerIntegrationTest {
     @Test
     @DisplayName("PKCE 없는 인가 요청은 거절한다")
     void requiresPkce() throws Exception {
-        MockHttpSession session = login("admin@openmarket.local", "admin-test-pass-1");
+        String email = "buyer-" + UUID.randomUUID() + "@example.com";
+        insertBuyer(email, "buyer-pass-1234");
+        MockHttpSession session = login(email, "buyer-pass-1234");
 
         String redirect =
                 mockMvc.perform(
