@@ -25,6 +25,9 @@ export const NOTICES = {
   "commission-set": "수수료율을 정했습니다. 이 뒤에 구매확정되는 주문부터 씁니다.",
   "commission-reset": "기본 수수료율로 돌렸습니다. 이 뒤에 구매확정되는 주문부터 씁니다.",
   "review-shown": "리뷰를 다시 보입니다. 별점에 다시 들어가고, 검색의 별점은 몇 초 안에 바뀝니다.",
+  "dead-letter-retried":
+    "다시 보냈습니다. 실패한 그룹만 처리하고, 또 실패하면 새 DLT 메시지로 들어옵니다.",
+  "dead-letter-discarded": "버렸습니다. 메시지는 보내지 않았고 사유는 감사 로그에 남습니다.",
 } as const;
 
 export type Notice = keyof typeof NOTICES;

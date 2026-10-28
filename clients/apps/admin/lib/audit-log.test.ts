@@ -1,18 +1,8 @@
 import { describe, expect, it } from "vitest";
-import {
-  actionLabel,
-  auditLogQuery,
-  decodeCursor,
-  encodeCursor,
-  mergeAuditLogs,
-} from "./audit-log";
+import { actionLabel, auditLogQuery } from "./audit-log";
+import { encodeCursor } from "./merged-page";
 
 const CURSOR = encodeCursor("2026-10-28T01:00:00.123Z", "0199f000-0000-7000-8000-000000000009");
-
-const row = (service: string, occurredAt: string, id: string) => ({
-  service,
-  item: { id, occurredAt, action: "COUPON_STOPPED", actorId: "admin" },
-});
 
 describe("auditLogQuery", () => {
   it("조건이 없으면 모든 서비스에 기간 없이 묻는다", () => {
@@ -57,38 +47,6 @@ describe("auditLogQuery", () => {
     expect(auditLogQuery({ before: "abc" }).query).toEqual({});
     expect(auditLogQuery({ from: "2026-13-01" }).error).toContain("날짜");
     expect(auditLogQuery({ from: "2026-10-02", to: "2026-10-01" }).error).toContain("늦습니다");
-  });
-});
-
-describe("mergeAuditLogs", () => {
-  it("서비스 결과를 시각·ID 내림차순으로 합쳐 앞의 size개를 주고, 마지막 행으로 커서를 만든다", () => {
-    const page = mergeAuditLogs(
-      [
-        [
-          row("member", "2026-10-28T03:00:00.5Z", "0199-a"),
-          row("member", "2026-10-28T01:00:00Z", "0199-b"),
-        ],
-        [
-          row("payment", "2026-10-28T03:00:00.123456Z", "0199-c"),
-          row("payment", "2026-10-28T03:00:00.5Z", "0199-d"),
-        ],
-      ],
-      [false, false],
-      3,
-    );
-    expect(page.rows.map((r) => r.item.id)).toEqual(["0199-d", "0199-a", "0199-c"]);
-    expect(page.nextCursor).toBe(encodeCursor("2026-10-28T03:00:00.123456Z", "0199-c"));
-  });
-
-  it("합친 행이 size 이하이고 다음 쪽이 있는 서비스가 없으면 커서가 없다", () => {
-    const page = mergeAuditLogs([[row("member", "2026-10-28T01:00:00Z", "0199-b")]], [false], 3);
-    expect(page.nextCursor).toBeNull();
-  });
-
-  it("한 서비스라도 다음 쪽이 있으면 합친 행이 적어도 커서를 만든다", () => {
-    const id = "0199f000-0000-7000-8000-00000000000b";
-    const page = mergeAuditLogs([[row("member", "2026-10-28T01:00:00Z", id)]], [true], 3);
-    expect(decodeCursor(page.nextCursor ?? "")).toBe(`2026-10-28T01:00:00Z,${id}`);
   });
 });
 

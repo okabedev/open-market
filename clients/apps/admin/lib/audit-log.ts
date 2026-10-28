@@ -1,10 +1,10 @@
 import { ADMIN_SERVICES, adminService, type AdminService } from "./admin-services";
 import { addDays, kstStartOf, parseDate } from "./dates";
+import { decodeCursor } from "./merged-page";
 
 /**
- * 감사 로그 화면(ADM-4, ADR 0023)의 조건과 합치기. 서비스마다 `GET /v1/admin/audit-logs`가 `(시각, id)` 내림차순으로 커서보다 앞선 행을
- * `size`개까지 준다(docs/architecture/data.md "audit_log"). 화면은 모든 대상 서비스의 결과를 같은 순서로 합쳐 앞의 `size`개를 보이므로, 합친
- * 앞 `size`개는 전체에서도 맞다. 다음 쪽 커서는 보인 마지막 행으로 만들어 모든 서비스에 같이 보낸다.
+ * 감사 로그 화면(ADM-4, ADR 0023)의 조건. 서비스마다 `GET /v1/admin/audit-logs`가 `(시각, id)` 내림차순으로 커서보다 앞선 행을
+ * `size`개까지 준다(docs/architecture/data.md "audit_log"). 화면은 결과를 `merged-page.ts`로 합친다.
  */
 
 /** 서비스가 남기는 작업. 서비스가 새 작업을 남기면 여기에 이름을 더한다(모르는 작업은 코드 그대로 보인다). */
@@ -116,52 +116,4 @@ export function auditLogQuery(params: Params): AuditLogQuery {
     result.query.to = kstStartOf(addDays(to, 1));
   }
   return result;
-}
-
-const CURSOR = /^\d{4}-\d{2}-\d{2}T[\d:.]+Z,[0-9a-f-]{36}$/;
-
-/** 서비스와 같은 커서: `<시각(ISO-8601)>,<id>`를 base64url(패딩 없음)로. */
-export function encodeCursor(occurredAt: string, id: string): string {
-  return Buffer.from(`${occurredAt},${id}`, "utf8").toString("base64url");
-}
-
-/** 커서 안의 `<시각>,<id>`. 형식이 틀리면 null이다. */
-export function decodeCursor(cursor: string): string | null {
-  if (!/^[A-Za-z0-9_-]+$/.test(cursor)) {
-    return null;
-  }
-  const value = Buffer.from(cursor, "base64url").toString("utf8");
-  return CURSOR.test(value) ? value : null;
-}
-
-/** ISO 시각(UTC, `Z`)의 소수 자릿수를 9자리로 맞춘 비교 키. 서비스는 끝의 0을 떼고 쓴다. */
-function instantKey(iso: string): string {
-  const match = /^(.*T\d{2}:\d{2}:\d{2})(?:\.(\d+))?Z$/.exec(iso);
-  return match ? `${match[1]}.${(match[2] ?? "").padEnd(9, "0")}` : iso;
-}
-
-export type AuditLogRow<I> = { service: string; item: I };
-type Item = { id?: string; occurredAt?: string };
-
-/**
- * 서비스 결과를 `(시각, id)` 내림차순으로 합쳐 앞의 `size`개를 준다. 합친 행이 `size`를 넘거나 다음 쪽이 있는 서비스가 있으면 보인 마지막
- * 행으로 커서를 만든다.
- */
-export function mergeAuditLogs<I extends Item>(
-  pages: AuditLogRow<I>[][],
-  hasMore: boolean[],
-  size: number,
-): { rows: AuditLogRow<I>[]; nextCursor: string | null } {
-  const key = (row: AuditLogRow<I>) => instantKey(row.item.occurredAt ?? "");
-  const merged = pages.flat().sort((a, b) => {
-    const byTime = key(b).localeCompare(key(a));
-    return byTime !== 0 ? byTime : (b.item.id ?? "").localeCompare(a.item.id ?? "");
-  });
-  const rows = merged.slice(0, size);
-  const last = rows.at(-1);
-  const more = merged.length > size || hasMore.some(Boolean);
-  return {
-    rows,
-    nextCursor: more && last ? encodeCursor(last.item.occurredAt ?? "", last.item.id ?? "") : null,
-  };
 }

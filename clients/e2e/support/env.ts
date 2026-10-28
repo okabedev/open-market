@@ -13,6 +13,8 @@ export const env = {
   adminEmail: process.env.ADMIN_SEED_EMAIL ?? "admin@openmarket.local",
   adminPassword: process.env.ADMIN_SEED_PASSWORD ?? "admin-local-1234",
   sellerClientSecret: process.env.SELLER_CLIENT_SECRET ?? "seller-local-secret",
+  /** run.sh가 띄운 Compose 프로젝트. 화면으로 만들 수 없는 상태(DLT 메시지)를 컨테이너에서 만든다 */
+  composeProject: process.env.E2E_COMPOSE_PROJECT ?? "openmarket-e2e",
 };
 
 /** 실행마다 겹치지 않는 값. 같은 스택에서 다시 돌려도 이메일과 상호가 겹치지 않는다. */

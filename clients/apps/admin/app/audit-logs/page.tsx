@@ -21,11 +21,11 @@ import {
   ACTION_LABELS,
   actionLabel,
   auditLogQuery,
-  mergeAuditLogs,
   targetLabel,
   type AuditLogFilters,
 } from "@/lib/audit-log";
 import { fanOut } from "@/lib/fan-out";
+import { mergeByTime } from "@/lib/merged-page";
 import { requireSession } from "@/lib/session";
 
 const selectClass = "h-10 w-full rounded-md border border-input bg-card px-3 text-sm";
@@ -126,10 +126,11 @@ async function AuditLogList({ query }: { query: ReturnType<typeof auditLogQuery>
   if (results.length === 0) {
     return <Alert variant="destructive">감사 로그를 불러오지 못했습니다.</Alert>;
   }
-  const page = mergeAuditLogs(
+  const page = mergeByTime(
     results.map(({ service, value }) => (value.items ?? []).map((item) => ({ service, item }))),
     results.map(({ value }) => Boolean(value.nextCursor)),
     PAGE_SIZE,
+    (item) => item.occurredAt,
   );
   const first = new URLSearchParams(
     Object.entries(query.filters).filter((entry): entry is [string, string] => Boolean(entry[1])),
