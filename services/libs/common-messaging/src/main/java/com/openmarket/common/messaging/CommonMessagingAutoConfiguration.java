@@ -3,10 +3,13 @@ package com.openmarket.common.messaging;
 import com.openmarket.common.messaging.cleanup.MessagingCleanupJob;
 import com.openmarket.common.messaging.consumer.EventEnvelopeReader;
 import com.openmarket.common.messaging.consumer.IdempotentEventProcessor;
+import com.openmarket.common.messaging.metrics.MessagingMetrics;
 import com.openmarket.common.messaging.outbox.JdbcOutbox;
 import com.openmarket.common.messaging.outbox.Outbox;
 import com.openmarket.common.messaging.trace.MicrometerTraceparentSupplier;
 import com.openmarket.common.messaging.trace.TraceparentSupplier;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Metrics;
 import io.micrometer.tracing.Tracer;
 import io.micrometer.tracing.propagation.Propagator;
 import java.time.Clock;
@@ -47,13 +50,21 @@ public class CommonMessagingAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
+    MessagingMetrics messagingMetrics(ObjectProvider<MeterRegistry> registry) {
+        // 지표 자동설정이 없는 앱(테스트 등)은 전역 레지스트리에 센다. 등록된 레지스트리가 없으면 버려진다.
+        return new MessagingMetrics(registry.getIfAvailable(() -> Metrics.globalRegistry));
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
     Outbox outbox(
             JdbcClient jdbcClient,
             ObjectProvider<JsonMapper> jsonMapper,
             TraceparentSupplier traceparentSupplier,
-            ObjectProvider<Clock> clock) {
+            ObjectProvider<Clock> clock,
+            MessagingMetrics metrics) {
         return new JdbcOutbox(
-                jdbcClient, jsonMapper(jsonMapper), traceparentSupplier, clock(clock));
+                jdbcClient, jsonMapper(jsonMapper), traceparentSupplier, clock(clock), metrics);
     }
 
     @Bean
@@ -62,12 +73,14 @@ public class CommonMessagingAutoConfiguration {
             JdbcClient jdbcClient,
             ObjectProvider<JsonMapper> jsonMapper,
             PlatformTransactionManager transactionManager,
-            ObjectProvider<Clock> clock) {
+            ObjectProvider<Clock> clock,
+            MessagingMetrics metrics) {
         return new IdempotentEventProcessor(
                 new EventEnvelopeReader(jsonMapper(jsonMapper)),
                 jdbcClient,
                 new TransactionTemplate(transactionManager),
-                clock(clock));
+                clock(clock),
+                metrics);
     }
 
     @Bean

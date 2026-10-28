@@ -1,5 +1,6 @@
 package com.openmarket.order.command.application;
 
+import com.openmarket.common.messaging.consumer.IgnoredEvents;
 import com.openmarket.order.command.domain.Order;
 import com.openmarket.order.command.domain.OrderRepository;
 import com.openmarket.order.command.domain.SellerOrderProgress;
@@ -31,7 +32,7 @@ public class AdvanceSellerOrderUseCase {
     public void execute(AdvanceSellerOrderCommand command) {
         Optional<Order> found = orders.findForUpdateById(command.orderId());
         if (found.isEmpty()) {
-            log.warn("모르는 주문의 배송 진행이라 넘긴다: orderId={}", command.orderId());
+            IgnoredEvents.warn(log, "모르는 주문의 배송 진행이라 넘긴다: orderId={}", command.orderId());
             return;
         }
         Order order = found.get();
@@ -40,7 +41,8 @@ public class AdvanceSellerOrderUseCase {
             case APPLIED -> orders.save(order);
             case ALREADY -> {}
             case INVALID ->
-                    log.warn(
+                    IgnoredEvents.warn(
+                            log,
                             "하위 주문 진행 상태를 바꿀 수 없어 넘긴다: orderId={}, sellerOrderId={}, status={}",
                             order.id(),
                             command.sellerOrderId(),

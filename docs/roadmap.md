@@ -325,7 +325,8 @@
   - [x] `infra/fault/run.sh`(Toxiproxy `fault` profile, 가짜 PG, k6 `saga.js`, `check.sql`). Kafka 1분 중지, DB 지연·끊김, PG 지연에서 위반 0, DLT 0. 결과는 [risks.md](architecture/risks.md) "장애 주입"
   - [x] 복제 슬롯 무효(R5, 운영자가 슬롯을 지워야 복구), 쿠폰 예약 실패 조합, Redis 장애 중 쿠폰 발급. 위반 0, DLT 0
   - [x] Redis 장애 중 gateway OOM, Redis 복귀 순간 promotion 지연 수정(Lettuce `REJECT_COMMANDS`, 응답 대기 명령 상한)
-  - [ ] 복제 슬롯 무효 경보(대시보드·알림)와 복구 절차(런북)
+  - [x] 복제 슬롯 무효 경보(대시보드·알림). `infra/fault/run.sh slot`이 경보 메일을 받은 뒤 복구하고 해결 메일까지 확인한다
+  - [ ] 복제 슬롯 복구 절차(런북)
 - [x] 관리자 백오피스: 운영 지표, 감사 로그 조회, DLT 재처리(ADM-4, ADM-5)
   - [x] `common-messaging` DLT 수집·다시 보내기·버리기(R14)
     - [x] `dead_letter` 테이블, DLT 수집기, 다시 보낸 메시지의 대상 그룹 거르기(`dlt-target-group`)
@@ -337,7 +338,7 @@
     - [x] 감사 로그(`/audit-logs`). E2E `m6-admin-audit-log`
     - [x] DLT 메시지(`/dead-letters`). E2E `m6-admin-dead-letters`(페이로드를 읽을 수 없는 이벤트를 Kafka에 넣어 그룹별 DLT 메시지를 만든다)
 - [x] 관리자 2단계 인증(TOTP, R15). Spring Security 7 다중 요소 인증의 요소 권한([ADR 0024](adr/0024-admin-totp-mfa.md)). E2E·부하·장애 시험 도구의 관리자 로그인도 코드를 만든다
-- [ ] 대시보드와 알림 규칙(NFR-10): 서비스 RED, JVM, Kafka, 비즈니스 대시보드와 알림 5종([observability.md](architecture/observability.md))
+- [x] 대시보드와 알림 규칙(NFR-10): 서비스 RED, JVM, Kafka와 outbox, 비즈니스 대시보드와 알림 7종(오류율, p95, 소비자 지연, DLT 유입, outbox 미발행, 복제 슬롯 무효·없음)을 Mailpit으로([observability.md](architecture/observability.md), [ADR 0025](adr/0025-ops-metrics-and-alerts.md)). 메시징 지표(outbox 이벤트, DLT 유입, 이벤트 처리 지연, 무시한 이벤트)는 `common-messaging`, 복제 슬롯은 postgres-exporter
 - [ ] 개인정보 마스킹·감사 로그 점검(NFR-7, NFR-8), OWASP Top 10 점검
 - [ ] 운영 런북(장애 유형별 대응 절차, 관리자 TOTP 등록 해제 포함)
 - [ ] 마일스톤 E2E `infra/e2e/run.sh m6`

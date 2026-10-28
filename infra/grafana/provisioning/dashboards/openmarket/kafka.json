@@ -1,0 +1,665 @@
+{
+  "uid": "openmarket-kafka",
+  "title": "Kafka와 outbox",
+  "description": "소비자 지연, DLT 유입, 무시한 이벤트, 이벤트 처리 지연, outbox 발행(복제 슬롯).",
+  "tags": [
+    "openmarket"
+  ],
+  "timezone": "browser",
+  "editable": true,
+  "graphTooltip": 1,
+  "refresh": "30s",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "schemaVersion": 41,
+  "templating": {
+    "list": [
+      {
+        "name": "application",
+        "label": "서비스",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "query": {
+          "query": "label_values(up{job=\"services\"}, application)",
+          "refId": "application"
+        },
+        "definition": "label_values(up{job=\"services\"}, application)",
+        "includeAll": true,
+        "multi": true,
+        "allValue": ".+",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "refresh": 2,
+        "sort": 1
+      }
+    ]
+  },
+  "annotations": {
+    "list": []
+  },
+  "links": [
+    {
+      "type": "dashboards",
+      "tags": [
+        "openmarket"
+      ],
+      "asDropdown": true,
+      "title": "Open Market"
+    }
+  ],
+  "panels": [
+    {
+      "type": "row",
+      "title": "소비",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "w": 24,
+        "h": 1,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1
+    },
+    {
+      "type": "timeseries",
+      "title": "소비자 지연(lag, 소비자별 최대)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "max by (application, client_id) (kafka_consumer_fetch_manager_records_lag_max{application=~\"$application\"})",
+          "legendFormat": "{{application}} {{client_id}}",
+          "refId": "A",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "gridPos": {
+        "w": 12,
+        "h": 8,
+        "x": 0,
+        "y": 1
+      },
+      "description": "소비자(리스너 컨테이너 스레드)마다 맡은 파티션 중 가장 큰 lag. 토픽 라벨은 없다. 알림 \"소비자 지연 증가\": 서비스별 최대 1,000건 초과가 5분. 서비스가 죽으면 이 값도 사라지므로 up을 함께 본다",
+      "id": 2
+    },
+    {
+      "type": "timeseries",
+      "title": "이벤트 처리 지연 p95(리스너별)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "histogram_quantile(0.95, sum by (listener, le) (rate(messaging_event_delay_seconds_bucket{application=~\"$application\"}[$__rate_interval])))",
+          "legendFormat": "{{listener}}",
+          "refId": "A",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "gridPos": {
+        "w": 12,
+        "h": 8,
+        "x": 12,
+        "y": 1
+      },
+      "description": "이벤트를 outbox에 쌓은 시각부터 리스너가 처리를 마칠 때까지. Debezium·Kafka 전달과 재시도가 모두 들어간다",
+      "id": 3
+    },
+    {
+      "type": "timeseries",
+      "title": "DLT 유입",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (application, topic, group) (increase(messaging_dead_letters_total{application=~\"$application\"}[$__rate_interval]))",
+          "legendFormat": "{{group}} ← {{topic}}",
+          "refId": "A",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "gridPos": {
+        "w": 8,
+        "h": 8,
+        "x": 0,
+        "y": 9
+      },
+      "description": "알림 \"DLT 유입\". admin \"DLT 메시지\" 화면에서 다시 보내거나 버린다",
+      "id": 4
+    },
+    {
+      "type": "timeseries",
+      "title": "무시한 이벤트",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (listener) (increase(messaging_events_ignored_total{application=~\"$application\"}[$__rate_interval]))",
+          "legendFormat": "{{listener}}",
+          "refId": "A",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "gridPos": {
+        "w": 8,
+        "h": 8,
+        "x": 8,
+        "y": 9
+      },
+      "description": "상태 전이가 맞지 않아 처리하지 않고 넘긴 이벤트(messaging.md \"순서\")",
+      "id": 5
+    },
+    {
+      "type": "timeseries",
+      "title": "처리한 이벤트(초당)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (listener) (rate(messaging_event_delay_seconds_count{application=~\"$application\"}[$__rate_interval]))",
+          "legendFormat": "{{listener}}",
+          "refId": "A",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "gridPos": {
+        "w": 8,
+        "h": 8,
+        "x": 16,
+        "y": 9
+      },
+      "id": 6
+    },
+    {
+      "type": "row",
+      "title": "발행(outbox → Debezium)",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "w": 24,
+        "h": 1,
+        "x": 0,
+        "y": 17
+      },
+      "id": 7
+    },
+    {
+      "type": "timeseries",
+      "title": "outbox 쌓인 이벤트(초당)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (type) (rate(messaging_outbox_events_total{application=~\"$application\"}[$__rate_interval]))",
+          "legendFormat": "{{type}}",
+          "refId": "A",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "gridPos": {
+        "w": 12,
+        "h": 8,
+        "x": 0,
+        "y": 18
+      },
+      "id": 8
+    },
+    {
+      "type": "timeseries",
+      "title": "복제 슬롯 미확인 WAL",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "max by (slot_name) (pg_replication_slots_slot_current_wal_lsn - pg_replication_slots_slot_confirmed_flush_lsn)",
+          "legendFormat": "{{slot_name}}",
+          "refId": "A",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "gridPos": {
+        "w": 12,
+        "h": 8,
+        "x": 12,
+        "y": 18
+      },
+      "description": "Debezium이 아직 확인하지 않은 WAL. 알림 \"outbox 미발행 증가\": 16MiB 초과가 3분",
+      "id": 9
+    },
+    {
+      "type": "stat",
+      "title": "슬롯 활성",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "max(pg_replication_slots_slot_is_active{slot_name=\"openmarket_outbox\"})",
+          "legendFormat": "",
+          "refId": "A",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "gridPos": {
+        "w": 8,
+        "h": 4,
+        "x": 0,
+        "y": 26
+      },
+      "description": "1이면 Debezium이 붙어 있다",
+      "id": 10
+    },
+    {
+      "type": "stat",
+      "title": "슬롯 WAL 상태(lost, unreserved면 1)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "max(pg_replication_slots_wal_status{slot_name=\"openmarket_outbox\", wal_status=~\"lost|unreserved\"}) or vector(0)",
+          "legendFormat": "",
+          "refId": "A",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "gridPos": {
+        "w": 8,
+        "h": 4,
+        "x": 8,
+        "y": 26
+      },
+      "description": "알림 \"복제 슬롯 무효\". lost는 자동 복구되지 않는다(런북)",
+      "id": 11
+    },
+    {
+      "type": "stat",
+      "title": "슬롯이 잃기 전까지 남은 WAL",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "min(pg_replication_slots_safe_wal_size_bytes{slot_name=\"openmarket_outbox\"})",
+          "legendFormat": "",
+          "refId": "A",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "gridPos": {
+        "w": 8,
+        "h": 4,
+        "x": 16,
+        "y": 26
+      },
+      "description": "max_slot_wal_keep_size(기본 1GB)까지 남은 양",
+      "id": 12
+    }
+  ]
+}

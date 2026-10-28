@@ -9,6 +9,8 @@ dependencies {
     // Boot는 이 어펜더를 포함하지 않는다. 버전은 Boot BOM의 OpenTelemetry(1.62.0)에 맞춘다(ADR 0009).
     implementation(libs.opentelemetry.logback.appender)
     implementation("ch.qos.logback:logback-classic")
+    // 가상 스레드 지표(고정 시간, 제출 실패). Boot가 JVM 지표와 함께 등록한다(docs/architecture/observability.md "대시보드와 알림").
+    implementation("io.micrometer:micrometer-java21")
 
     testImplementation(project(":libs:common-test"))
     testImplementation("org.springframework.boot:spring-boot-micrometer-tracing-test")

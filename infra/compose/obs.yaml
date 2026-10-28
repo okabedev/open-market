@@ -58,6 +58,19 @@ services:
       timeout: 5s
       retries: 20
 
+  # 복제 슬롯 상태(무효, 확인되지 않은 WAL)와 Postgres 통계를 Prometheus에 낸다. 계정은 infra/postgres/init/03-monitor.sh.
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.20.1
+    profiles: [obs]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATA_SOURCE_URI: postgres:5432/openmarket?sslmode=disable
+      DATA_SOURCE_USER: monitor
+      DATA_SOURCE_PASS: ${MONITOR_DB_PASSWORD:?}
+    mem_limit: 64m
+
   grafana:
     image: grafana/grafana:13.2.3
     profiles: [obs]
@@ -68,6 +81,8 @@ services:
         condition: service_healthy
       loki:
         condition: service_started
+      mailpit:
+        condition: service_healthy
     environment:
       # 로컬 전용이라 로그인 없이 관리자 권한으로 연다. 비밀 값이 없다.
       GF_AUTH_ANONYMOUS_ENABLED: "true"
@@ -77,6 +92,14 @@ services:
       GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
       # 기동 후 플러그인을 인터넷에서 최신 버전으로 받거나 올리지 않는다. 이미지에 든 플러그인만 쓴다.
       GF_PLUGINS_PREINSTALL_DISABLED: "true"
+      # 알림 메일은 로컬 Mailpit(기본 profile)으로 보낸다. 받은 메일은 http://localhost:8025에서 본다.
+      GF_SMTP_ENABLED: "true"
+      GF_SMTP_HOST: mailpit:1025
+      GF_SMTP_FROM_ADDRESS: grafana@openmarket.local
+      GF_SMTP_FROM_NAME: Open Market 알림
+      GF_SMTP_STARTTLS_POLICY: NoStartTLS
+      # 알림 메일의 링크 주소
+      GF_SERVER_ROOT_URL: http://localhost:3003
     ports:
       - "3003:3000" # 3000~3002는 프론트 앱이 쓴다
     volumes:

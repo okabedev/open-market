@@ -1,5 +1,6 @@
 package com.openmarket.order.command.application;
 
+import com.openmarket.common.messaging.consumer.IgnoredEvents;
 import com.openmarket.common.messaging.outbox.Outbox;
 import com.openmarket.order.command.domain.CancelReason;
 import com.openmarket.order.command.domain.Order;
@@ -35,7 +36,7 @@ public class CancelOrderUseCase {
     public void execute(CancelOrderCommand command) {
         Optional<Order> found = orders.findForUpdateById(command.orderId());
         if (found.isEmpty()) {
-            log.warn("모르는 주문의 취소라 넘긴다: orderId={}", command.orderId());
+            IgnoredEvents.warn(log, "모르는 주문의 취소라 넘긴다: orderId={}", command.orderId());
             return;
         }
         Order order = found.get();
@@ -51,7 +52,11 @@ public class CancelOrderUseCase {
             }
             case ALREADY -> {}
             case INVALID ->
-                    log.warn("취소할 수 없는 상태라 넘긴다: orderId={}, status={}", order.id(), order.status());
+                    IgnoredEvents.warn(
+                            log,
+                            "취소할 수 없는 상태라 넘긴다: orderId={}, status={}",
+                            order.id(),
+                            order.status());
         }
     }
 }

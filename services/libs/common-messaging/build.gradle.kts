@@ -13,6 +13,8 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-jdbc")
     implementation("tools.jackson.core:jackson-databind")
     implementation("io.micrometer:micrometer-tracing")
+    // 메시징 지표(MessagingMetrics, IgnoredEvents). 서비스의 Prometheus 레지스트리에 센다.
+    implementation("io.micrometer:micrometer-core")
     implementation(libs.shedlock.jdbc)
     // DLT 메시지 관리자 API(DeadLetterAdminController). MVC 서비스에만 켜지므로 웹을 강제하지 않는다.
     compileOnly("org.springframework:spring-web")

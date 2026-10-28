@@ -6,6 +6,7 @@ import com.openmarket.catalog.command.domain.StockAdjustment;
 import com.openmarket.catalog.command.domain.StockAdjustmentRepository;
 import com.openmarket.catalog.command.domain.StockRepository;
 import com.openmarket.common.core.id.Ids;
+import com.openmarket.common.messaging.consumer.IgnoredEvents;
 import com.openmarket.common.messaging.outbox.Outbox;
 import java.time.Clock;
 import java.time.Instant;
@@ -61,7 +62,8 @@ public class RestockClaimUseCase {
                 (skuId, quantity) -> {
                     Optional<Stock> found = stocks.findForUpdateBySkuId(skuId);
                     if (found.isEmpty()) {
-                        log.warn(
+                        IgnoredEvents.warn(
+                                log,
                                 "재고가 없는 SKU라 재입고를 넘긴다: claimId={}, skuId={}",
                                 command.claimId(),
                                 skuId);
@@ -70,7 +72,8 @@ public class RestockClaimUseCase {
                     Stock stock = found.get();
                     int added = stock.restock(quantity, now);
                     if (added == 0) {
-                        log.warn(
+                        IgnoredEvents.warn(
+                                log,
                                 "실재고가 상한이라 재입고를 넘긴다: claimId={}, skuId={}",
                                 command.claimId(),
                                 skuId);

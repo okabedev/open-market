@@ -1,5 +1,6 @@
 package com.openmarket.common.messaging.consumer;
 
+import com.openmarket.common.messaging.metrics.MessagingMetrics;
 import java.nio.charset.StandardCharsets;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.header.Header;
@@ -15,10 +16,18 @@ import org.springframework.kafka.support.KafkaUtils;
  *
  * <p>위치({@code 토픽-파티션@오프셋}), 이벤트 {@code type}·{@code id}, 예외 클래스만 쓴다. 키, 값, 예외 메시지는 개인정보가 들어갈 수 있어
  * 쓰지 않는다. 예외 메시지와 스택은 DLT 메시지의 {@code kafka_dlt-*} 헤더에 남는다.
+ *
+ * <p>DLT로 보낸 메시지는 원래 토픽과 리스너 그룹으로 센다({@link MessagingMetrics#DEAD_LETTERS}).
  */
 public class FailedEventLogger implements RetryListener {
 
     private static final Logger log = LoggerFactory.getLogger(FailedEventLogger.class);
+
+    private final MessagingMetrics metrics;
+
+    public FailedEventLogger(MessagingMetrics metrics) {
+        this.metrics = metrics;
+    }
 
     @Override
     public void failedDelivery(
@@ -40,6 +49,7 @@ public class FailedEventLogger implements RetryListener {
                 header(record, EventEnvelopeReader.TYPE),
                 header(record, EventEnvelopeReader.ID),
                 cause(ex));
+        metrics.deadLettered(record.topic(), KafkaUtils.getConsumerGroupId());
     }
 
     @Override

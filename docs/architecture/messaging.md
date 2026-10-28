@@ -95,7 +95,7 @@
 
 순서
 - 순서는 같은 키(집계) 안에서만 보장된다. 다른 집계의 이벤트 순서에 기대지 않는다.
-- 상태 전이가 맞지 않는 이벤트가 오면(예: `PAID`가 아닌 주문에 `ShipmentShipped` 도착) 경고 로그를 남기고 무시한다. 무시한 이벤트는 지표로 센다.
+- 상태 전이가 맞지 않는 이벤트가 오면(예: `PAID`가 아닌 주문에 `ShipmentShipped` 도착) 경고 로그를 남기고 무시한다. 유스케이스는 `log.warn` 대신 `common-messaging`의 `IgnoredEvents.warn(log, ...)`을 불러, 리스너별로 `messaging_events_ignored_total`을 센다([observability.md](observability.md) "지표").
 
 ## DLT 재처리
 관리자가 DLT 메시지를 보고 다시 처리하거나 버린다(ADM-5, M6). 근거는 [ADR 0022](../adr/0022-dead-letter-reprocessing.md), 화면이 여러 서비스를 합치는 방법은 [ADR 0023](../adr/0023-admin-ops-queries.md)이다.

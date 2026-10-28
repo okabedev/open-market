@@ -47,6 +47,7 @@ cp .env.example .env
 - 토스페이먼츠 키(`TOSS_CLIENT_KEY`, `TOSS_SECRET_KEY`)는 `.env.example`의 문서용 공개 테스트 키를 그대로 쓴다. 주문서형 연동 키는 전자결제 신청(사업자 정보) 뒤에만 발급되기 때문이다([ADR 0018](adr/0018-toss-payments-integration.md)). 내 상점 키가 있으면 바꾼다. `test_`로 시작하는 키만 쓴다.
 - `.env.example`에 새 변수가 생기면(예: M3의 `ORDER_CLIENT_SECRET`, `MEMBER_CLIENT_SECRET`) 이미 만든 `.env`에도 더한다. compose는 빠진 변수가 있으면 뜨지 않는다.
 - `.env`는 커밋하지 않는다.
+- M6 대시보드·알림 전에 만든 `.env`에는 `MONITOR_DB_PASSWORD`를 `.env.example`에서 옮겨 적는다. 그 전에 만든 Postgres 볼륨에는 `monitor` 계정이 없으므로 볼륨을 지우거나(`docker compose down -v`) 한 번 만든다: `docker compose exec -T postgres psql -U postgres -d openmarket -c "CREATE ROLE monitor LOGIN PASSWORD '<MONITOR_DB_PASSWORD>'" -c "GRANT pg_monitor TO monitor"`.
 
 ## 5. 실행
 구성은 [overview.md](architecture/overview.md)의 "로컬 실행 구성"을 본다. 레포 루트에서 실행한다.
@@ -79,7 +80,8 @@ docker compose --profile search --profile obs --profile apps down
 | Elasticsearch (`search`, `apps`) | http://localhost:9200 | 인증 없음. nori 플러그인을 넣은 이미지를 처음 띄울 때 빌드한다. 상품 인덱스는 search 서비스가 뜰 때 만든다([search.md](architecture/search.md)) |
 | OTel Collector (`obs`) | OTLP gRPC `localhost:4317`, HTTP `localhost:4318` | 서비스가 트레이스와 로그를 보낸다. `obs`를 띄우지 않으면 서비스 로그에 `Failed to export` ERROR가 가끔 남는다(OTel이 빈도를 제한한다). 무시해도 된다 |
 | Prometheus (`obs`) | http://localhost:9090 | |
-| Grafana (`obs`) | http://localhost:3003 | 로그인 없음. 데이터 소스 Prometheus, Tempo, Loki가 미리 등록된다 |
+| Grafana (`obs`) | http://localhost:3003 | 로그인 없음. 데이터 소스 Prometheus, Tempo, Loki와 폴더 "Open Market"의 대시보드 4개, 알림 7종이 미리 등록된다. 알림 메일은 Mailpit으로 간다([observability.md](architecture/observability.md) "대시보드와 알림") |
+| postgres-exporter (`obs`) | 호스트에 열지 않음 | Prometheus가 `postgres-exporter:9187`을 스크레이프한다 |
 
 - `kafka-init`은 `infra/kafka/topics.txt`의 토픽을 만들고 끝나는 일회성 컨테이너다. `docker compose ps -a`에서 `Exited (0)`이면 정상이다. 실패하면 `docker compose logs kafka-init`로 원인을 본다.
 - connect가 unhealthy면 outbox 커넥터 태스크가 RUNNING이 아니다. 원인은 커넥터 상태(`curl localhost:8083/connectors/outbox/status`)의 `trace`와 `docker compose logs connect`로 본다. 대처는 [messaging.md](architecture/messaging.md)의 "장애 때 동작"에 있다.
@@ -189,7 +191,7 @@ infra/fault/run.sh kafka         # 하나만
 FAULT_AT=30 FAULT_FOR=120 infra/fault/run.sh kafka   # 장애 시작 시점과 길이(초)
 ```
 
-- 별도 Compose 프로젝트(`openmarket-fault`)를 빈 볼륨으로 띄운다(기본·`apps`·`e2e`(가짜 PG)·`fault`(Toxiproxy) profile). 서비스의 DB 연결은 Toxiproxy를 거친다(`SERVICE_POSTGRES_HOST=toxiproxy`). Debezium은 Postgres에 바로 붙는다. 결제 기한은 4분, 만료 작업은 10초마다로 줄인다.
+- 별도 Compose 프로젝트(`openmarket-fault`)를 빈 볼륨으로 띄운다(기본·`apps`·`e2e`(가짜 PG)·`fault`(Toxiproxy)·`obs`(경보) profile). 서비스의 DB 연결은 Toxiproxy를 거친다(`SERVICE_POSTGRES_HOST=toxiproxy`). Debezium은 Postgres에 바로 붙는다. 결제 기한은 4분, 만료 작업은 10초마다로 줄인다.
 - 장애마다 k6 시나리오를 돌린다. 기본은 `infra/k6/saga.js`로 주문 생성 → 결제 준비 대기 → 가짜 PG 승인 → 결제 승인을 초당 2건, 3분 동안 흘린다(`SAGA_RATE`, `SAGA_DURATION`, `SAGA_BUYERS`). 실패하면 같은 멱등 키로 다시 부른다. `redis`는 `coupon-issue.js`(선착순 발급, 초당 3명), `coupon`은 `coupon-saga.js`(쿠폰 예약 실패 조합 30경우, `COMBO_CASES`)를 돌린다. 이 스택은 복제 슬롯 상한(`max_slot_wal_keep_size`)이 64MB다.
 
   | 장애 | 넣는 방법 | 기본 |
@@ -202,4 +204,4 @@ FAULT_AT=30 FAULT_FOR=120 infra/fault/run.sh kafka   # 장애 시작 시점과 �
   | `redis` | Redis를 SIGKILL로 죽였다가 다시 띄운다(마지막 스냅숏 뒤 키를 잃는다) | 60초 |
   | `coupon` | 넣지 않는다. 같은 쿠폰·재고 1개 상품으로 두 주문을 한꺼번에 넣어 예약을 갈리게 한다 | - |
 - k6가 끝나면 끝나지 않은 주문·결제가 없어질 때까지(최대 10분) 기다린 뒤 `infra/fault/check.sql`(슈퍼유저)과 `.DLT` 토픽 메시지 수를 센다. 검사는 주문 끝 상태, 결제·주문·재고 예약의 짝, 남은 재고 예약, SKU별 재고 차감, 쿠폰 발급 수와 행 수, 묶인 쿠폰, 사용된 쿠폰과 결제 완료 주문의 짝이다. Redis의 발급 수 키도 참고로 출력한다.
-- 결과: `infra/fault/.out/<장애>.log`(k6 출력과 막힌 단계 수), `<장애>-check.txt`(검사). 위반이나 DLT 메시지가 있으면 종료 코드가 0이 아니다. 남겨서 보려면 `FAULT_KEEP=1`이다.
+- 결과: `infra/fault/.out/<장애>.log`(k6 출력과 막힌 단계 수), `<장애>-check.txt`(검사). 위반이나 DLT 메시지가 있으면 종료 코드가 0이 아니다. `slot`은 Grafana "복제 슬롯 무효" 경보 메일이 Mailpit에 온 뒤(최대 `SLOT_ALERT_WAIT`초, 기본 240) 슬롯을 지워 복구하고, 해결 메일까지 오는지 본다(`slot-alert.txt`). 메일이 오지 않아도 종료 코드가 0이 아니다. 남겨서 보려면 `FAULT_KEEP=1`이다.

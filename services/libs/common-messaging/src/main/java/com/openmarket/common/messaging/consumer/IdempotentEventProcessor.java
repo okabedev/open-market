@@ -1,5 +1,6 @@
 package com.openmarket.common.messaging.consumer;
 
+import com.openmarket.common.messaging.metrics.MessagingMetrics;
 import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import java.time.Clock;
@@ -30,6 +31,9 @@ import org.springframework.transaction.support.TransactionTemplate;
  * <p>관리자가 DLT 메시지를 다시 보내면 원래 토픽에 {@value #TARGET_GROUP_HEADER} 헤더(실패한 그룹)가 붙어 온다. 지금 리스너의 그룹이 아니면
  * 처리하지 않고 넘긴다. 다른 그룹은 처리 기록(30일 보관)이 지워진 뒤에도 다시 처리하지 않는다(ADR 0022). 리스너 그룹은 리스너 컨테이너가 리스너 스레드에 둔
  * 값이다. 리스너 스레드 밖이라 그룹을 모르면 막지 않는다.
+ *
+ * <p>처리한 이벤트는 발생 시각부터 처리를 마칠 때까지 걸린 시간을 리스너별로 잰다({@link MessagingMetrics#EVENT_DELAY}). 핸들러가 이벤트를
+ * 넘기면({@link IgnoredEvents}) 리스너 이름으로 센다.
  */
 public class IdempotentEventProcessor {
 
@@ -42,16 +46,19 @@ public class IdempotentEventProcessor {
     private final JdbcClient jdbc;
     private final TransactionTemplate transaction;
     private final Clock clock;
+    private final MessagingMetrics metrics;
 
     public IdempotentEventProcessor(
             EventEnvelopeReader reader,
             JdbcClient jdbc,
             TransactionTemplate transaction,
-            Clock clock) {
+            Clock clock,
+            MessagingMetrics metrics) {
         this.reader = reader;
         this.jdbc = jdbc;
         this.transaction = transaction;
         this.clock = clock;
+        this.metrics = metrics;
     }
 
     /**
@@ -75,18 +82,22 @@ public class IdempotentEventProcessor {
         }
         EventEnvelope<T> event = reader.read(record, payloadType);
         Boolean processed =
-                transaction.execute(
-                        status -> {
-                            if (!markProcessed(event, listener)) {
-                                return false;
-                            }
-                            handler.accept(event);
-                            return true;
-                        });
+                IgnoredEvents.handling(
+                        listener,
+                        () ->
+                                transaction.execute(
+                                        status -> {
+                                            if (!markProcessed(event, listener)) {
+                                                return false;
+                                            }
+                                            handler.accept(event);
+                                            return true;
+                                        }));
         if (!Boolean.TRUE.equals(processed)) {
             log.debug("이미 처리한 이벤트를 건너뛴다: {} {} ({})", event.type(), event.id(), listener);
             return false;
         }
+        metrics.handled(listener, event.occurredAt(), clock.instant());
         return true;
     }
 

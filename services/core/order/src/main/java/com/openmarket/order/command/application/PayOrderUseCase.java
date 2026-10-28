@@ -1,5 +1,6 @@
 package com.openmarket.order.command.application;
 
+import com.openmarket.common.messaging.consumer.IgnoredEvents;
 import com.openmarket.common.messaging.outbox.Outbox;
 import com.openmarket.order.command.domain.CartRepository;
 import com.openmarket.order.command.domain.Order;
@@ -41,7 +42,7 @@ public class PayOrderUseCase {
     public void execute(PayOrderCommand command) {
         Optional<Order> found = orders.findForUpdateById(command.orderId());
         if (found.isEmpty()) {
-            log.warn("모르는 주문의 결제 승인이라 넘긴다: orderId={}", command.orderId());
+            IgnoredEvents.warn(log, "모르는 주문의 결제 승인이라 넘긴다: orderId={}", command.orderId());
             return;
         }
         Order order = found.get();
@@ -58,7 +59,8 @@ public class PayOrderUseCase {
             }
             case ALREADY -> {}
             case INVALID ->
-                    log.warn(
+                    IgnoredEvents.warn(
+                            log,
                             "결제 완료로 바꿀 수 없는 상태라 넘긴다: orderId={}, status={}",
                             order.id(),
                             order.status());

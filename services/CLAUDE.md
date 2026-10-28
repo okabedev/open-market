@@ -12,8 +12,8 @@ services/
 ├─ libs/
 │  ├─ common-core      베이스 예외, ErrorType, Money, ID(UUID v7), 개인정보 마스킹, AES-GCM 암호화, 감사 로그(AuditLog) 인터페이스 (Spring 의존 없음)
 │  ├─ common-web       ProblemDetail 변환, @Idempotent 처리, 요청 로깅, 감사 로그 저장·관리자 조회(audit_log) (자동설정)
-│  ├─ common-messaging outbox 기록, 멱등 소비, EventEnvelope, 재시도·DLT 오류 처리기, DLT 수집과 관리자 API(dead_letter), 트레이스 전파, ShedLock·정리 작업 (자동설정)
-│  ├─ common-observability OpenTelemetry 스타터, Logback → OpenTelemetry 로그 어펜더 (자동설정). OTel을 쓰는 서비스는 스타터 대신 이 모듈을 쓴다
+│  ├─ common-messaging outbox 기록, 멱등 소비, EventEnvelope, 재시도·DLT 오류 처리기, DLT 수집과 관리자 API(dead_letter), 트레이스 전파, 메시징 지표·무시한 이벤트(IgnoredEvents), ShedLock·정리 작업 (자동설정)
+│  ├─ common-observability OpenTelemetry 스타터, Logback → OpenTelemetry 로그 어펜더 (자동설정), 가상 스레드 지표(micrometer-java21). OTel을 쓰는 서비스는 스타터 대신 이 모듈을 쓴다
 │  ├─ common-security  리소스 서버: 토큰 재검증, 역할·내부 경로 규칙, 공개 경로(`openmarket.security.public-paths`), roles·scope 권한 변환 (자동설정). API를 받는 서비스가 쓴다
 │  └─ common-test      Testcontainers 설정, ArchUnit 규칙, OpenAPI 문서 비교(OpenApiSnapshot), 픽스처
 ├─ core/<service>
@@ -25,7 +25,7 @@ services/
 - 의존 방향과 이름 규칙은 `common-test`의 ArchUnit 규칙이 검사한다. 규칙을 우회하지 말고, 규칙이 틀렸다면 conventions.md와 규칙을 같이 고친다.
 - `Command`, `Request`, `Response`, `View`, 유스케이스 반환값에는 도메인 타입을 쓰지 않는다.
 - 상태를 바꾸는 서비스 사이 연동은 outbox 이벤트로만 한다. 유스케이스 안에서 Kafka로 직접 보내지 않는다.
-- 리스너는 `common-messaging`의 `IdempotentEventProcessor`를 거친다. 비즈니스 실패는 예외가 아니라 실패 이벤트로 낸다.
+- 리스너는 `common-messaging`의 `IdempotentEventProcessor`를 거친다. 비즈니스 실패는 예외가 아니라 실패 이벤트로 낸다. 상태가 맞지 않아 이벤트를 넘길 때는 `IgnoredEvents.warn(log, ...)`으로 로그를 남긴다(지표로 센다).
 - 스케줄 작업은 `common-messaging`의 `LockingTaskExecutor`(ShedLock)로 감싸 한 번만 실행되게 한다.
 - Flyway 위치에 `classpath:db/migration`, `classpath:db/common/web`, `classpath:db/common/messaging`을 함께 적는다.
 - 예외 핸들러는 서비스에 두지 않는다. `common-core` 예외를 던지면 `common-web`이 ProblemDetail로 바꾼다.

@@ -1,5 +1,6 @@
 package com.openmarket.fulfillment.command.application;
 
+import com.openmarket.common.messaging.consumer.IgnoredEvents;
 import com.openmarket.fulfillment.command.domain.Claim;
 import com.openmarket.fulfillment.command.domain.ClaimRepository;
 import java.time.Clock;
@@ -30,7 +31,7 @@ public class RecordRefundFailureUseCase {
     public void execute(RecordRefundFailureCommand command) {
         Optional<Claim> found = claims.findForUpdateById(command.claimId());
         if (found.isEmpty()) {
-            log.warn("모르는 클레임의 환불 실패라 넘긴다: claimId={}", command.claimId());
+            IgnoredEvents.warn(log, "모르는 클레임의 환불 실패라 넘긴다: claimId={}", command.claimId());
             return;
         }
         Claim claim = found.get();

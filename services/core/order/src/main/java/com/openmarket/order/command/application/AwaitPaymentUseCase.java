@@ -1,5 +1,6 @@
 package com.openmarket.order.command.application;
 
+import com.openmarket.common.messaging.consumer.IgnoredEvents;
 import com.openmarket.common.messaging.outbox.Outbox;
 import com.openmarket.order.command.domain.Order;
 import com.openmarket.order.command.domain.Order.Reservation;
@@ -36,7 +37,7 @@ public class AwaitPaymentUseCase {
     public void execute(AwaitPaymentCommand command) {
         Optional<Order> found = orders.findForUpdateById(command.orderId());
         if (found.isEmpty()) {
-            log.warn("모르는 주문의 예약 결과라 넘긴다: orderId={}", command.orderId());
+            IgnoredEvents.warn(log, "모르는 주문의 예약 결과라 넘긴다: orderId={}", command.orderId());
             return;
         }
         Order order = found.get();
@@ -54,7 +55,8 @@ public class AwaitPaymentUseCase {
             case RECORDED -> orders.save(order);
             case ALREADY -> {}
             case INVALID ->
-                    log.warn(
+                    IgnoredEvents.warn(
+                            log,
                             "예약 결과를 기록할 수 없는 상태라 넘긴다: orderId={}, reservation={}, status={}",
                             order.id(),
                             reservation,
