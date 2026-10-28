@@ -10,6 +10,7 @@ export const metadata: Metadata = {
 };
 
 const NAV: NavItem[] = [
+  { href: "/metrics", label: "운영 지표" },
   { href: "/seller-applications", label: "입점 심사" },
   { href: "/sellers", label: "판매자" },
   { href: "/products", label: "상품" },
