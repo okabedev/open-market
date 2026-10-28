@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { formatRate, kstToday, mergeDays, metricsPeriod, totals } from "./metrics";
+import { kstToday } from "./dates";
+import { formatRate, mergeDays, metricsPeriod, totals } from "./metrics";
 
 // 2026-10-27 15:30 UTC = 2026-10-28 00:30 KST
 const NOW = new Date("2026-10-27T15:30:00Z");
