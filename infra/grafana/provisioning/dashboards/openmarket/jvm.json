@@ -286,7 +286,7 @@
     },
     {
       "type": "timeseries",
-      "title": "플랫폼 스레드",
+      "title": "스레드",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -327,8 +327,19 @@
             "uid": "prometheus"
           },
           "expr": "sum by (application) (jvm_threads_live_threads{application=~\"$application\"})",
-          "legendFormat": "{{application}}",
+          "legendFormat": "{{application}} 플랫폼",
           "refId": "A",
+          "range": true,
+          "instant": false
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (application) (jvm_threads_virtual_live_threads{application=~\"$application\"})",
+          "legendFormat": "{{application}} 가상",
+          "refId": "B",
           "range": true,
           "instant": false
         }
@@ -584,7 +595,7 @@
     },
     {
       "type": "timeseries",
-      "title": "커넥션 획득 p95",
+      "title": "커넥션 획득 시간",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -624,8 +635,8 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "histogram_quantile(0.95, sum by (application, le) (rate(hikaricp_connections_acquire_seconds_bucket{application=~\"$application\"}[$__rate_interval])))",
-          "legendFormat": "{{application}}",
+          "expr": "max by (application) (hikaricp_connections_acquire_seconds_max{application=~\"$application\"})",
+          "legendFormat": "{{application}} 최대",
           "refId": "A",
           "range": true,
           "instant": false

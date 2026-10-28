@@ -70,7 +70,7 @@
     },
     {
       "type": "timeseries",
-      "title": "소비자 지연(lag)",
+      "title": "소비자 지연(lag, 소비자별 최대)",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -110,8 +110,8 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum by (application, topic) (kafka_consumer_fetch_manager_records_lag{application=~\"$application\"})",
-          "legendFormat": "{{application}} ← {{topic}}",
+          "expr": "max by (application, client_id) (kafka_consumer_fetch_manager_records_lag_max{application=~\"$application\"})",
+          "legendFormat": "{{application}} {{client_id}}",
           "refId": "A",
           "range": true,
           "instant": false
@@ -123,7 +123,7 @@
         "x": 0,
         "y": 1
       },
-      "description": "리스너 소비자가 낸 파티션별 lag의 합. 알림 \"소비자 지연 증가\": 1,000건 초과가 5분. 서비스가 죽으면 이 값도 사라지므로 up을 함께 본다",
+      "description": "소비자(리스너 컨테이너 스레드)마다 맡은 파티션 중 가장 큰 lag. 토픽 라벨은 없다. 알림 \"소비자 지연 증가\": 서비스별 최대 1,000건 초과가 5분. 서비스가 죽으면 이 값도 사라지므로 up을 함께 본다",
       "id": 2
     },
     {

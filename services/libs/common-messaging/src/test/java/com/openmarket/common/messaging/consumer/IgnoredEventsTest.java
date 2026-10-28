@@ -47,7 +47,7 @@ class IgnoredEventsTest {
     void doesNotCountOutsideListener() {
         IgnoredEvents.warn(log, "취소할 수 없는 상태라 넘긴다: orderId={}", "o-1");
 
-        assertThat(registry.find(IgnoredEvents.METRIC).counters()).isEmpty();
+        assertThat(ignoredTotal()).isZero();
     }
 
     @Test
@@ -57,7 +57,14 @@ class IgnoredEventsTest {
 
         IgnoredEvents.warn(log, "넘긴다");
 
-        assertThat(registry.find(IgnoredEvents.METRIC).counters()).isEmpty();
+        assertThat(ignoredTotal()).isZero();
+    }
+
+    /** 다른 테스트가 전역 레지스트리에 만든 카운터가 이 레지스트리에도 0으로 붙으므로 개수가 아니라 합계를 본다. */
+    private double ignoredTotal() {
+        return registry.find(IgnoredEvents.METRIC).counters().stream()
+                .mapToDouble(Counter::count)
+                .sum();
     }
 
     private double ignored(String listener) {

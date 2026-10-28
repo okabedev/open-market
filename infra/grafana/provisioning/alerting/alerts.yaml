@@ -97,8 +97,9 @@ groups:
             model:
               refId: A
               instant: true
-              # 리스너 소비자가 스스로 낸 파티션별 lag의 합. DLT 수집기(<토픽>.DLT)도 들어간다.
-              expr: sum by (application, topic) (kafka_consumer_fetch_manager_records_lag)
+              # 소비자(클라이언트)마다 맡은 파티션 중 가장 큰 lag. Kafka 클라이언트가 이 값에는 토픽 라벨을 붙이지 않는다.
+              # DLT 수집기 소비자도 들어간다.
+              expr: max by (application) (kafka_consumer_fetch_manager_records_lag_max)
           - refId: B
             datasourceUid: __expr__
             model:
@@ -112,7 +113,7 @@ groups:
         execErrState: Error
         labels: { severity: warning }
         annotations:
-          summary: "{{ $labels.application }}이(가) {{ $labels.topic }}에서 {{ $values.A.Value }}건 뒤처졌다(5분 넘게)"
+          summary: "{{ $labels.application }} 소비자가 {{ $values.A.Value }}건 뒤처졌다(5분 넘게)"
           description: Kafka 대시보드의 이벤트 처리 지연과 서비스 오류, DB 커넥션 풀을 본다.
 
       - uid: openmarket-dead-letter
@@ -187,11 +188,38 @@ groups:
               refId: A
               instant: true
               # lost: 슬롯이 WAL을 잃었다. Debezium이 스스로 복구하지 못하고 발행이 멈춘다(risks.md R5·R16).
-              # unreserved: max_slot_wal_keep_size를 넘어 곧 lost가 된다. 슬롯이 없으면(absent) 커넥터가 발행하지 않는다.
+              # unreserved: max_slot_wal_keep_size를 넘어 다음 체크포인트에 lost가 될 수 있다.
               expr: >-
                 max by (slot_name, wal_status)
                 (pg_replication_slots_wal_status{slot_name="openmarket_outbox", wal_status=~"lost|unreserved"})
-                or absent(pg_replication_slots_slot_is_active{slot_name="openmarket_outbox"})
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              refId: B
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+        for: 30s
+        noDataState: OK
+        execErrState: Error
+        labels: { severity: critical }
+        annotations:
+          summary: "복제 슬롯 {{ $labels.slot_name }} 상태 {{ $labels.wal_status }}"
+          description: 자동으로 복구되지 않는다. 런북 "복제 슬롯 무효"대로 슬롯을 지우면 Debezium이 새로 만들고 남은 outbox 행을 다시 보낸다.
+
+      - uid: openmarket-replication-slot-missing
+        title: 복제 슬롯 없음
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              # 슬롯이 없으면 Debezium이 발행하지 않는다. postgres-exporter가 응답하지 않아도 값이 없어 같이 울린다.
+              expr: absent(pg_replication_slots_slot_is_active{slot_name="openmarket_outbox"})
           - refId: B
             datasourceUid: __expr__
             model:
@@ -206,5 +234,5 @@ groups:
         execErrState: Error
         labels: { severity: critical }
         annotations:
-          summary: "복제 슬롯 openmarket_outbox 상태 {{ or $labels.wal_status \"없음\" }}"
-          description: 자동으로 복구되지 않는다. 런북 "복제 슬롯 무효"대로 슬롯을 지우면 Debezium이 새로 만들고 남은 outbox 행을 다시 보낸다.
+          summary: 복제 슬롯 openmarket_outbox가 없거나 postgres-exporter가 응답하지 않는다(3분)
+          description: connect 상태와 커넥터 등록, postgres-exporter(up{job="postgres"})를 본다.

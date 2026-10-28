@@ -52,20 +52,20 @@ Boot가 내는 HTTP(`http_server_requests_seconds`), JVM, Hikari, Kafka 클라�
 | `messaging_dead_letters_total{topic, group}` | `common-messaging` 오류 처리기(`FailedEventLogger`) | DLT로 보낸 메시지 수. `topic`은 원래 토픽, `group`은 실패한 리스너 그룹 |
 | `messaging_event_delay_seconds{listener}` | `IdempotentEventProcessor` | 이벤트를 outbox에 쌓은 시각부터 리스너가 처리를 마칠 때까지(히스토그램 10ms~10분). 이미 처리한 이벤트는 재지 않는다. Saga 단계별 시간이다 |
 | `messaging_events_ignored_total{listener}` | 유스케이스의 `IgnoredEvents.warn(log, ...)` | 상태 전이가 맞지 않아 처리하지 않고 넘긴 이벤트([messaging.md](messaging.md) "순서"). 리스너가 처리하는 중에만 센다 |
-| `kafka_consumer_fetch_manager_records_lag{topic, partition}` | Boot Kafka 지표(소비자) | 파티션별 lag. 소비자가 살아 있을 때만 보인다 |
-| `jvm_threads_virtual_*` | `micrometer-java21`(`common-observability`) | 가상 스레드 고정(pinned) 시간, 제출 실패 |
+| `kafka_consumer_fetch_manager_records_lag_max{client_id}` | Boot Kafka 지표(소비자) | 소비자마다 맡은 파티션 중 가장 큰 lag. 토픽 라벨은 없다. 소비자가 살아 있을 때만 보인다 |
+| `jvm_threads_virtual_*` | `micrometer-java21`(`common-observability`) | 살아 있는 가상 스레드 수, 고정(pinned) 시간, 제출 실패 |
 | `pg_replication_slots_*` | postgres-exporter | 슬롯 활성, `wal_status`(`reserved`, `extended`, `unreserved`, `lost`), 현재 LSN, 확인된 LSN, 잃기 전까지 남은 WAL |
 
 라벨 `application`은 Prometheus가 Eureka 앱 이름으로 붙인다.
 
 ## 대시보드와 알림
-Grafana 폴더 "Open Market"(http://localhost:3003).
+Grafana 폴더 "Open Market"(http://localhost:3003). 알림은 7종이다.
 
 | 대시보드(uid) | 내용 |
 |---|---|
 | 서비스 RED(`openmarket-red`) | 요청 수, 5xx 비율, p50/p95/p99(서비스별), 4xx, 엔드포인트별 초당 요청·p95·5xx 표 |
-| JVM(`openmarket-jvm`) | 힙(상한 대비), GC 멈춤·횟수, 플랫폼 스레드, 가상 스레드 고정 시간·제출 실패, 커넥션 풀 사용·대기·획득 시간, CPU |
-| Kafka와 outbox(`openmarket-kafka`) | 소비자 lag, 이벤트 처리 지연 p95(리스너별), DLT 유입, 무시한 이벤트, 처리한 이벤트, outbox 이벤트, 복제 슬롯 미확인 WAL·활성·WAL 상태·남은 WAL |
+| JVM(`openmarket-jvm`) | 힙(상한 대비), GC 멈춤·횟수, 플랫폼·가상 스레드 수, 가상 스레드 고정 시간·제출 실패, 커넥션 풀 사용·대기·획득 시간(최대, 평균), CPU |
+| Kafka와 outbox(`openmarket-kafka`) | 소비자별 최대 lag, 이벤트 처리 지연 p95(리스너별), DLT 유입, 무시한 이벤트, 처리한 이벤트, outbox 이벤트, 복제 슬롯 미확인 WAL·활성·WAL 상태·남은 WAL |
 | 비즈니스(`openmarket-business`) | 주문 생성, 결제 승인·실패, 쿠폰 발급(기간 합계), 주문 흐름(생성 → 결제 대기 → 결제 완료·취소), 결제, 쿠폰 발급 응답, 재고·쿠폰 예약, Saga 단계별 지연 p95 |
 
 업무 숫자의 원본은 admin 운영 지표다(업무 DB, [ADR 0023](../adr/0023-admin-ops-queries.md)). 비즈니스 대시보드는 흐름과 지연을 본다.
@@ -76,12 +76,13 @@ Grafana 폴더 "Open Market"(http://localhost:3003).
 |---|---|---|---|
 | 오류율 급증 | 서비스별 5분 5xx 비율 > 5%(초당 0.1건 이상일 때) | 2분 | RED 엔드포인트 표, `X-Request-Id`로 Tempo·Loki |
 | p95 지연 목표 초과 | 서비스별 5분 p95 > 500ms(NFR-9 주문 생성 기준) | 5분 | RED 엔드포인트별 p95, JVM GC·커넥션 대기 |
-| 소비자 지연 증가 | 서비스·토픽별 lag 합 > 1,000 | 5분 | Kafka 이벤트 처리 지연, 서비스 오류, 커넥션 풀 |
+| 소비자 지연 증가 | 서비스별 소비자 lag 최대 > 1,000 | 5분 | Kafka 이벤트 처리 지연, 서비스 오류, 커넥션 풀 |
 | DLT 유입 | 10분 안에 DLT로 보낸 메시지가 있다(서비스·토픽·그룹별) | 바로 | admin "DLT 메시지" 화면 |
 | outbox 미발행 증가 | 복제 슬롯 미확인 WAL > 16MiB | 3분 | connect 상태, 커넥터 상태 |
-| 복제 슬롯 무효 | 슬롯 `openmarket_outbox`가 `lost`·`unreserved`이거나 없다 | 3분 | 런북 "복제 슬롯 무효". 저절로 복구되지 않는다(R5, R16) |
+| 복제 슬롯 무효 | 슬롯 `openmarket_outbox`가 `lost` 또는 `unreserved`(곧 lost) | 30초 | 런북 "복제 슬롯 무효". 저절로 복구되지 않는다(R5, R16) |
+| 복제 슬롯 없음 | 슬롯 `openmarket_outbox`가 없거나 postgres-exporter가 응답하지 않는다 | 3분 | connect 상태, 커넥터 등록, `up{job="postgres"}` |
 
-DLT 카운터는 처음 DLT로 보낼 때 1로 생겨 `increase()`가 0이 되므로, 10분 전에 없던 시계열도 유입으로 본다. 새 스택은 Debezium이 슬롯을 만들기 전 1~2분 동안 슬롯이 없어서 슬롯 알림에 3분을 둔다.
+DLT 카운터는 처음 DLT로 보낼 때 1로 생겨 `increase()`가 0이 되므로, 10분 전에 없던 시계열도 유입으로 본다. 새 스택은 Debezium이 슬롯을 만들기 전 1~2분 동안 슬롯이 없어서 "복제 슬롯 없음"은 3분을 둔다. `infra/fault/run.sh slot`이 "복제 슬롯 무효" 경보 메일과 복구 뒤 해결 메일이 Mailpit에 오는지 확인한다.
 
 ## 대시보드 관리
 Grafana 데이터 소스와 대시보드는 `infra/grafana/`에 파일로 두고 프로비저닝한다. 화면에서 고친 대시보드는 JSON으로 내보내 커밋한다.
