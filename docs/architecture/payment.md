@@ -201,3 +201,4 @@ gateway 경로는 `/api/payment` + 아래 경로다.
 - 인덱스는 원장 `(kind, occurred_at)`이다(`V5`). 뒤 조회는 `(payment_id, occurred_at)`으로 찾는다.
 - 응답은 `{from, to, days: [{date, approvedCount, rejectedCount, undecidedCount, failureRate}]}`이다. `failureRate`는 0~1, 소수 넷째 자리(반올림)이고 정해진 시도가 없으면 비어 있다. `from`·`to`는 `yyyy-MM-dd`이고 필수다. `from`이 `to`보다 늦으면 400 `PAYMENT_INVALID_INPUT`이다. 날짜 경계는 KST 00:00이다.
 - 시도마다 뒤 조회를 찾는 집계라 조회 DAO를 QueryDSL 대신 SQL(`JdbcClient`)로 쓴다(`PaymentMetricsQueryDao`).
+- 화면은 주문 지표와 같은 admin "운영 지표"다([order.md](order.md) "운영 지표").

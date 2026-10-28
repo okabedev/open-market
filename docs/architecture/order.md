@@ -192,6 +192,7 @@ order는 `payment.payment`에서 결제 결과를 받는다([payment.md](payment
 - 인덱스는 `placed_at`, `paid_at`(값이 있는 행)이다(`V8`).
 - 응답은 `{from, to, days: [{date, orderCount, paidOrderCount, gmv}]}`이다. `from`·`to`는 `yyyy-MM-dd`이고 필수다. `from`이 `to`보다 늦으면 400 `ORDER_INVALID_INPUT`이다. 날짜 경계는 KST 00:00이다.
 - 날짜로 묶는 집계라 조회 DAO를 QueryDSL 대신 SQL(`JdbcClient`)로 쓴다(`OrderMetricsQueryDao`).
+- 화면은 admin "운영 지표"(`/metrics?from=&to=`, 기본 오늘까지 최근 7일)다. 이 API와 payment 운영 지표에 동시에 묻고 날짜별 한 표와 기간 합계로 보인다. 합계의 결제 실패율은 날짜별 실패율의 평균이 아니라 기간 전체의 거절 ÷ (승인 + 거절)이다. 한 서비스가 응답하지 않으면 그쪽 칸을 비우고 빠진 서비스를 알린다. 기간 검증(형식, 순서, 31일)은 화면이 먼저 한다(`apps/admin/lib/metrics.ts`).
 
 ## 내부 API
 서비스 간 조회다. `internal` scope 토큰만 부를 수 있고 gateway는 넘기지 않는다. 프론트 api-client(OpenAPI 문서)에 넣지 않는다.
