@@ -20,6 +20,8 @@ services:
       OIDC_ISSUER: http://auth.openmarket.local:9000
       ADMIN_SEED_EMAIL: ${ADMIN_SEED_EMAIL}
       ADMIN_SEED_PASSWORD: ${ADMIN_SEED_PASSWORD}
+      # 시드 관리자의 2단계 인증 비밀 값. run.sh가 admin-totp.js로 등록한 뒤 넘긴다(.env 값이 아니다).
+      ADMIN_TOTP_SECRET: ${ADMIN_TOTP_SECRET:-}
       SHOP_CLIENT_SECRET: ${SHOP_CLIENT_SECRET}
       SELLER_CLIENT_SECRET: ${SELLER_CLIENT_SECRET}
       ADMIN_CLIENT_SECRET: ${ADMIN_CLIENT_SECRET}

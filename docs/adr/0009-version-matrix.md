@@ -30,6 +30,7 @@ Spring Authorization Server는 Spring Security 7.x에 포함되어 Boot BOM이 �
 | ShedLock | 7.10.1 | 스케줄 작업 단일 실행. `shedlock-core`와 `shedlock-provider-jdbc-template`만 쓴다(애노테이션 AOP 대신 `LockingTaskExecutor`를 직접 호출) |
 | TwelveMonkeys ImageIO (`imageio-jpeg`, `imageio-webp`) | 3.15.2 | file의 이미지 읽기(JPEG CMYK·EXIF, WebP). 2026-10-06 릴리스된 3.15.3은 2주 지난 뒤 검토한다. [ADR 0017](0017-image-processing.md). 2026-10-19 추가 |
 | uuid-creator | 6.1.1 | UUID v7 생성(`common-core`). JDK 표준에는 v7 생성기가 없다 |
+| ZXing core (`com.google.zxing:core`) | 3.5.4 | auth 관리자 TOTP 등록 화면의 QR 코드(SVG로 직접 그린다, `javase` 모듈은 쓰지 않는다). 2025-11-11 릴리스. [ADR 0024](0024-admin-totp-mfa.md). 2026-10-28 추가 |
 | opentelemetry-logback-appender-1.0 | 2.28.1-alpha | Logback 로그를 OTLP로 보낸다(`common-observability`). Boot에 포함되지 않는다. Boot BOM의 OpenTelemetry 1.62.0으로 빌드된 마지막 버전이다(2.29.0부터 1.63.0 이상). Boot의 OpenTelemetry를 올릴 때 함께 올린다. 2026-10-18 추가 |
 
 ### 코드 스타일 도구 후보 (선택과 빌드 확인 결과는 [ADR 0010](0010-code-style-tools.md))

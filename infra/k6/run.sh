@@ -81,6 +81,17 @@ wait_for "gateway → promotion" "http://localhost:8080/api/promotion/v1/issued-
 wait_for "gateway → search" "http://localhost:8080/api/search/v1/products?q=x" 200
 wait_for "gateway → catalog" "http://localhost:8080/api/catalog/v1/categories" 200
 
+# 시드 관리자의 2단계 인증을 한 번 등록하고 비밀 값을 시나리오에 넘긴다(관리자 로그인은 비밀번호 다음에 TOTP를 확인한다, ADR 0024).
+enroll_admin() {
+  rm -f "$ROOT/infra/k6/.out/admin-totp.json"
+  docker compose -p "$PROJECT" --profile load run --rm --no-deps k6 run --quiet admin-totp.js >/dev/null
+  ADMIN_TOTP_SECRET=$(grep -o '"secret":"[A-Z2-7]*"' "$ROOT/infra/k6/.out/admin-totp.json" | cut -d'"' -f4)
+  [[ -n "$ADMIN_TOTP_SECRET" ]] || fail "관리자 2단계 인증을 등록하지 못했다"
+  export ADMIN_TOTP_SECRET
+  log "관리자 2단계 인증을 등록했다"
+}
+enroll_admin
+
 # 컨테이너 CPU·메모리를 5초마다 남긴다. k6 자신도 들어간다(R13: 부하 발생기가 CPU를 나눠 쓴다).
 sample() {
   echo "time,name,cpu,mem"

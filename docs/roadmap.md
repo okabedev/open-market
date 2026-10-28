@@ -336,7 +336,7 @@
     - [x] 운영 지표(`/metrics`). E2E `m6-admin-metrics`
     - [x] 감사 로그(`/audit-logs`). E2E `m6-admin-audit-log`
     - [x] DLT 메시지(`/dead-letters`). E2E `m6-admin-dead-letters`(페이로드를 읽을 수 없는 이벤트를 Kafka에 넣어 그룹별 DLT 메시지를 만든다)
-- [ ] 관리자 2단계 인증(TOTP, R15)
+- [x] 관리자 2단계 인증(TOTP, R15). Spring Security 7 다중 요소 인증의 요소 권한([ADR 0024](adr/0024-admin-totp-mfa.md)). E2E·부하·장애 시험 도구의 관리자 로그인도 코드를 만든다
 - [ ] 대시보드와 알림 규칙(NFR-10): 서비스 RED, JVM, Kafka, 비즈니스 대시보드와 알림 5종([observability.md](architecture/observability.md))
 - [ ] 개인정보 마스킹·감사 로그 점검(NFR-7, NFR-8), OWASP Top 10 점검
 - [ ] 운영 런북(장애 유형별 대응 절차, 관리자 TOTP 등록 해제 포함)

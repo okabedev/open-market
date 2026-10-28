@@ -6,6 +6,8 @@ export const env = {
   mailpit: __ENV.MAILPIT_URL || "http://mailpit:8025",
   adminEmail: __ENV.ADMIN_SEED_EMAIL || "admin@openmarket.local",
   adminPassword: __ENV.ADMIN_SEED_PASSWORD || "admin-local-1234",
+  // 시드 관리자의 2단계 인증 비밀 값(Base32). run.sh가 admin-totp.js로 한 번 등록하고 넘긴다.
+  adminTotpSecret: __ENV.ADMIN_TOTP_SECRET || "",
   clients: {
     shop: { id: "shop", secret: __ENV.SHOP_CLIENT_SECRET || "shop-local-secret", app: "http://localhost:3000" },
     seller: { id: "seller", secret: __ENV.SELLER_CLIENT_SECRET || "seller-local-secret", app: "http://localhost:3001" },

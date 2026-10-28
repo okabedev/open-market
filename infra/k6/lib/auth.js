@@ -5,6 +5,7 @@ import crypto from "k6/crypto";
 import encoding from "k6/encoding";
 import { sleep } from "k6";
 import { env, clientAddress } from "./env.js";
+import { currentStep, totpCode } from "./totp.js";
 
 const BATCH = 50;
 const PASSWORD = "load-test-1234";
@@ -151,5 +152,79 @@ export function rolesOf(accessToken) {
 }
 
 export function adminToken() {
-  return login("admin", [{ email: env.adminEmail, password: env.adminPassword }])[0];
+  return adminLogin(env.adminTotpSecret).token;
+}
+
+/**
+ * 시드 관리자 로그인. 관리자는 비밀번호 다음에 2단계 인증을 거친다(docs/architecture/auth.md "관리자 2단계 인증"). 등록하지 않았으면 등록
+ * 화면의 비밀 키로 등록하고, 등록했으면 `secret`으로 코드를 만든다. 같은 30초 단계의 코드는 다시 받지 않으므로 거절되면 다음 단계에 한 번 더 한다.
+ * @param {string} secret 등록한 비밀 값(Base32). 등록 전이면 빈 값
+ * @returns {{token: string, secret: string}}
+ */
+export function adminLogin(secret) {
+  const client = env.clients.admin;
+  const redirectUri = `${client.app}/auth/callback`;
+  const jar = new http.CookieJar();
+  const verifier = encoding.b64encode(crypto.randomBytes(48), "rawurl");
+  const authorize = `${env.auth}/oauth2/authorize?${[
+    "response_type=code",
+    `client_id=${client.id}`,
+    `scope=${encodeURIComponent("openid profile api")}`,
+    `redirect_uri=${encodeURIComponent(redirectUri)}`,
+    "state=load",
+    `code_challenge=${crypto.sha256(verifier, "base64rawurl")}`,
+    "code_challenge_method=S256",
+  ].join("&")}`;
+  const params = { jar, tags: { name: "seed" } };
+  const csrf = (body) => (/name="_csrf" value="([^"]+)"/.exec(body) || [])[1];
+
+  const page = http.get(authorize, { ...params, headers: { Accept: "text/html" } });
+  expectStatus([page], [200], "로그인 화면");
+  const login = http.post(
+    `${env.auth}/login`,
+    { username: env.adminEmail, password: env.adminPassword, _csrf: csrf(page.body) },
+    { ...params, redirects: 0 },
+  );
+  expectStatus([login], [302], "관리자 로그인");
+  // 저장된 인가 요청 → 2단계 화면(요소가 없어 인가 요청을 다시 저장한다)
+  http.get(authorize, { ...params, redirects: 0, headers: { Accept: "text/html" } });
+
+  let confirmed = false;
+  for (let attempt = 0; attempt < 2 && !confirmed; attempt++) {
+    const form = http.get(`${env.auth}/login/totp`, params);
+    expectStatus([form], [200], "2단계 화면");
+    const enrolling = /id="totp-secret"[^>]*>([A-Z2-7]+)</.exec(form.body);
+    if (enrolling) {
+      secret = enrolling[1];
+    }
+    if (!secret) {
+      throw new Error("관리자가 2단계 인증을 등록했는데 비밀 값(ADMIN_TOTP_SECRET)이 없다");
+    }
+    const r = http.post(
+      `${env.auth}/login/totp${enrolling ? "/enroll" : ""}`,
+      { code: totpCode(secret, currentStep()), _csrf: csrf(form.body) },
+      { ...params, redirects: 0 },
+    );
+    confirmed = enrolling ? r.status === 200 : r.status === 302 && !/[?&]error/.test(r.headers.Location || "");
+    if (!confirmed) {
+      // 같은 단계의 코드를 이미 썼다(앞 실행). 다음 단계까지 기다린다.
+      sleep(30 - ((Date.now() / 1000) % 30) + 1);
+    }
+  }
+  if (!confirmed) {
+    throw new Error("관리자 2단계 인증에 실패했다");
+  }
+
+  const codeResponse = http.get(authorize, { ...params, redirects: 0, headers: { Accept: "text/html" } });
+  const code = (/[?&]code=([^&]+)/.exec(codeResponse.headers.Location || "") || [])[1];
+  if (!code) {
+    throw new Error(`관리자 인가 코드를 받지 못했다: ${codeResponse.status} ${codeResponse.headers.Location}`);
+  }
+  const issued = http.post(
+    `${env.auth}/oauth2/token`,
+    { grant_type: "authorization_code", code: decodeURIComponent(code), redirect_uri: redirectUri, code_verifier: verifier },
+    { headers: { Authorization: `Basic ${encoding.b64encode(`${client.id}:${client.secret}`)}` }, tags: { name: "seed" } },
+  );
+  expectStatus([issued], [200], "관리자 토큰 발급");
+  return { token: issued.json("access_token"), secret };
 }

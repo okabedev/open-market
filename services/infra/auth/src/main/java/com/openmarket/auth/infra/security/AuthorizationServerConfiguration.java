@@ -8,6 +8,7 @@ import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
 import com.openmarket.auth.command.application.RecordLoginFailureUseCase;
 import com.openmarket.auth.command.application.RecordLoginSuccessUseCase;
+import com.openmarket.auth.command.application.SecondFactorSessionPort;
 import com.openmarket.auth.command.domain.AccountRepository;
 import com.openmarket.auth.infra.AuthProperties;
 import com.openmarket.auth.infra.key.JdbcSigningKeyStore;
@@ -25,6 +26,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcOperations;
 import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.authorization.AuthorizationManagerFactories;
+import org.springframework.security.authorization.AuthorizationManagerFactory;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.OAuth2AuthorizationServerConfiguration;
@@ -46,6 +49,7 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.oauth2.server.resource.web.BearerTokenAuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.intercept.RequestAuthorizationContext;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.context.SecurityContextHolderFilter;
@@ -58,6 +62,10 @@ import org.springframework.transaction.support.TransactionOperations;
  * Spring Authorization Server 구성(docs/architecture/auth.md). 클라이언트, 인가, 동의는 auth 스키마에 JDBC로 저장한다.
  *
  * <p>필터 체인은 셋이다. 로그인 세션을 쓰는 두 체인(1, 3)은 비활성화된 계정의 세션을 끝낸다({@link DeactivatedAccountSessionFilter}).
+ *
+ * <p>ADMIN 역할 로그인은 비밀번호 다음에 TOTP를 확인해야 인가 코드를 받는다(ADR 0024). 체인 1의 권한 규칙이 {@link
+ * SecondFactor#AUTHORITY} 요소를 요구하고, 없으면 2단계 화면으로 보낸다. 인가 코드를 내는 필터는 권한 검사({@code
+ * AuthorizationFilter}) 뒤에 있어 비밀번호만 맞힌 세션은 코드를 받지 못한다.
  *
  * <ol>
  *   <li>OAuth2·OIDC 엔드포인트
@@ -86,13 +94,20 @@ public class AuthorizationServerConfiguration {
                                                                     ::addRequiredRoleCheck))
                                     .oidc(Customizer.withDefaults());
                         })
-                .authorizeHttpRequests(authorize -> authorize.anyRequest().authenticated())
-                // 브라우저가 로그인 없이 인가 엔드포인트에 오면 로그인 화면으로 보낸다.
+                .authorizeHttpRequests(
+                        authorize -> authorize.anyRequest().access(secondFactor().authenticated()))
+                // 브라우저가 로그인 없이 인가 엔드포인트에 오면 로그인 화면으로, 관리자가 2단계를 마치지 않았으면 2단계 화면으로
+                // 보낸다. 2단계 화면으로 보낼 때 인가 요청을 저장해 확인 뒤 돌아온다.
                 .exceptionHandling(
                         exceptions ->
-                                exceptions.defaultAuthenticationEntryPointFor(
-                                        new LoginUrlAuthenticationEntryPoint("/login"),
-                                        new MediaTypeRequestMatcher(MediaType.TEXT_HTML)));
+                                exceptions
+                                        .defaultAuthenticationEntryPointFor(
+                                                new LoginUrlAuthenticationEntryPoint("/login"),
+                                                new MediaTypeRequestMatcher(MediaType.TEXT_HTML))
+                                        .defaultDeniedHandlerForMissingAuthority(
+                                                new LoginUrlAuthenticationEntryPoint(
+                                                        SecondFactor.PAGE),
+                                                SecondFactor.AUTHORITY));
         return http.build();
     }
 
@@ -165,6 +180,10 @@ public class AuthorizationServerConfiguration {
                                         // 안내 주소를 막는다. 경로만 보고 연다.
                                         .requestMatchers(HttpMethod.GET, "/login")
                                         .permitAll()
+                                        // 2단계 화면은 비밀번호를 확인한 관리자 세션만 연다.
+                                        .requestMatchers(
+                                                SecondFactor.PAGE, SecondFactor.PAGE + "/**")
+                                        .hasRole("ADMIN")
                                         .anyRequest()
                                         .authenticated())
                 .formLogin(
@@ -174,6 +193,14 @@ public class AuthorizationServerConfiguration {
                                         .permitAll())
                 .addFilterBefore(loginRateLimitFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
+    }
+
+    /** ADMIN 역할 로그인은 {@link SecondFactor#AUTHORITY} 요소가 있어야 한다. 다른 로그인과 클라이언트 인증은 그대로다. */
+    private static AuthorizationManagerFactory<RequestAuthorizationContext> secondFactor() {
+        return AuthorizationManagerFactories.<RequestAuthorizationContext>multiFactor()
+                .requireFactors(SecondFactor.AUTHORITY)
+                .when(SecondFactor::isRequired)
+                .build();
     }
 
     private static JwtAuthenticationConverter rolesConverter() {
@@ -266,6 +293,11 @@ public class AuthorizationServerConfiguration {
                 new FilterRegistrationBean<>(filter);
         registration.setEnabled(false);
         return registration;
+    }
+
+    @Bean
+    SecondFactorSessionPort secondFactorSession(Clock clock) {
+        return new SpringSecuritySecondFactorSessionAdapter(clock);
     }
 
     @Bean

@@ -16,7 +16,8 @@ import org.springframework.security.core.userdetails.User;
  *
  * <ul>
  *   <li>비밀번호가 틀림: 폼에 입력한 이메일로 실패를 센다. 없는 계정이면 유스케이스가 무시한다.
- *   <li>폼 로그인 성공: 주체 이름(accountId)으로 실패 횟수를 지운다. 토큰 요청 같은 클라이언트 인증 성공은 건너뛴다.
+ *   <li>폼 로그인 성공: 주체 이름(accountId)으로 실패 횟수를 지운다. 토큰 요청 같은 클라이언트 인증 성공은 건너뛴다. 관리자는 2단계 인증이 맞아야
+ *       지운다(비밀번호 성공으로 지우면 틀린 코드 횟수가 다시 로그인할 때마다 처음부터라 코드를 끝없이 추측할 수 있다).
  * </ul>
  */
 public class LoginAttemptRecorder {
@@ -40,7 +41,8 @@ public class LoginAttemptRecorder {
     @EventListener
     public void onSuccess(AuthenticationSuccessEvent event) {
         if (event.getAuthentication() instanceof UsernamePasswordAuthenticationToken token
-                && token.getPrincipal() instanceof User) {
+                && token.getPrincipal() instanceof User
+                && !SecondFactor.isRequired(token)) {
             success.execute(new RecordLoginSuccessCommand(UUID.fromString(token.getName())));
         }
     }

@@ -5,9 +5,13 @@ import com.openmarket.auth.command.domain.AccountRepository;
 import com.openmarket.auth.command.domain.EmailAddress;
 import com.openmarket.auth.command.domain.EmailVerification;
 import com.openmarket.auth.command.domain.EmailVerificationRepository;
+import com.openmarket.auth.command.domain.TotpCredential;
+import com.openmarket.auth.command.domain.TotpCredentialRepository;
 import com.openmarket.common.messaging.outbox.Outbox;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -54,6 +58,75 @@ final class Fakes {
         public Account save(Account account) {
             rows.put(account.id(), account);
             return account;
+        }
+    }
+
+    static final class TotpCredentials implements TotpCredentialRepository {
+        final Map<UUID, TotpCredential> rows = new LinkedHashMap<>();
+
+        @Override
+        public Optional<TotpCredential> findForUpdateByAccountId(UUID accountId) {
+            return Optional.ofNullable(rows.get(accountId));
+        }
+
+        @Override
+        public TotpCredential save(TotpCredential credential) {
+            rows.put(credential.accountId(), credential);
+            return credential;
+        }
+    }
+
+    /** 원문 앞에 {@code enc:}를 붙인다. 비밀 값은 Base32로 담는다. */
+    static final class PrefixCipher implements TotpSecretCipherPort {
+        @Override
+        public String encrypt(byte[] secret) {
+            return "enc:" + com.openmarket.auth.command.domain.Base32.encode(secret);
+        }
+
+        @Override
+        public byte[] decrypt(String encrypted) {
+            return com.openmarket.auth.command.domain.Base32.decode(encrypted.substring(4));
+        }
+    }
+
+    /** 원문 앞에 {@code h:}를 붙인다. */
+    static final class PrefixHasher implements RecoveryCodeHasherPort {
+        @Override
+        public String hash(String code) {
+            return "h:" + code;
+        }
+
+        @Override
+        public boolean matches(String code, String hash) {
+            return hash.equals(hash(code));
+        }
+    }
+
+    /** 앞으로 돌릴 수 있는 시계. TOTP 단계를 넘길 때 쓴다. */
+    static final class MutableClock extends Clock {
+        private Instant now;
+
+        MutableClock(Instant now) {
+            this.now = now;
+        }
+
+        void advance(Duration duration) {
+            now = now.plus(duration);
+        }
+
+        @Override
+        public ZoneId getZone() {
+            return ZoneOffset.UTC;
+        }
+
+        @Override
+        public Clock withZone(ZoneId zone) {
+            return this;
+        }
+
+        @Override
+        public Instant instant() {
+            return now;
         }
     }
 
