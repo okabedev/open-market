@@ -15,11 +15,10 @@ import {
 } from "@openmarket/ui";
 import Link from "next/link";
 import { bff } from "@/lib/bff";
+import { addDays, kstToday } from "@/lib/dates";
 import {
-  addDays,
   DEFAULT_DAYS,
   formatRate,
-  kstToday,
   MAX_DAYS,
   mergeDays,
   metricsPeriod,

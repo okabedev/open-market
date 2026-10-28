@@ -334,7 +334,7 @@
   - [x] order·payment 운영 지표 API
   - [ ] admin 운영 지표, 감사 로그, DLT 메시지 화면
     - [x] 운영 지표(`/metrics`). E2E `m6-admin-metrics`
-    - [ ] 감사 로그
+    - [x] 감사 로그(`/audit-logs`). E2E `m6-admin-audit-log`
     - [ ] DLT 메시지
 - [ ] 관리자 2단계 인증(TOTP, R15)
 - [ ] 대시보드와 알림 규칙(NFR-10): 서비스 RED, JVM, Kafka, 비즈니스 대시보드와 알림 5종([observability.md](architecture/observability.md))

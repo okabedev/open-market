@@ -3,13 +3,11 @@
  * (docs/architecture/order.md·payment.md "운영 지표"). 화면은 두 응답을 날짜로 합치고, 한 서비스가 응답하지 않으면 그쪽 칸만 비운다.
  */
 
+import { addDays, DAY_MS, kstToday, parseDate } from "./dates";
+
 /** 서비스가 받는 기간 상한. 넘으면 서비스가 400이라 화면에서 먼저 막는다. */
 export const MAX_DAYS = 31;
 export const DEFAULT_DAYS = 7;
-
-const DAY_MS = 24 * 60 * 60 * 1000;
-const DATE = /^\d{4}-\d{2}-\d{2}$/;
-const kstDate = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul" });
 
 export type OrderDay = { orderCount: number; paidOrderCount: number; gmv: number };
 export type PaymentDay = {
@@ -31,25 +29,6 @@ type PaymentDayView = {
   failureRate?: number;
 };
 
-/** 그 시각의 한국 날짜(`yyyy-MM-dd`). */
-export function kstToday(now: Date): string {
-  return kstDate.format(now);
-}
-
-function parse(date: string): number | null {
-  if (!DATE.test(date)) {
-    return null;
-  }
-  const time = Date.parse(`${date}T00:00:00Z`);
-  // 2026-02-30처럼 없는 날짜는 다음 달로 넘어가므로 다시 써서 비교한다.
-  return Number.isNaN(time) || new Date(time).toISOString().slice(0, 10) !== date ? null : time;
-}
-
-/** 날짜(`yyyy-MM-dd`)에 며칠을 더한다. */
-export function addDays(date: string, days: number): string {
-  return new Date(Date.parse(`${date}T00:00:00Z`) + days * DAY_MS).toISOString().slice(0, 10);
-}
-
 /** 검색 조건의 기간. 없으면 오늘(KST)까지 최근 7일이고, 한쪽만 있으면 나머지를 7일 기간으로 채운다. */
 export function metricsPeriod(
   params: Record<string, string | string[] | undefined>,
@@ -61,8 +40,8 @@ export function metricsPeriod(
   }
   const to = toParam ?? (fromParam ? addDays(fromParam, DEFAULT_DAYS - 1) : kstToday(now));
   const from = fromParam ?? addDays(to, -(DEFAULT_DAYS - 1));
-  const fromTime = parse(from);
-  const toTime = parse(to);
+  const fromTime = parseDate(from);
+  const toTime = parseDate(to);
   if (fromTime === null || toTime === null) {
     return { from, to, error: "날짜를 yyyy-MM-dd 형식의 있는 날짜로 입력해 주세요." };
   }

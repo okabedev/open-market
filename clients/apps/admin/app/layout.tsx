@@ -20,6 +20,7 @@ const NAV: NavItem[] = [
   { href: "/commission-rates", label: "수수료율" },
   { href: "/claims", label: "클레임 중재" },
   { href: "/payment-failures", label: "결제 실패" },
+  { href: "/audit-logs", label: "감사 로그" },
 ];
 
 // 세션(쿠키)을 읽으므로 요청마다 그린다.
