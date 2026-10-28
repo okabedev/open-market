@@ -104,7 +104,7 @@ PK는 `(principal, idempotency_key)`다. 처리 중에 같은 키가 또 오면 
 - `(occurred_at, id)` 내림차순이고 `{items, nextCursor}`를 준다. 항목은 ID, 작업한 사람, 작업, 대상 종류·ID, 부가 설명, trace id, 시각이다.
 - 기간은 `from` 이상 `to` 미만(ISO-8601)이고 둘 다 선택이다. `size`는 1~100(기본 20)이다. 기간이 거꾸로이거나 크기·커서 형식이 틀리면 400 `AUDIT_LOG_INVALID_INPUT`이다.
 - 커서는 `<시각(ISO-8601)>,<id>`를 base64url(패딩 없음)로 감싼 값이다. admin BFF는 합친 목록의 마지막 행으로 커서를 만들어 모든 서비스에 같이 보낸다. DLT 메시지 목록(`dead_letter`)도 같은 형식이다.
-- 화면은 admin "감사 로그"(`/audit-logs`)다. 대상 서비스(`apps/admin/lib/admin-services.ts`, gateway 라우트가 있는 12개)에 동시에 묻고(서비스마다 5초, `lib/fan-out.ts`) 위 순서로 합친다. 응답하지 않은 서비스는 빼고 화면에 알린다. 거르기는 기간(KST 날짜, 종료일 포함), 서비스(그 서비스에만 묻는다), 작업, 작업한 사람이다. 형식이 틀린 커서는 첫 쪽으로 돌린다. 작업 이름은 `lib/audit-log.ts`의 `ACTION_LABELS`가 한국어로 바꾸고, 모르는 작업은 코드 그대로 보인다. 서비스가 새 작업을 남기면 여기에 더한다.
+- 화면은 admin "감사 로그"(`/audit-logs`)다. 대상 서비스(`apps/admin/lib/admin-services.ts`, gateway 라우트가 있는 12개)에 동시에 묻고(서비스마다 5초, `lib/fan-out.ts`) 위 순서로 합친다(`lib/merged-page.ts`, DLT 메시지 화면도 같다). 응답하지 않은 서비스는 빼고 화면에 알린다. 거르기는 기간(KST 날짜, 종료일 포함), 서비스(그 서비스에만 묻는다), 작업, 작업한 사람이다. 형식이 틀린 커서는 첫 쪽으로 돌린다. 작업 이름은 `lib/audit-log.ts`의 `ACTION_LABELS`가 한국어로 바꾸고, 모르는 작업은 코드 그대로 보인다. 서비스가 새 작업을 남기면 여기에 더한다.
 - 감사 대상은 관리자 작업이다(용어집 "감사 로그"). 판매자 작업(클레임 승인, 판매자 쿠폰, 상품 가격 등)은 남기지 않고 각 서비스의 이력과 이벤트로 본다. M6에서 금액을 바꾸는 관리자 작업을 점검해, 빠져 있던 정산 즉시 실행에 `SETTLEMENT_RUN_EXECUTED`를 더했다([settlement.md](settlement.md) "정산 확정").
 
 ### dead_letter

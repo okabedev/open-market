@@ -326,16 +326,16 @@
   - [x] 복제 슬롯 무효(R5, 운영자가 슬롯을 지워야 복구), 쿠폰 예약 실패 조합, Redis 장애 중 쿠폰 발급. 위반 0, DLT 0
   - [x] Redis 장애 중 gateway OOM, Redis 복귀 순간 promotion 지연 수정(Lettuce `REJECT_COMMANDS`, 응답 대기 명령 상한)
   - [ ] 복제 슬롯 무효 경보(대시보드·알림)와 복구 절차(런북)
-- [ ] 관리자 백오피스: 운영 지표, 감사 로그 조회, DLT 재처리(ADM-4, ADM-5)
+- [x] 관리자 백오피스: 운영 지표, 감사 로그 조회, DLT 재처리(ADM-4, ADM-5)
   - [x] `common-messaging` DLT 수집·다시 보내기·버리기(R14)
     - [x] `dead_letter` 테이블, DLT 수집기, 다시 보낸 메시지의 대상 그룹 거르기(`dlt-target-group`)
     - [x] 관리자 API(목록, 다시 보내기, 버리기), 감사 로그, 처리된 행 정리, 두 그룹이 같은 토픽을 읽을 때 대상 그룹만 처리하는 통합 테스트
   - [x] `common-web` 감사 로그 조회 API. 금액 변경(결제, 환불, 정산)의 감사 누락 점검(NFR-8). 정산 즉시 실행이 빠져 있어 더했다
   - [x] order·payment 운영 지표 API
-  - [ ] admin 운영 지표, 감사 로그, DLT 메시지 화면
+  - [x] admin 운영 지표, 감사 로그, DLT 메시지 화면
     - [x] 운영 지표(`/metrics`). E2E `m6-admin-metrics`
     - [x] 감사 로그(`/audit-logs`). E2E `m6-admin-audit-log`
-    - [ ] DLT 메시지
+    - [x] DLT 메시지(`/dead-letters`). E2E `m6-admin-dead-letters`(페이로드를 읽을 수 없는 이벤트를 Kafka에 넣어 그룹별 DLT 메시지를 만든다)
 - [ ] 관리자 2단계 인증(TOTP, R15)
 - [ ] 대시보드와 알림 규칙(NFR-10): 서비스 RED, JVM, Kafka, 비즈니스 대시보드와 알림 5종([observability.md](architecture/observability.md))
 - [ ] 개인정보 마스킹·감사 로그 점검(NFR-7, NFR-8), OWASP Top 10 점검

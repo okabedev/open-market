@@ -21,6 +21,7 @@ const NAV: NavItem[] = [
   { href: "/claims", label: "클레임 중재" },
   { href: "/payment-failures", label: "결제 실패" },
   { href: "/audit-logs", label: "감사 로그" },
+  { href: "/dead-letters", label: "DLT 메시지" },
 ];
 
 // 세션(쿠키)을 읽으므로 요청마다 그린다.

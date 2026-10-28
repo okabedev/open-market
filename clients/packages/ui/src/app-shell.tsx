@@ -29,16 +29,20 @@ export function AppShell({
   return (
     <div className="flex min-h-dvh flex-col">
       <header className="border-b bg-card">
-        <div className={cn(container, "flex h-14 items-center gap-6")}>
-          <a href="/" className="font-semibold tracking-tight">
+        <div className={cn(container, "flex min-h-14 items-center gap-6 py-2")}>
+          <a href="/" className="font-semibold tracking-tight whitespace-nowrap">
             {appName}
           </a>
-          <nav aria-label="주 메뉴" className="flex flex-1 items-center gap-4 text-sm">
+          {/* 메뉴가 많으면(admin) 항목 단위로 다음 줄로 넘어간다. 항목 안에서는 줄을 바꾸지 않는다. */}
+          <nav
+            aria-label="주 메뉴"
+            className="flex flex-1 flex-wrap items-center gap-x-4 gap-y-1 text-sm"
+          >
             {nav.map((item) => (
               <a
                 key={item.href}
                 href={item.href}
-                className="text-muted-foreground hover:text-foreground"
+                className="whitespace-nowrap text-muted-foreground hover:text-foreground"
               >
                 {item.label}
               </a>
