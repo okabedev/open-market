@@ -105,6 +105,8 @@ M5 시작(2026-10-22)에 정한 규칙이다. API와 화면은 각 PR에서 이 
 - 확인: 수량 30에 회원 120명이 두 번씩 동시에 누르고 그사이 Redis 키를 20번 지워도 DB 발급 수 30, 회원당 1장, 같은 회원의 두 요청이 같은 발급 쿠폰을 받는다(`IssueCouponApiIntegrationTest`). 저장 실패, Redis 장애, Redis가 적게 센 경우, 집합에서 빠진 경우는 유스케이스 테스트(`IssueCouponUseCaseTest`)가 본다.
 
 - Redis를 부를 수 없으면 503 `PROMOTION_UNAVAILABLE`이다. DB만으로 발급하지 않는다.
+  - 연결이 끊겼으면 바로 503이다. 연결은 됐는데 응답이 없으면 명령 시간 초과(2초) 뒤 503이다.
+  - 시간 초과는 처음에 500ms였다. 1,000건이 한꺼번에 오면 Redis는 10ms 안에 응답해도 promotion의 GC 멈춤과 CPU 경쟁으로 응답 처리가 1.4초까지 늦어져, 정상 발급 요청이 503이 됐다([risks.md](risks.md) "부하 측정").
 - 발급은 상태가 정해지는 요청이라 `Idempotency-Key`는 받지 않는다(위 2의 "이미 발급").
 - gateway는 이 경로에 엄격한 한도(사용자마다 1분에 `openmarket.gateway.strict-rate-limit.requests-per-minute`회)를 더 건다.
 
