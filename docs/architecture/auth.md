@@ -59,6 +59,7 @@ sequenceDiagram
 
 ## 보안 기본값
 - 비밀번호는 `DelegatingPasswordEncoder`(기본 bcrypt)로 저장한다.
+- 로그인 실패, 계정 잠금, 2단계 코드 실패, 레이트 리밋 초과는 보안 이벤트 로그로 남긴다([observability.md](observability.md) "보안 이벤트").
 - 로그인 5회 연속 실패 시 15분 잠금(ACC-1). 로그인과 가입은 IP 단위 레이트 리밋을 건다(NFR-5).
   - 가입 API는 gateway를 거치므로 gateway에서 제한한다.
   - 로그인 화면은 브라우저가 auth에 직접 가므로 gateway를 거치지 않는다. auth가 로그인 처리 앞에서 Redis로 IP 단위 제한을 건다. 경로는 폼 로그인과 같이 디코딩해서 맞춘다(`/%6Cogin`도 `/login`이다).

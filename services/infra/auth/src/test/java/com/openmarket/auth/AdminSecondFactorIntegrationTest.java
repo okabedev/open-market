@@ -25,8 +25,11 @@ import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -41,6 +44,7 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
  * 로그인, 같은 코드 재사용, 틀린 코드 잠금, 복구 코드를 본다.
  */
 @SpringBootTest(properties = "spring.kafka.listener.auto-startup=false")
+@ExtendWith(OutputCaptureExtension.class)
 @AutoConfigureMockMvc
 @Import({PostgresContainerConfiguration.class, RedisContainerConfiguration.class})
 class AdminSecondFactorIntegrationTest {
@@ -113,8 +117,8 @@ class AdminSecondFactorIntegrationTest {
     }
 
     @Test
-    @DisplayName("틀린 코드 5회째에 계정을 15분 잠그고 세션을 끝낸다. 비밀번호가 맞아도 횟수는 지우지 않는다")
-    void locksAfterFiveWrongCodes() throws Exception {
+    @DisplayName("틀린 코드 5회째에 계정을 15분 잠그고 세션을 끝낸다. 비밀번호가 맞아도 횟수는 지우지 않는다. 실패와 잠금을 보안 이벤트로 남긴다")
+    void locksAfterFiveWrongCodes(CapturedOutput output) throws Exception {
         EnrolledAdmin admin = enrolledAdmin(mockMvc, jdbc, passwordEncoder);
         MockHttpSession session = passwordLogin(mockMvc, admin.email(), "admin-pass-1234");
         for (int i = 0; i < 3; i++) {
@@ -133,6 +137,10 @@ class AdminSecondFactorIntegrationTest {
                                 .param("username", admin.email())
                                 .param("password", "admin-pass-1234"))
                 .andExpect(redirectedUrl("/login?locked"));
+        assertThat(output)
+                .contains("보안 이벤트 SECOND_FACTOR_FAILED account=" + admin.id())
+                .contains("보안 이벤트 ACCOUNT_LOCKED account=" + admin.id())
+                .doesNotContain(admin.email());
     }
 
     @Test

@@ -34,17 +34,22 @@ class RecordLoginResultUseCaseTest {
         failure.execute(new RecordLoginFailureCommand("buyer@example.com"));
         assertThat(account.isLocked(Fakes.NOW)).isFalse();
 
-        for (int i = 0; i < 4; i++) {
-            failure.execute(new RecordLoginFailureCommand("buyer@example.com"));
+        for (int i = 0; i < 3; i++) {
+            assertThat(failure.execute(new RecordLoginFailureCommand("buyer@example.com")))
+                    .isEqualTo(new RecordLoginFailureUseCase.Result(account.id(), false));
         }
+        assertThat(failure.execute(new RecordLoginFailureCommand("buyer@example.com")))
+                .isEqualTo(new RecordLoginFailureUseCase.Result(account.id(), true));
         assertThat(account.isLocked(Fakes.NOW)).isTrue();
     }
 
     @Test
     @DisplayName("없는 계정이나 형식이 틀린 이메일의 실패는 무시한다")
     void ignoresUnknown() {
-        failure.execute(new RecordLoginFailureCommand("nobody@example.com"));
-        failure.execute(new RecordLoginFailureCommand("not-an-email"));
+        assertThat(failure.execute(new RecordLoginFailureCommand("nobody@example.com")))
+                .isEqualTo(new RecordLoginFailureUseCase.Result(null, false));
+        assertThat(failure.execute(new RecordLoginFailureCommand("not-an-email")))
+                .isEqualTo(new RecordLoginFailureUseCase.Result(null, false));
         success.execute(new RecordLoginSuccessCommand(UUID.randomUUID()));
 
         assertThat(accounts.rows).isEmpty();

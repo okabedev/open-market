@@ -159,7 +159,7 @@ order가 결제 전에 주문을 취소하면(`OrderCancelled`: 재고 부족, �
 - 토스는 Eureka 밖의 외부 API라 OpenFeign·서킷 브레이커를 쓰지 않는다. 실패는 조회와 재조회 작업이 메운다.
 
 ## 원장(`PaymentLedgerEntry`, PAY-4)
-토스 요청 하나마다 한 줄을 추가한다. 고치거나 지우지 않는다.
+토스 요청 하나마다 한 줄을 추가한다. 고치거나 지우지 않는다. 트리거(`V6`)가 UPDATE·DELETE·TRUNCATE를 거절한다([data.md](data.md) "audit_log"와 같은 방식).
 | 필드 | 내용 |
 |---|---|
 | `kind` | `CONFIRM`(승인), `QUERY`(조회), `CANCEL`(전액 취소), `REFUND`(부분취소 환불) |

@@ -9,14 +9,18 @@ import java.util.Map;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.boot.micrometer.tracing.test.autoconfigure.AutoConfigureTracing;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.boot.test.web.server.LocalManagementPort;
 
 @AutoConfigureTracing
+@ExtendWith(OutputCaptureExtension.class)
 class GatewayTest extends GatewayTestSupport {
 
     @LocalManagementPort int managementPort;
@@ -61,14 +65,15 @@ class GatewayTest extends GatewayTestSupport {
     }
 
     @Test
-    @DisplayName("공개 경로가 아니면 토큰 없이는 401이고 서비스까지 가지 않는다")
-    void rejectsProtectedPathWithoutToken() throws Exception {
+    @DisplayName("공개 경로가 아니면 토큰 없이는 401이고 서비스까지 가지 않는다. 토큰이 없는 요청은 보안 이벤트로 남기지 않는다")
+    void rejectsProtectedPathWithoutToken(CapturedOutput output) throws Exception {
         int before = upstream.hits();
 
         HttpResponse<String> response = get("/api/member/v1/members/me");
 
         assertThat(response.statusCode()).isEqualTo(401);
         assertThat(upstream.hits()).isEqualTo(before);
+        assertThat(output).doesNotContain("보안 이벤트");
     }
 
     @Test
@@ -85,11 +90,12 @@ class GatewayTest extends GatewayTestSupport {
 
     @ParameterizedTest(name = "{0}")
     @MethodSource("invalidTokens")
-    @DisplayName("서명, iss, aud, exp 중 하나라도 맞지 않는 토큰은 401이다")
-    void rejectsInvalidToken(String reason, String token) throws Exception {
+    @DisplayName("서명, iss, aud, exp 중 하나라도 맞지 않는 토큰은 401이고 보안 이벤트로 남긴다")
+    void rejectsInvalidToken(String reason, String token, CapturedOutput output) throws Exception {
         HttpResponse<String> response = getWithToken("/api/member/v1/members/me", token);
 
         assertThat(response.statusCode()).isEqualTo(401);
+        assertThat(output).contains("보안 이벤트 TOKEN_REJECTED GET /api/member/v1/members/me");
     }
 
     static Stream<Arguments> invalidTokens() {
@@ -113,12 +119,14 @@ class GatewayTest extends GatewayTestSupport {
     }
 
     @Test
-    @DisplayName("판매자 경로는 SELLER 역할이 있어야 한다")
-    void sellerPathRequiresSellerRole() throws Exception {
+    @DisplayName("판매자 경로는 SELLER 역할이 있어야 한다. 거절은 주체와 함께 보안 이벤트로 남긴다")
+    void sellerPathRequiresSellerRole(CapturedOutput output) throws Exception {
         String path = "/api/member/v1/seller/profile";
 
         assertThat(getWithToken(path, TestJwt.token("buyer-1", "BUYER")).statusCode())
                 .isEqualTo(403);
+        assertThat(output)
+                .contains("보안 이벤트 ACCESS_DENIED subject=buyer-1 GET /api/member/v1/seller/profile");
         assertThat(getWithToken(path, TestJwt.token("seller-1", "BUYER", "SELLER")).statusCode())
                 .isEqualTo(200);
     }

@@ -341,7 +341,7 @@
 - [x] 대시보드와 알림 규칙(NFR-10): 서비스 RED, JVM, Kafka와 outbox, 비즈니스 대시보드와 알림 7종(오류율, p95, 소비자 지연, DLT 유입, outbox 미발행, 복제 슬롯 무효·없음)을 Mailpit으로([observability.md](architecture/observability.md), [ADR 0025](adr/0025-ops-metrics-and-alerts.md)). 메시징 지표(outbox 이벤트, DLT 유입, 이벤트 처리 지연, 무시한 이벤트)는 `common-messaging`, 복제 슬롯은 postgres-exporter
 - [ ] 개인정보 마스킹·감사 로그 점검(NFR-7, NFR-8), OWASP Top 10 점검. 결과는 [security.md](architecture/security.md)
   - [x] OWASP Top 10 점검과 접근·입력 방어: 이미지 압축 폭탄(좁고 긴 이미지), BFF 클라이언트 주소 위조, 로그인 레이트 리밋 인코딩 경로 우회, 업로드 Origin 검사, 앱 보안 헤더, BFF 세션 절대 수명, bcrypt 72바이트, gateway의 OpenAPI 문서
-  - [ ] 감사·보안 로그: `audit_log`·결제 원장 추가 전용(트리거), 보안 이벤트 로그, 정산 즉시 실행 감사, `audit_log` 보존 기간
+  - [x] 감사·보안 로그: `audit_log`·결제 원장 추가 전용(트리거), 보안 이벤트 로그(auth, gateway), 정산 즉시 실행 감사(확정마다 `SETTLEMENT_CONFIRMED`), `audit_log` 보존 기간(지우지 않는다)
   - [ ] 개인정보: `OrderPaid` 배송지, 개인정보 record의 `toString`, member.md 판매자 주문 화면
 - [ ] 운영 런북(장애 유형별 대응 절차, 관리자 TOTP 등록 해제 포함)
 - [ ] 마일스톤 E2E `infra/e2e/run.sh m6`

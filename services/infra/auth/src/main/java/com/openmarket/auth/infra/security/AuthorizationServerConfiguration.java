@@ -9,6 +9,7 @@ import com.nimbusds.jose.proc.SecurityContext;
 import com.openmarket.auth.command.application.RecordLoginFailureUseCase;
 import com.openmarket.auth.command.application.RecordLoginSuccessUseCase;
 import com.openmarket.auth.command.application.SecondFactorSessionPort;
+import com.openmarket.auth.command.application.SecurityEventPort;
 import com.openmarket.auth.command.domain.AccountRepository;
 import com.openmarket.auth.infra.AuthProperties;
 import com.openmarket.auth.infra.key.JdbcSigningKeyStore;
@@ -281,8 +282,12 @@ public class AuthorizationServerConfiguration {
 
     @Bean
     LoginRateLimitFilter loginRateLimitFilter(
-            StringRedisTemplate redis, AuthProperties properties, Clock clock) {
-        return new LoginRateLimitFilter(redis, properties.loginRateLimit().perMinute(), clock);
+            StringRedisTemplate redis,
+            AuthProperties properties,
+            Clock clock,
+            SecurityEventPort securityEvents) {
+        return new LoginRateLimitFilter(
+                redis, properties.loginRateLimit().perMinute(), clock, securityEvents);
     }
 
     /** 필터는 보안 체인 안에서만 돈다. 서블릿 필터로 한 번 더 등록되지 않게 막는다. */
@@ -301,9 +306,16 @@ public class AuthorizationServerConfiguration {
     }
 
     @Bean
+    SecurityEventPort securityEvents() {
+        return new LogSecurityEventAdapter();
+    }
+
+    @Bean
     LoginAttemptRecorder loginAttemptRecorder(
-            RecordLoginFailureUseCase failure, RecordLoginSuccessUseCase success) {
-        return new LoginAttemptRecorder(failure, success);
+            RecordLoginFailureUseCase failure,
+            RecordLoginSuccessUseCase success,
+            SecurityEventPort securityEvents) {
+        return new LoginAttemptRecorder(failure, success, securityEvents);
     }
 
     /** 기동할 때 읽은 서명 키. 서명은 ACTIVE 키 하나로 하고, JWK 세트에는 RETIRED가 아닌 키를 모두 싣는다. */

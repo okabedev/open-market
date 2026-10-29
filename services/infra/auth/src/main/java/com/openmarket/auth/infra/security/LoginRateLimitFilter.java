@@ -1,5 +1,6 @@
 package com.openmarket.auth.infra.security;
 
+import com.openmarket.auth.command.application.SecurityEventPort;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -37,11 +38,17 @@ public class LoginRateLimitFilter extends OncePerRequestFilter {
     private final StringRedisTemplate redis;
     private final int perMinute;
     private final Clock clock;
+    private final SecurityEventPort securityEvents;
 
-    public LoginRateLimitFilter(StringRedisTemplate redis, int perMinute, Clock clock) {
+    public LoginRateLimitFilter(
+            StringRedisTemplate redis,
+            int perMinute,
+            Clock clock,
+            SecurityEventPort securityEvents) {
         this.redis = redis;
         this.perMinute = perMinute;
         this.clock = clock;
+        this.securityEvents = securityEvents;
     }
 
     @Override
@@ -68,6 +75,9 @@ public class LoginRateLimitFilter extends OncePerRequestFilter {
             Long count = redis.opsForValue().increment(key);
             if (count != null && count == 1) {
                 redis.expire(key, WINDOW);
+            }
+            if (count != null && count == perMinute + 1) {
+                securityEvents.loginRateLimited(ip);
             }
             return count != null && count > perMinute;
         } catch (DataAccessException e) {

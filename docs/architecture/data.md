@@ -43,7 +43,7 @@
 
 - 서비스는 `spring.flyway.locations`에 자기 `classpath:db/migration`과 위 위치를 함께 적는다.
 - 라이브러리 마이그레이션 버전은 `V0_<n>`이다. 서비스 마이그레이션은 `V1`부터 시작하므로 겹치지 않는다.
-- 라이브러리들이 한 스키마의 Flyway 이력을 같이 쓰므로 `<n>`은 라이브러리 전체에서 이어 매긴다. 지금은 `V0_1` common-web, `V0_2`~`V0_4` common-messaging, `V0_5` common-web, `V0_6` common-messaging(`dead_letter`)이다. 다음 번호는 `V0_7`이다.
+- 라이브러리들이 한 스키마의 Flyway 이력을 같이 쓰므로 `<n>`은 라이브러리 전체에서 이어 매긴다. 지금은 `V0_1` common-web, `V0_2`~`V0_4` common-messaging, `V0_5` common-web, `V0_6` common-messaging(`dead_letter`), `V0_7` common-web(`audit_log` 추가 전용)이다. 다음 번호는 `V0_8`이다.
 - 공통 테이블을 바꿀 때는 새 `V0_<n>` 파일을 추가한다. 이미 `V1` 이상이 적용된 서비스에도 들어가도록 config-repo 공통 설정에 `spring.flyway.out-of-order=true`를 둔다.
 
 ### outbox_event
@@ -88,6 +88,8 @@ PK는 `(principal, idempotency_key)`다. 처리 중에 같은 키가 또 오면 
 
 ### audit_log
 관리자 작업 기록(NFR-8, 용어집 "감사 로그"). 유스케이스가 `common-core`의 `AuditLog`로 작업과 같은 트랜잭션에 쓴다. 지우거나 고치지 않는다.
+- 추가만 한다. 서비스 계정이 스키마 소유자라 권한으로 막을 수 없어서, 트리거(`V0_7`)가 UPDATE·DELETE·TRUNCATE를 거절한다. 앱 버그와 잘못 쓴 정리 작업을 막고, 소유자가 트리거를 지우는 것은 막지 못한다. 결제 원장(`payment_ledger_entry`)도 같다([payment.md](payment.md) "원장").
+- 보존 기간을 두지 않는다(지우지 않는다). 관리자 작업만 남겨 행이 적고, 기간 조회는 `occurred_at` 인덱스로 한다. 커지면 월별 파티션으로 나누고 오래된 파티션을 보관소로 옮긴다.
 
 | 컬럼 | 타입 | 설명 |
 |---|---|---|
@@ -106,7 +108,7 @@ PK는 `(principal, idempotency_key)`다. 처리 중에 같은 키가 또 오면 
 - 기간은 `from` 이상 `to` 미만(ISO-8601)이고 둘 다 선택이다. `size`는 1~100(기본 20)이다. 기간이 거꾸로이거나 크기·커서 형식이 틀리면 400 `AUDIT_LOG_INVALID_INPUT`이다.
 - 커서는 `<시각(ISO-8601)>,<id>`를 base64url(패딩 없음)로 감싼 값이다. admin BFF는 합친 목록의 마지막 행으로 커서를 만들어 모든 서비스에 같이 보낸다. DLT 메시지 목록(`dead_letter`)도 같은 형식이다.
 - 화면은 admin "감사 로그"(`/audit-logs`)다. 대상 서비스(`apps/admin/lib/admin-services.ts`, gateway 라우트가 있는 12개)에 동시에 묻고(서비스마다 5초, `lib/fan-out.ts`) 위 순서로 합친다(`lib/merged-page.ts`, DLT 메시지 화면도 같다). 응답하지 않은 서비스는 빼고 화면에 알린다. 거르기는 기간(KST 날짜, 종료일 포함), 서비스(그 서비스에만 묻는다), 작업, 작업한 사람이다. 형식이 틀린 커서는 첫 쪽으로 돌린다. 작업 이름은 `lib/audit-log.ts`의 `ACTION_LABELS`가 한국어로 바꾸고, 모르는 작업은 코드 그대로 보인다. 서비스가 새 작업을 남기면 여기에 더한다.
-- 감사 대상은 관리자 작업이다(용어집 "감사 로그"). 판매자 작업(클레임 승인, 판매자 쿠폰, 상품 가격 등)은 남기지 않고 각 서비스의 이력과 이벤트로 본다. M6에서 금액을 바꾸는 관리자 작업을 점검해, 빠져 있던 정산 즉시 실행에 `SETTLEMENT_RUN_EXECUTED`를 더했다([settlement.md](settlement.md) "정산 확정").
+- 감사 대상은 관리자 작업이다(용어집 "감사 로그"). 판매자 작업(클레임 승인, 판매자 쿠폰, 상품 가격 등)은 남기지 않고 각 서비스의 이력과 이벤트로 본다. M6에서 금액을 바꾸는 관리자 작업을 점검해, 빠져 있던 정산 즉시 실행에 `SETTLEMENT_RUN_EXECUTED`를 더했다. 보안 점검에서 확정한 정산마다 같은 트랜잭션의 `SETTLEMENT_CONFIRMED`를 더했다([settlement.md](settlement.md) "정산 확정").
 
 ### dead_letter
 리스너 그룹이 처리하지 못해 DLT로 간 메시지(ADM-5, 용어집 "DLT 메시지"). `common-messaging`의 DLT 수집기가 넣는다. 규칙은 [messaging.md](messaging.md#dlt-재처리).

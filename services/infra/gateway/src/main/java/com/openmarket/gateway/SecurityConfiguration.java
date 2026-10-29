@@ -1,11 +1,19 @@
 package com.openmarket.gateway;
 
+import java.security.Principal;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
+import org.springframework.security.oauth2.server.resource.web.access.server.BearerTokenServerAccessDeniedHandler;
+import org.springframework.security.oauth2.server.resource.web.server.BearerTokenServerAuthenticationEntryPoint;
 import org.springframework.security.web.server.SecurityWebFilterChain;
+import org.springframework.security.web.server.ServerAuthenticationEntryPoint;
+import org.springframework.security.web.server.authorization.ServerAccessDeniedHandler;
 import org.springframework.security.web.server.context.NoOpServerSecurityContextRepository;
 import org.springframework.security.web.server.savedrequest.NoOpServerRequestCache;
 
@@ -15,10 +23,16 @@ import org.springframework.security.web.server.savedrequest.NoOpServerRequestCac
  *
  * <p>규칙은 위에서부터 먼저 맞는 것이 이긴다. 내부 경로와 서비스 actuator는 막고, 역할 경로는 역할을 보고, 공개 경로는 통과시키고, 나머지는 로그인이 필요하다.
  * 세션을 만들지 않는다.
+ *
+ * <p>거절은 보안 이벤트로 남긴다(docs/architecture/observability.md "보안 이벤트"). 역할이나 막은 경로로 거절한 403은 {@code
+ * ACCESS_DENIED}, 토큰이 있는데 검증에 실패한 401은 {@code TOKEN_REJECTED}다. 토큰 없이 온 401은 남기지 않는다. 쿼리 문자열은 남기지
+ * 않는다.
  */
 @Configuration(proxyBeanMethods = false)
 @EnableWebFluxSecurity
 class SecurityConfiguration {
+
+    private static final Logger security = LoggerFactory.getLogger("security");
 
     @Bean
     SecurityWebFilterChain securityWebFilterChain(
@@ -59,7 +73,45 @@ class SecurityConfiguration {
                                                             .permitAll());
                             exchanges.anyExchange().authenticated();
                         })
-                .oauth2ResourceServer(server -> server.jwt(Customizer.withDefaults()))
+                .exceptionHandling(
+                        exceptions ->
+                                exceptions
+                                        .authenticationEntryPoint(loggingEntryPoint())
+                                        .accessDeniedHandler(loggingAccessDeniedHandler()))
+                .oauth2ResourceServer(
+                        server ->
+                                server.jwt(Customizer.withDefaults())
+                                        .authenticationEntryPoint(loggingEntryPoint())
+                                        .accessDeniedHandler(loggingAccessDeniedHandler()))
                 .build();
+    }
+
+    private static ServerAuthenticationEntryPoint loggingEntryPoint() {
+        ServerAuthenticationEntryPoint bearer = new BearerTokenServerAuthenticationEntryPoint();
+        return (exchange, exception) -> {
+            if (!(exception instanceof AuthenticationCredentialsNotFoundException)) {
+                security.warn(
+                        "보안 이벤트 TOKEN_REJECTED {} {}",
+                        exchange.getRequest().getMethod(),
+                        exchange.getRequest().getPath().value());
+            }
+            return bearer.commence(exchange, exception);
+        };
+    }
+
+    private static ServerAccessDeniedHandler loggingAccessDeniedHandler() {
+        ServerAccessDeniedHandler bearer = new BearerTokenServerAccessDeniedHandler();
+        return (exchange, denied) ->
+                exchange.getPrincipal()
+                        .map(Principal::getName)
+                        .defaultIfEmpty("anonymous")
+                        .doOnNext(
+                                subject ->
+                                        security.warn(
+                                                "보안 이벤트 ACCESS_DENIED subject={} {} {}",
+                                                subject,
+                                                exchange.getRequest().getMethod(),
+                                                exchange.getRequest().getPath().value()))
+                        .then(bearer.handle(exchange, denied));
     }
 }

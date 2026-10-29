@@ -146,11 +146,22 @@ class SettlementApiIntegrationTest {
         assertThat(
                         jdbc.sql(
                                         "SELECT actor_id || '/' || action || '/' || target_type || '/'"
-                                                + " || detail FROM audit_log WHERE target_id = :id")
+                                                + " || detail FROM audit_log WHERE target_id = :id"
+                                                + " ORDER BY occurred_at, id")
                                 .param("id", settlementId)
                                 .query(String.class)
                                 .list())
-                .containsExactly(adminId + "/SETTLEMENT_PAID_OUT/SETTLEMENT/18000원");
+                .satisfiesExactly(
+                        confirmed ->
+                                assertThat(confirmed)
+                                        .startsWith(
+                                                adminId + "/SETTLEMENT_CONFIRMED/SETTLEMENT/실행 ")
+                                        .endsWith(", 18000원"),
+                        paid ->
+                                assertThat(paid)
+                                        .isEqualTo(
+                                                adminId
+                                                        + "/SETTLEMENT_PAID_OUT/SETTLEMENT/18000원"));
         List<String> paidOut =
                 jdbc.sql(
                                 "SELECT payload::text FROM outbox_event WHERE aggregate_id = :id AND"

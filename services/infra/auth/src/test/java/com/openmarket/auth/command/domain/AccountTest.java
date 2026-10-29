@@ -66,6 +66,18 @@ class AccountTest {
     }
 
     @Test
+    @DisplayName("이번 실패로 잠갔을 때만 true다. 잠긴 동안의 실패는 false다")
+    void reportsWhenFailureLocks() {
+        Account account = register();
+        for (int i = 0; i < 4; i++) {
+            assertThat(account.recordLoginFailure(NOW)).isFalse();
+        }
+
+        assertThat(account.recordLoginFailure(NOW)).isTrue();
+        assertThat(account.recordLoginFailure(NOW.plusSeconds(1))).isFalse();
+    }
+
+    @Test
     @DisplayName("잠금이 풀리면 실패 횟수는 처음부터 다시 센다")
     void countRestartsAfterLockExpires() {
         Account account = register();

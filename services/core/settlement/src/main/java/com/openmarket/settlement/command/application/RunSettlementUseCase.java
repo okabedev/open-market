@@ -3,6 +3,7 @@ package com.openmarket.settlement.command.application;
 import com.openmarket.common.core.audit.AuditEntry;
 import com.openmarket.common.core.audit.AuditLog;
 import com.openmarket.common.core.id.Ids;
+import com.openmarket.settlement.command.application.ConfirmSettlementCommand.AdminRun;
 import com.openmarket.settlement.command.domain.SellerPeriod;
 import com.openmarket.settlement.command.domain.SettlementItemRepository;
 import java.time.Clock;
@@ -11,6 +12,8 @@ import java.time.Instant;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
+import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -19,8 +22,9 @@ import org.springframework.stereotype.Service;
  * 오래된 순으로 확정한다. 판매자·기간마다 트랜잭션을 따로 연다({@link ConfirmSettlementUseCase}). 정기 작업과 관리자 즉시 실행이 같이 쓰고, 겹쳐
  * 돌아도 판매자 잠금과 판매자·기간 유니크로 결과가 같다.
  *
- * <p>관리자 즉시 실행은 끝난 뒤 감사 로그 {@value #AUDIT_ACTION}(대상은 이번 실행 ID, 부가 설명은 확정 건수)를 남긴다(NFR-8). 확정은
- * 판매자·기간마다 따로 커밋되므로 감사 로그도 따로 쓴다. 정기 실행은 사람이 한 작업이 아니라 남기지 않는다.
+ * <p>관리자 즉시 실행은 확정한 정산마다 확정과 같은 트랜잭션에서 감사 로그를 남기고({@link ConfirmSettlementUseCase}), 끝나면 요약 {@value
+ * #AUDIT_ACTION}(대상은 이번 실행 ID, 부가 설명은 확정 건수)를 남긴다(NFR-8). 도중에 실패해도 요약을 남긴다. 정기 실행은 사람이 한 작업이 아니라
+ * 남기지 않는다.
  */
 @Service
 public class RunSettlementUseCase {
@@ -50,32 +54,45 @@ public class RunSettlementUseCase {
 
     /** 관리자 즉시 실행. 확정한 정산 수. */
     public int execute(RunSettlementCommand command) {
-        int confirmed = execute();
-        auditLog.record(
-                new AuditEntry(
-                        command.adminId().toString(),
-                        AUDIT_ACTION,
-                        AUDIT_TARGET,
-                        Ids.newId().toString(),
-                        "확정 " + confirmed + "건"));
-        return confirmed;
+        AdminRun adminRun = new AdminRun(command.adminId(), Ids.newId());
+        AtomicInteger confirmed = new AtomicInteger();
+        String outcome = "(오류로 중단)";
+        try {
+            confirmAll(adminRun, confirmed);
+            outcome = "";
+            return confirmed.get();
+        } finally {
+            auditLog.record(
+                    new AuditEntry(
+                            adminRun.adminId().toString(),
+                            AUDIT_ACTION,
+                            AUDIT_TARGET,
+                            adminRun.runId().toString(),
+                            "확정 " + confirmed.get() + "건" + outcome));
+        }
     }
 
     /** 정기 실행. 확정한 정산 수. */
     public int execute() {
+        AtomicInteger confirmed = new AtomicInteger();
+        confirmAll(null, confirmed);
+        return confirmed.get();
+    }
+
+    private void confirmAll(@Nullable AdminRun adminRun, AtomicInteger confirmed) {
         Instant closedBy = clock.instant().minus(closeDelay);
         Set<SellerPeriod> tried = new HashSet<>();
-        int confirmed = 0;
         while (true) {
             List<SellerPeriod> page = items.findClosablePeriods(closedBy, PAGE_SIZE);
             List<SellerPeriod> fresh = page.stream().filter(tried::add).toList();
             if (fresh.isEmpty()) {
-                return confirmed;
+                return;
             }
             for (SellerPeriod period : fresh) {
                 if (confirm.execute(
-                        new ConfirmSettlementCommand(period.sellerId(), period.periodStart()))) {
-                    confirmed++;
+                        new ConfirmSettlementCommand(
+                                period.sellerId(), period.periodStart(), adminRun))) {
+                    confirmed.incrementAndGet();
                 }
             }
         }

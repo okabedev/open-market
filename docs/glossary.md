@@ -102,7 +102,8 @@
 | 멱등성 키 | `Idempotency-Key` 헤더, `idempotency_record` 테이블 | 상태 변경 API의 중복 요청을 막는다 |
 | 이벤트 봉투 | `EventEnvelope` | 이벤트 공통 필드. [messaging.md](architecture/messaging.md) 참고 |
 | DLT | `<topic>.DLT` | 재시도 후에도 실패한 메시지가 가는 토픽 |
-| 감사 로그 | `AuditLog`, `audit_log` 테이블 | 관리자 작업을 누가, 언제, 무엇에 했는지 남긴다(NFR-8). 작업과 같은 트랜잭션에 쓴다 |
+| 감사 로그 | `AuditLog`, `audit_log` 테이블 | 관리자 작업을 누가, 언제, 무엇에 했는지 남긴다(NFR-8). 작업과 같은 트랜잭션에 쓴다. 추가만 한다 |
+| 보안 이벤트 | `SecurityEventPort`, 로거 `security` | 로그인 실패, 계정 잠금, 2단계 코드 실패, 로그인 레이트 리밋 초과, gateway의 접근 거부·토큰 거절. 로그로만 남긴다([observability.md](architecture/observability.md) "보안 이벤트") |
 | DLT 메시지 | `DeadLetter`, `dead_letter` 테이블 | 리스너 그룹 하나가 처리하지 못해 DLT로 간 메시지. 그 그룹의 서비스가 모아 둔다. 상태는 `PENDING`, `RETRIED`(다시 보냄), `DISCARDED`(버림) |
 | 다시 보내기 | `retry`, `dlt-target-group` 헤더 | DLT 메시지를 원래 토픽으로 다시 보내 실패한 그룹만 처리하게 한다(ADM-5) |
 | 운영 지표 | `OrderMetrics`, `PaymentMetrics` | 관리자가 보는 일별 주문 수, 결제된 주문 수, GMV, 결제 실패율(ADM-4). 업무 DB에서 센다 |
