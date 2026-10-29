@@ -236,3 +236,144 @@ groups:
         annotations:
           summary: 복제 슬롯 openmarket_outbox가 없거나 postgres-exporter가 응답하지 않는다(3분)
           description: connect 상태와 커넥터 등록, postgres-exporter(up{job="postgres"})를 본다.
+
+  # 보안 이벤트(docs/architecture/observability.md "보안 이벤트") 로그를 Loki에서 센다. 이벤트가 없으면 값이 없어 OK다.
+  - orgId: 1
+    name: openmarket-security
+    folder: Open Market
+    interval: 1m
+    rules:
+      - uid: openmarket-security-login-failures
+        title: 로그인 실패 급증
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: loki
+            model:
+              refId: A
+              queryType: instant
+              expr: 'sum(count_over_time({service_name=~"auth|gateway"} |= "보안 이벤트 LOGIN_FAILED " [5m]))'
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              refId: B
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [20] }
+        for: 0s
+        noDataState: OK
+        execErrState: Error
+        labels: { severity: warning }
+        annotations:
+          summary: "로그인 실패 {{ $values.A.Value }}건(5분)"
+          description: '한 IP는 분당 10회로 막히므로 여러 IP에 나눈 비밀번호 대입일 수 있다. 런북 "보안 이벤트 알림"대로 Loki에서 IP와 계정을 본다.'
+
+      - uid: openmarket-security-login-rate-limited
+        title: 로그인 레이트 리밋 초과
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: loki
+            model:
+              refId: A
+              queryType: instant
+              expr: 'sum(count_over_time({service_name=~"auth|gateway"} |= "보안 이벤트 LOGIN_RATE_LIMITED " [10m]))'
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              refId: B
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+        for: 0s
+        noDataState: OK
+        execErrState: Error
+        labels: { severity: warning }
+        annotations:
+          summary: "로그인 한도를 넘은 IP {{ $values.A.Value }}건(10분)"
+          description: '한 IP가 분당 10회를 넘겨 로그인했다. 런북 "보안 이벤트 알림"대로 그 IP의 실패 계정을 본다.'
+
+      - uid: openmarket-security-account-locked
+        title: 계정 잠금 다수
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: loki
+            model:
+              refId: A
+              queryType: instant
+              expr: 'sum(count_over_time({service_name=~"auth|gateway"} |= "보안 이벤트 ACCOUNT_LOCKED " [10m]))'
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              refId: B
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [2] }
+        for: 0s
+        noDataState: OK
+        execErrState: Error
+        labels: { severity: warning }
+        annotations:
+          summary: "계정 잠금 {{ $values.A.Value }}건(10분)"
+          description: '여러 계정이 5회 실패로 잠겼다. 대입 공격이거나 남의 계정을 일부러 잠그는 것일 수 있다. 런북 "보안 이벤트 알림".'
+
+      - uid: openmarket-security-second-factor-failed
+        title: 관리자 2단계 코드 실패
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: loki
+            model:
+              refId: A
+              queryType: instant
+              expr: 'sum(count_over_time({service_name=~"auth|gateway"} |= "보안 이벤트 SECOND_FACTOR_FAILED " [10m]))'
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              refId: B
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [2] }
+        for: 0s
+        noDataState: OK
+        execErrState: Error
+        labels: { severity: critical }
+        annotations:
+          summary: "2단계 코드 실패 {{ $values.A.Value }}건(10분)"
+          description: '2단계 화면은 관리자 비밀번호가 맞아야 온다. 본인이 아니면 비밀번호가 샌 것이다. 런북 "보안 이벤트 알림".'
+
+      - uid: openmarket-security-access-denied
+        title: 접근 거부·토큰 거절 급증
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: loki
+            model:
+              refId: A
+              queryType: instant
+              expr: 'sum(count_over_time({service_name=~"auth|gateway"} |~ "보안 이벤트 (ACCESS_DENIED|TOKEN_REJECTED) " [5m]))'
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              refId: B
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [30] }
+        for: 0s
+        noDataState: OK
+        execErrState: Error
+        labels: { severity: warning }
+        annotations:
+          summary: "gateway 403·토큰 거절 {{ $values.A.Value }}건(5분)"
+          description: '권한 밖 경로(관리자·내부 API)를 훑거나 위조 토큰을 보내는 것일 수 있다. 런북 "보안 이벤트 알림".'

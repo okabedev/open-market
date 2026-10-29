@@ -59,7 +59,7 @@ Boot가 내는 HTTP(`http_server_requests_seconds`), JVM, Hikari, Kafka 클라�
 라벨 `application`은 Prometheus가 Eureka 앱 이름으로 붙인다.
 
 ## 대시보드와 알림
-Grafana 폴더 "Open Market"(http://localhost:3003). 알림은 7종이다.
+Grafana 폴더 "Open Market"(http://localhost:3003). 알림은 12종이다(지표 7종, 보안 이벤트 로그 5종).
 
 | 대시보드(uid) | 내용 |
 |---|---|
@@ -81,6 +81,11 @@ Grafana 폴더 "Open Market"(http://localhost:3003). 알림은 7종이다.
 | outbox 미발행 증가 | 복제 슬롯 미확인 WAL > 16MiB | 3분 | connect 상태, 커넥터 상태 |
 | 복제 슬롯 무효 | 슬롯 `openmarket_outbox`가 `lost` 또는 `unreserved`(곧 lost) | 30초 | [런북](../runbook.md) "복제 슬롯 무효". 저절로 복구되지 않는다(R5, R16) |
 | 복제 슬롯 없음 | 슬롯 `openmarket_outbox`가 없거나 postgres-exporter가 응답하지 않는다 | 3분 | connect 상태, 커넥터 등록, `up{job="postgres"}` |
+| 로그인 실패 급증 | 5분 안에 `LOGIN_FAILED` > 20(한 IP는 분당 10회로 막히므로 여러 IP의 대입) | 바로 | [런북](../runbook.md) "보안 이벤트 알림" |
+| 로그인 레이트 리밋 초과 | 10분 안에 `LOGIN_RATE_LIMITED`가 있다 | 바로 | 같은 곳 |
+| 계정 잠금 다수 | 10분 안에 `ACCOUNT_LOCKED` ≥ 3 | 바로 | 같은 곳 |
+| 관리자 2단계 코드 실패 | 10분 안에 `SECOND_FACTOR_FAILED` ≥ 3(critical. 비밀번호는 맞았다) | 바로 | 같은 곳 |
+| 접근 거부·토큰 거절 급증 | 5분 안에 gateway `ACCESS_DENIED` + `TOKEN_REJECTED` > 30 | 바로 | 같은 곳 |
 
 DLT 카운터는 처음 DLT로 보낼 때 1로 생겨 `increase()`가 0이 되므로, 10분 전에 없던 시계열도 유입으로 본다. 새 스택은 Debezium이 슬롯을 만들기 전 1~2분 동안 슬롯이 없어서 "복제 슬롯 없음"은 3분을 둔다. `infra/fault/run.sh slot`이 "복제 슬롯 무효" 경보 메일과 복구 뒤 해결 메일이 Mailpit에 오는지 확인한다.
 
@@ -97,7 +102,8 @@ DLT 카운터는 처음 DLT로 보낼 때 1로 생겨 `increase()`가 0이 되�
 | `TOKEN_REJECTED` | gateway | 토큰이 있는데 서명·`iss`·`aud`·만료 검증에 실패한 401. 메서드, 경로. 토큰 없이 온 401은 남기지 않는다 |
 
 - 서비스 안의 소유권 거절(남의 주문 등)은 업무 오류(404·403 ProblemDetail)라 요청 로그(메서드, 경로, 상태)로 본다.
-- 알림 규칙은 아직 두지 않는다. 로그 기반 알림은 Loki 규칙이 필요하다.
+- 알림은 Grafana 알림 규칙이 Loki를 직접 센다(`count_over_time`, 1분마다 평가, `openmarket-security` 그룹). Loki ruler는 쓰지 않는다. 규칙 파일이 지표 알림과 같은 곳(`alerts.yaml`)이고 연락처·정책을 같이 쓰기 때문이다. 기준은 위 "대시보드와 알림"이다.
+- 확인(2026-10-29): 개발용 스택에서 위조 토큰 35건과 없는 계정 로그인 12건(실패 10, 레이트 리밋 2)을 보내 "접근 거부·토큰 거절 급증"과 "로그인 레이트 리밋 초과" 메일이 Mailpit에 왔고, 실패 10건은 "로그인 실패 급증"을 울리지 않았다.
 
 ## 대시보드 관리
 Grafana 데이터 소스와 대시보드는 `infra/grafana/`에 파일로 두고 프로비저닝한다. 화면에서 고친 대시보드는 JSON으로 내보내 커밋한다.
