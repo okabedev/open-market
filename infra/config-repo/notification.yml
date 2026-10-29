@@ -4,6 +4,8 @@ server:
 spring:
   datasource:
     password: ${NOTIFICATION_DB_PASSWORD}
+  flyway:
+    password: ${NOTIFICATION_DB_OWNER_PASSWORD}
   kafka:
     consumer:
       group-id: notification

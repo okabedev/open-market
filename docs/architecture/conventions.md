@@ -6,7 +6,7 @@
 | 서비스 | 고유 명사 한 단어, 소문자. `-service` 같은 접미사를 붙이지 않는다 | `order`, `fulfillment` |
 | Gradle 모듈 | `:core:<service>`, `:infra:<service>`, `:libs:<lib>` | `:core:order` |
 | 루트 패키지 | `com.openmarket.<service>` | `com.openmarket.order` |
-| DB 스키마·계정 | `<service>`, `<service>_app` | `order`, `order_app` |
+| DB 스키마·계정 | `<service>`, 마이그레이션 `<service>_owner`, 앱 `<service>_app` | `order`, `order_owner`, `order_app` |
 | 토픽 | `<service>.<aggregate>` | `order.order` |
 | Spring 앱 이름 | `<service>` (Eureka, config 파일 이름도 같다) | `spring.application.name=order` |
 

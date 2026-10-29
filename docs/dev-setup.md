@@ -66,7 +66,7 @@ docker compose --profile search --profile obs --profile apps down
 
 | 구성 요소 | 호스트 주소 | 비고 |
 |---|---|---|
-| PostgreSQL | `localhost:5432`, DB `openmarket` | 관리자 `postgres`, 서비스 계정 `<service>_app`. 비밀번호는 `.env` |
+| PostgreSQL | `localhost:5432`, DB `openmarket` | 관리자 `postgres`, 서비스 계정 `<service>_app`(데이터)·`<service>_owner`(Flyway). 비밀번호는 `.env` |
 | Kafka | `localhost:9092` | 컨테이너끼리는 `kafka:29092` |
 | Debezium Connect | http://localhost:8083 | 기동할 때 outbox 커넥터를 등록한다. 상태: `curl localhost:8083/connectors/outbox/status` |
 | Redis | `localhost:6379` | |

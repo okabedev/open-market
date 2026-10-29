@@ -4,6 +4,8 @@ server:
 spring:
   datasource:
     password: ${MEMBER_DB_PASSWORD}
+  flyway:
+    password: ${MEMBER_DB_OWNER_PASSWORD}
   security:
     oauth2:
       client:

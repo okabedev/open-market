@@ -4,6 +4,8 @@ server:
 spring:
   datasource:
     password: ${SEARCH_DB_PASSWORD}
+  flyway:
+    password: ${SEARCH_DB_OWNER_PASSWORD}
   kafka:
     consumer:
       group-id: search

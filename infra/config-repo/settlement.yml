@@ -4,6 +4,8 @@ server:
 spring:
   datasource:
     password: ${SETTLEMENT_DB_PASSWORD}
+  flyway:
+    password: ${SETTLEMENT_DB_OWNER_PASSWORD}
   kafka:
     consumer:
       group-id: settlement

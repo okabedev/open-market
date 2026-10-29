@@ -4,6 +4,8 @@ server:
 spring:
   datasource:
     password: ${ORDER_DB_PASSWORD}
+  flyway:
+    password: ${ORDER_DB_OWNER_PASSWORD}
   jpa:
     properties:
       hibernate:

@@ -8,6 +8,8 @@ management:
 spring:
   datasource:
     password: ${AUTH_DB_PASSWORD}
+  flyway:
+    password: ${AUTH_DB_OWNER_PASSWORD}
   data:
     redis:
       # 로그인 레이트 리밋. Redis가 죽으면 통과시키므로(fail-open) 타임아웃을 짧게 둔다(gateway.yml과 같다).
