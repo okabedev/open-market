@@ -163,6 +163,9 @@ services:
 
   promotion:
     <<: *spring-service
+    # 선착순 쿠폰 버스트(1,000명 동시) 때 640m에서는 힙(256MB)이 차 major GC가 나고 컨테이너 메모리가 상한에 닿았다.
+    # 힙이 상한의 40%라 768m이면 약 307MB다. 실측은 docs/architecture/risks.md "부하 측정".
+    mem_limit: 768m
     build:
       context: ../../services
       args:
