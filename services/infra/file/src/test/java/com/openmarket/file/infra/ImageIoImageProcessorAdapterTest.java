@@ -93,6 +93,28 @@ class ImageIoImageProcessorAdapterTest {
     }
 
     @Test
+    @DisplayName("서브샘플링은 가장 큰 변형 폭의 2배 이상을 남긴다")
+    void subsamplesByLargestVariantWidth() {
+        assertThat(ImageIoImageProcessorAdapter.subsampling(new ImageDimensions(6000, 4000), 800))
+                .isEqualTo(3);
+        assertThat(ImageIoImageProcessorAdapter.subsampling(new ImageDimensions(2400, 1600), 800))
+                .isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("좁고 긴 이미지도 푸는 픽셀이 상한을 넘지 않는다")
+    void subsamplesNarrowTallImageByPixels() {
+        ImageDimensions narrowTall = new ImageDimensions(1599, 31_000);
+
+        int step = ImageIoImageProcessorAdapter.subsampling(narrowTall, 800);
+
+        long decoded =
+                (long) Math.ceilDiv(narrowTall.width(), step)
+                        * Math.ceilDiv(narrowTall.height(), step);
+        assertThat(decoded).isLessThanOrEqualTo(ImageIoImageProcessorAdapter.MAX_DECODED_PIXELS);
+    }
+
+    @Test
     @DisplayName("1억 화소 이미지도 픽셀을 풀지 않고 크기만 읽는다")
     void probesHugeImageWithoutDecoding() {
         Runtime runtime = Runtime.getRuntime();

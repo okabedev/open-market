@@ -43,7 +43,8 @@
 | 2 | 크기 10MB 이하. multipart 한도가 본문을 다 받기 전에 끊고, 유스케이스가 내용을 읽으며 한 번 더 본다 | 413 `COMMON_PAYLOAD_TOO_LARGE`, 400 `FILE_TOO_LARGE` |
 | 3 | 확장자가 아니라 내용의 첫 바이트(매직 바이트)로 JPEG, PNG, WebP를 판별 | 400 `FILE_UNSUPPORTED_FORMAT` |
 | 4 | 머리만 읽은 크기가 5천만 화소 이하(압축 폭탄 방지) | 400 `FILE_IMAGE_TOO_LARGE` |
-| 5 | 변형을 만들 수 있는지(손상, 잘림) | 400 `FILE_INVALID_IMAGE` |
+| 5 | 긴 변이 짧은 변의 10배 이하. 변형은 폭을 맞추고 높이를 비율대로 두므로, 아주 긴 이미지는 변형도 거대해진다 | 400 `FILE_IMAGE_ASPECT_RATIO` |
+| 6 | 변형을 만들 수 있는지(손상, 잘림) | 400 `FILE_INVALID_IMAGE` |
 
 - 저장 경로에는 사용자 입력(파일 이름 포함)을 쓰지 않는다. 원본은 `<용도>/<yyyy>/<MM>/<fileId>.<ext>`, 변형은 같은 디렉터리의 `<fileId>.<변형>.jpg`다. 파일 이름은 저장하지 않는다.
 - gateway 기본 레이트 리밋(사용자마다 초당 20회)도 함께 걸린다.

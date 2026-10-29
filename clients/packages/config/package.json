@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     "./eslint": "./eslint.mjs",
+    "./next-headers": "./next-headers.mjs",
     "./prettier": "./prettier.mjs",
     "./tsconfig/base.json": "./tsconfig/base.json",
     "./tsconfig/nextjs.json": "./tsconfig/nextjs.json",

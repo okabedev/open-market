@@ -55,7 +55,7 @@ public class UploadFileUseCase {
         ImageFormat format =
                 ImageFormat.detect(content).orElseThrow(UnsupportedFileFormatException::new);
         ImageDimensions dimensions = images.probe(content, format);
-        UploadPolicy.checkPixels(dimensions);
+        UploadPolicy.checkDimensions(dimensions);
 
         FilePurpose purpose = FilePurpose.valueOf(command.purpose().name());
         StoredFile file =

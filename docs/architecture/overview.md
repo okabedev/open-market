@@ -72,7 +72,7 @@ flowchart LR
 - `spring.jpa.open-in-view=false`. 지연 로딩은 트랜잭션 안에서만 한다.
 - 지표는 Prometheus가 스크레이프한다. OpenTelemetry 스타터의 OTLP 지표 내보내기는 끈다(`management.otlp.metrics.export.enabled=false`). 트레이스와 로그만 OTLP로 보낸다.
 - 설정은 config 서버에서 받는다. 공통 설정은 `infra/config-repo/application.yml`, 서비스별 설정은 `<service>.yml`에 둔다. 비밀 값은 환경 변수로 넣는다.
-- 모든 서비스는 Eureka에 등록되고, Actuator(`health`, `prometheus`)와 OpenAPI(`/v3/api-docs`)를 노출한다.
+- 모든 서비스는 Eureka에 등록되고, Actuator(`health`, `prometheus`)와 OpenAPI(`/v3/api-docs`)를 노출한다. gateway는 OpenAPI 문서를 바깥에 넘기지 않는다.
 - 공통 라이브러리(`services/libs`)
   - `common-core`: 프레임워크 의존 없는 베이스 예외, 오류 분류, `Money`, ID 생성, 개인정보 마스킹, AES-GCM 암호화, 감사 로그 인터페이스
   - `common-web`: 오류 응답 변환, `@Idempotent` 처리, 요청 로깅, 감사 로그 저장 (Boot 자동설정)
@@ -98,4 +98,4 @@ flowchart LR
 ## 관련 문서
 - [context-map.md](context-map.md): 컨텍스트 관계와 이벤트 목록
 - [conventions.md](conventions.md): 패키지 규약과 명명 규칙
-- [data.md](data.md), [messaging.md](messaging.md), [auth.md](auth.md), [member.md](member.md), [catalog.md](catalog.md), [order.md](order.md), [payment.md](payment.md), [fulfillment.md](fulfillment.md), [promotion.md](promotion.md), [review.md](review.md), [settlement.md](settlement.md), [file.md](file.md), [notification.md](notification.md), [observability.md](observability.md), [risks.md](risks.md)
+- [data.md](data.md), [messaging.md](messaging.md), [auth.md](auth.md), [member.md](member.md), [catalog.md](catalog.md), [order.md](order.md), [payment.md](payment.md), [fulfillment.md](fulfillment.md), [promotion.md](promotion.md), [review.md](review.md), [settlement.md](settlement.md), [file.md](file.md), [notification.md](notification.md), [observability.md](observability.md), [security.md](security.md), [risks.md](risks.md)

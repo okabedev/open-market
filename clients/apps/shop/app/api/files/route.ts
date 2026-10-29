@@ -9,6 +9,9 @@ import { isUploadPurpose, PHOTO_MAX_BYTES } from "@/lib/upload";
  * "비공개 파일", 리뷰 사진은 공개 경로).
  */
 export async function POST(request: Request): Promise<Response> {
+  if (!(await bff.isSameOrigin(request))) {
+    return Response.json({ detail: "허용하지 않는 요청입니다." }, { status: 403 });
+  }
   if (!(await currentSession())) {
     return Response.json({ detail: "로그인이 필요합니다." }, { status: 401 });
   }

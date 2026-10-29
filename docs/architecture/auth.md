@@ -52,7 +52,7 @@ sequenceDiagram
 - admin 클라이언트는 `ADMIN` 역할이 없는 계정의 인가 요청을 거절한다. 관리자는 비밀번호 다음에 TOTP를 확인한다(아래 "관리자 2단계 인증").
 
 ## 인가
-1. **gateway**: 서명, `iss`, `exp`, `aud`(`shop`, `seller`, `admin` 중 하나)를 검증한다. 경로 접두어로 역할을 검사한다. `/v1/seller/**`는 `SELLER`, `/v1/admin/**`는 `ADMIN`이 필요하다. 공개 경로는 config-repo `gateway.yml`의 `openmarket.gateway.public-paths`에 적고, 나머지는 토큰이 있어야 한다. 서비스의 `/internal/**`와 `/actuator/**`는 넘기지 않는다. 바깥에서 들어온 내부 헤더(`X-Internal-*`)는 지운다. 규칙 순서와 근거는 [ADR 0011](../adr/0011-gateway-webflux.md).
+1. **gateway**: 서명, `iss`, `exp`, `aud`(`shop`, `seller`, `admin` 중 하나)를 검증한다. 경로 접두어로 역할을 검사한다. `/v1/seller/**`는 `SELLER`, `/v1/admin/**`는 `ADMIN`이 필요하다. 공개 경로는 config-repo `gateway.yml`의 `openmarket.gateway.public-paths`에 적고, 나머지는 토큰이 있어야 한다. 서비스의 `/internal/**`, `/actuator/**`, OpenAPI 문서(`/v3/api-docs`)는 넘기지 않는다. 바깥에서 들어온 내부 헤더(`X-Internal-*`)는 지운다. 규칙 순서와 근거는 [ADR 0011](../adr/0011-gateway-webflux.md).
 2. **서비스**: 같은 검증을 한 번 더 한다. gateway를 우회한 호출도 막기 위해서다. `services/libs/common-security`(자동설정)가 맡는다. `/internal/**`는 `internal` scope, `/v1/seller/**`는 `SELLER`, `/v1/admin/**`는 `ADMIN`, 나머지 `/v1/**`는 역할이 있는 사용자 토큰이 필요하고, 그 밖의 경로는 막는다(actuator, OpenAPI 문서, `/error`는 연다). 서비스 간 토큰은 역할이 없어 `/v1`을 부르지 못한다. 토큰 없이 여는 서비스 경로(공개 이미지 `/files/**`, 상품 조회)는 config-repo `<service>.yml`의 `openmarket.security.public-paths`(메서드, 서비스 기준 패턴)에 적는다. 역할·내부 경로는 여기에 적어도 열리지 않는다. gateway의 `public-paths`에도 gateway 기준 경로로 같이 적어야 바깥에서 열린다. 소유권은 유스케이스에서 검사한다(예: 하위 주문의 `sellerId`가 토큰의 `sub`와 같은지).
    - auth는 common-security를 쓰지 않는다. `/v1/**` 체인이 가입 API만 열고, 관리자 API(`/v1/admin/**`, DLT 메시지)는 auth가 발급한 액세스 토큰의 `roles`에 `ADMIN`이 있어야 한다. 토큰이 없으면 401, 그 밖의 막힌 경로는 403이다.
 3. **서비스 간 호출**: 각 서비스는 자기 이름을 클라이언트 ID로 쓰는 `client_credentials` 토큰을 받는다. 내부 API는 `/internal/v1/**`에 두고 `internal` scope를 요구한다. gateway는 `/internal/**`를 라우팅하지 않는다.
@@ -61,9 +61,11 @@ sequenceDiagram
 - 비밀번호는 `DelegatingPasswordEncoder`(기본 bcrypt)로 저장한다.
 - 로그인 5회 연속 실패 시 15분 잠금(ACC-1). 로그인과 가입은 IP 단위 레이트 리밋을 건다(NFR-5).
   - 가입 API는 gateway를 거치므로 gateway에서 제한한다.
-  - 로그인 화면은 브라우저가 auth에 직접 가므로 gateway를 거치지 않는다. auth가 로그인 처리 앞에서 Redis로 IP 단위 제한을 건다.
-- CSRF: BFF 세션 쿠키는 `SameSite=Lax`로 둔다. Server Action은 Next.js가 Origin을 검사하고, Route Handler는 직접 Origin을 검사한다. auth 로그인 화면은 Spring Security CSRF 토큰을 쓴다.
+  - 로그인 화면은 브라우저가 auth에 직접 가므로 gateway를 거치지 않는다. auth가 로그인 처리 앞에서 Redis로 IP 단위 제한을 건다. 경로는 폼 로그인과 같이 디코딩해서 맞춘다(`/%6Cogin`도 `/login`이다).
+- CSRF: BFF 세션 쿠키는 `SameSite=Lax`로 둔다. Server Action은 Next.js가 Origin을 검사하고, 상태를 바꾸는 Route Handler(로그아웃, 파일 업로드)는 `bff.isSameOrigin`으로 직접 검사한다. auth 로그인 화면은 Spring Security CSRF 토큰을 쓴다.
 - 세션 쿠키는 운영 기준과 같게 `HttpOnly`를 켠다. `Secure`는 로컬 HTTP에서 끄고 설정으로 바꿀 수 있게 한다.
+- BFF 세션 수명(shop·seller 14일, admin 8시간)은 로그인 시각부터 센다. 리프레시 토큰은 rotation마다 수명이 다시 시작되므로, 토큰을 갱신해도 세션은 늘리지 않는다. 지나면 다시 로그인한다.
+- 앱 3개는 모든 응답에 `Content-Security-Policy: frame-ancestors 'none'`, `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`을 붙인다(`@openmarket/config/next-headers`). Spring 서비스와 auth는 Spring Security 기본 헤더를 쓴다.
 
 ## 관리자 2단계 인증(M6)
 `ADMIN` 역할 계정은 비밀번호 다음에 TOTP(RFC 6238) 코드를 확인해야 로그인이 끝난다. Spring Security 7 다중 요소 인증의 요소 권한(`FACTOR_TOTP`)으로 요구한다([ADR 0024](../adr/0024-admin-totp-mfa.md), R15).

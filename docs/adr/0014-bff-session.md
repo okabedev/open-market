@@ -22,7 +22,7 @@
 - 핵심(`createBff`)은 표준 `Request`·`Response`만 쓰고 Next.js를 모른다. Next.js 연결(`cookies()`, Redis 연결 하나)은 `@openmarket/bff/next`에 둔다.
 - 라우트: `GET /auth/login?returnTo=`, `GET /auth/callback`, `POST /auth/logout`.
 - 쿠키: 세션 `om_sid_<앱>`(Path `/`), 로그인 진행 `om_login_<앱>`(Path `/auth`, 10분). 둘 다 HttpOnly, SameSite=Lax이고 Secure는 `SESSION_COOKIE_SECURE`로 켠다. 쿠키는 포트를 구분하지 않아서 이름에 앱을 붙인다.
-- Redis 키: `bff:<앱>:session:<sid>`(TTL은 리프레시 토큰 수명. shop·seller 14일, admin 8시간), `bff:<앱>:login:<state>`(한 번 꺼내면 지운다), `bff:<앱>:lock:<sid>`(갱신 락 10초).
+- Redis 키: `bff:<앱>:session:<sid>`(TTL은 리프레시 토큰 수명. shop·seller 14일, admin 8시간. 로그인 시각부터 세고 토큰을 갱신해도 늘리지 않는다), `bff:<앱>:login:<state>`(한 번 꺼내면 지운다), `bff:<앱>:lock:<sid>`(갱신 락 10초).
 - 갱신: 액세스 토큰이 30초 안에 만료되면 갱신한다. 같은 프로세스의 동시 요청은 Promise 하나로 묶는다. 프로세스 사이는 Redis 락(`SET NX PX`, 소유자 토큰으로만 해제)을 잡은 한 요청만 auth에 요청하고, 나머지는 새 토큰이 저장될 때까지 최대 5초 기다린다. 갱신이 `invalid_grant`로 거절되면 세션을 지운다.
 - 보안: 콜백은 쿠키의 state와 쿼리의 state가 같아야 한다(login CSRF). 로그인할 때마다 새 세션 ID를 만든다(세션 고정). `returnTo`는 앱 안의 경로만 받는다. 로그아웃은 같은 Origin의 POST만 받고, 리프레시 토큰을 폐기한 뒤 auth의 `end_session_endpoint`로 보낸다.
 - 설정: 레포 루트 `.env`를 BFF가 처음 쓰일 때 `process.loadEnvFile`로 읽는다. `<APP>_CLIENT_SECRET`(필수), `OIDC_ISSUER`, `APP_URL`, `REDIS_URL`, `SESSION_COOKIE_SECURE`.

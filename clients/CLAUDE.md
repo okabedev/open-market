@@ -38,7 +38,7 @@ clients/
 - 전역 상태 라이브러리를 쓰지 않는다. 목록 조건(상태, 쪽)은 URL 검색 조건에 둔다.
 - 폼은 `useActionState` + Server Action(`actions.ts`, `"use server"`)이다. 검증은 Server Action 안의 zod 스키마로 하고 `FormState`를 돌려준다. 서비스 오류는 `problemState(error, response.status, values)`로 바꾼다. 비밀번호·계좌 번호는 `values`에 넣지 않는다.
 - 로그인이 필요한 화면은 `requireSession("<현재 경로>")`(`lib/session.ts`)로 시작한다.
-- 공개 API(가입 등)는 `bff.publicClient("<서비스>")`, 사용자 API는 `bff.serviceClient("<서비스>")`로 부른다. 둘 다 브라우저 주소를 `X-Forwarded-For`로 넘긴다.
+- 공개 API(가입 등)는 `bff.publicClient("<서비스>")`, 사용자 API는 `bff.serviceClient("<서비스>")`로 부른다. 둘 다 브라우저 주소를 `X-Forwarded-For`로 넘긴다. `pnpm start`는 `next start` 대신 `packages/bff/bin/serve.mjs`로 띄워 브라우저가 보낸 `X-Forwarded-*`를 연결 주소로 바꾼다(`next dev`는 바꾸지 않는다).
 - 처리한 행이 목록에서 빠지는 관리자 작업은 성공하면 같은 목록으로 돌아가 `?notice=`로 결과를 보여 준다(`apps/admin/lib/review.ts`).
 
 ## 도구

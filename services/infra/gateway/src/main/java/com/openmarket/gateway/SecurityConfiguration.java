@@ -40,7 +40,12 @@ class SecurityConfiguration {
                                             "/actuator/prometheus")
                                     .permitAll();
                             exchanges
-                                    .pathMatchers("/api/*/internal/**", "/api/*/actuator/**")
+                                    // OpenAPI 문서는 프론트 타입 생성용이다. 서비스 테스트가 직접 읽고, 바깥에는 내주지 않는다.
+                                    .pathMatchers(
+                                            "/api/*/internal/**",
+                                            "/api/*/actuator/**",
+                                            "/api/*/v3/api-docs",
+                                            "/api/*/v3/api-docs/**")
                                     .denyAll();
                             exchanges.pathMatchers("/api/*/v1/seller/**").hasRole("SELLER");
                             exchanges.pathMatchers("/api/*/v1/admin/**").hasRole("ADMIN");

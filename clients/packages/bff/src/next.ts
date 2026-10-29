@@ -76,6 +76,8 @@ export type NextBff = {
   };
   /** 로그인한 사용자. 토큰은 넣지 않는다 */
   getSession(): Promise<SessionView | null>;
+  /** 요청의 Origin이 앱 주소와 같은지. 상태를 바꾸는 Route Handler가 먼저 부른다(로그아웃은 handlers가 검사한다) */
+  isSameOrigin(request: Request): Promise<boolean>;
   /** gateway에 보낼 액세스 토큰. 만료가 가까우면 갱신한다. 로그인하지 않았거나 세션이 끝났으면 null */
   getAccessToken(): Promise<string | null>;
   /** 사용자 토큰을 붙인 서비스 클라이언트. 로그인하지 않았으면 토큰 없이 만든다(공개 경로만 부를 수 있다) */
@@ -106,6 +108,7 @@ export function createNextBff(app: AppName): NextBff {
       logout: async (request) => (await instance(app)).logout(request),
     },
     getSession: async () => (await instance(app)).getSession(await sid()),
+    isSameOrigin: async (request) => (await instance(app)).isSameOrigin(request),
     getAccessToken,
     async serviceClient(service) {
       const accessToken = await getAccessToken();

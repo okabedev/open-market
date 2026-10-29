@@ -24,12 +24,12 @@ gateway가 해야 할 일은 다음과 같다([auth.md](../architecture/auth.md)
 - **WebFlux 구현을 쓴다.**
 - 라우트, 공개 경로, 레이트 리밋 한도, 토큰 검증 설정은 config-repo의 `gateway.yml`에 둔다. 코드에는 정책의 틀만 둔다: 역할 경로 규칙, 내부 헤더 제거, 키 리졸버, 요청 ID.
 - 인가 규칙(먼저 맞는 것이 이긴다)
-  1. 서비스의 `/internal/**`, `/actuator/**`는 막는다(`denyAll`).
+  1. 서비스의 `/internal/**`, `/actuator/**`, `/v3/api-docs/**`는 막는다(`denyAll`). OpenAPI 문서는 서비스 테스트가 직접 읽는다(M6 보안 점검에서 더했다).
   2. `/api/*/v1/seller/**`는 `SELLER`, `/api/*/v1/admin/**`는 `ADMIN`.
   3. `openmarket.gateway.public-paths`에 적은 메서드·경로는 토큰 없이 통과한다.
   4. 나머지는 유효한 토큰이 있어야 한다(기본 거부).
 - 토큰은 `aud`가 `shop`, `seller`, `admin` 중 하나여야 한다. 서비스 간 토큰(`aud=internal`)은 gateway를 지나지 않는다. 권한은 `roles` 클레임에 `ROLE_`을 붙여 만든다.
-- 레이트 리밋 키는 로그인한 요청이면 `user:<sub>`, 익명이면 `ip:<주소>`다. 주소는 `X-Forwarded-For`의 마지막 값(BFF가 붙인 값)이다. 이 값을 믿는 근거는 gateway에 BFF만 닿는다는 전제다. 운영 배치에서는 gateway를 외부에 직접 열지 않는다.
+- 레이트 리밋 키는 로그인한 요청이면 `user:<sub>`, 익명이면 `ip:<주소>`다. 주소는 `X-Forwarded-For`의 마지막 값(BFF가 붙인 값)이다. 이 값을 믿는 근거는 gateway에 BFF만 닿는다는 전제다. 운영 배치에서는 gateway를 외부에 직접 열지 않는다. BFF는 앱 서버(`packages/bff/bin/serve.mjs`)가 브라우저가 보낸 `X-Forwarded-*`를 지우고 연결 주소를 넣은 값을 넘긴다. Next.js 기본 서버는 브라우저가 넣은 값을 그대로 두므로 위조로 익명 한도를 피할 수 있었다(M6 보안 점검).
 - Redis 장애 시 레이트 리미터는 요청을 통과시킨다(fail-open). 명령 타임아웃을 200ms로 둬서 그 사이 요청이 멈추지 않게 한다.
 - 요청 ID는 따로 만들지 않고 trace id를 응답 헤더 `X-Request-Id`로 돌려준다. 서비스에는 `traceparent`로 같은 trace가 넘어간다.
 - actuator는 관리 포트(8081)에만 둔다. Prometheus는 Eureka 메타데이터 `management.port`로 그 포트를 찾는다.

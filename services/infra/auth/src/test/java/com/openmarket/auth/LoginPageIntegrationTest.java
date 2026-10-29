@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.openmarket.common.test.container.PostgresContainerConfiguration;
 import com.openmarket.common.test.container.RedisContainerConfiguration;
+import java.net.URI;
 import java.util.UUID;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.DisplayName;
@@ -119,6 +120,27 @@ class LoginPageIntegrationTest {
         loginAs(email, "password123", ip()).andExpect(redirectedUrl("/"));
         mockMvc.perform(get("/login").queryParam("limited", ""))
                 .andExpect(content().string(Matchers.containsString("잠시 뒤")));
+    }
+
+    @Test
+    @DisplayName("경로 글자를 퍼센트 인코딩해도(/%6Cogin) 같은 한도를 받는다")
+    void limitsPercentEncodedLoginPath() throws Exception {
+        String email = register();
+        RequestPostProcessor ip = ip();
+        awayFromWindowEdge();
+        for (int i = 0; i < 8; i++) {
+            loginAs("nobody-" + i + email, "wrong-password-1", ip)
+                    .andExpect(redirectedUrl("/login?error"));
+        }
+
+        mockMvc.perform(
+                        post(URI.create("/%6Cogin"))
+                                .with(csrf())
+                                .with(ip)
+                                .param("username", email)
+                                .param("password", "password123"))
+                .andExpect(status().isSeeOther())
+                .andExpect(redirectedUrl("/login?limited"));
     }
 
     /** 한도는 분 단위 고정 창이다. 9번의 요청이 창 경계에 걸치면 새 창에서 다시 세어 한도에 닿지 않으므로, 창이 끝나기 15초 안이면 다음 창까지 기다린다. */

@@ -7,11 +7,14 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.time.Clock;
 import java.time.Duration;
-import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
+import org.springframework.security.web.util.matcher.OrRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
@@ -25,8 +28,11 @@ public class LoginRateLimitFilter extends OncePerRequestFilter {
 
     private static final Logger log = LoggerFactory.getLogger(LoginRateLimitFilter.class);
     private static final Duration WINDOW = Duration.ofMinutes(1);
-    private static final Set<String> LIMITED_PATHS =
-            Set.of("/login", "/login/totp", "/login/totp/enroll");
+    // 폼 로그인과 MVC처럼 디코딩한 경로로 맞춘다. 원래 URI로 비교하면 /%6Cogin이 한도를 피해 로그인된다.
+    private static final RequestMatcher SECOND_FACTOR =
+            new OrRequestMatcher(post("/login/totp"), post("/login/totp/enroll"));
+    private static final RequestMatcher LIMITED =
+            new OrRequestMatcher(post("/login"), SECOND_FACTOR);
 
     private final StringRedisTemplate redis;
     private final int perMinute;
@@ -40,8 +46,7 @@ public class LoginRateLimitFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        String path = request.getRequestURI().substring(request.getContextPath().length());
-        return !("POST".equals(request.getMethod()) && LIMITED_PATHS.contains(path));
+        return !LIMITED.matches(request);
     }
 
     @Override
@@ -50,8 +55,7 @@ public class LoginRateLimitFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
         if (exceeded(request.getRemoteAddr())) {
             response.setStatus(HttpServletResponse.SC_SEE_OTHER);
-            String path = request.getRequestURI().substring(request.getContextPath().length());
-            String page = path.startsWith("/login/totp") ? "/login/totp" : "/login";
+            String page = SECOND_FACTOR.matches(request) ? "/login/totp" : "/login";
             response.setHeader("Location", request.getContextPath() + page + "?limited");
             return;
         }
@@ -70,5 +74,9 @@ public class LoginRateLimitFilter extends OncePerRequestFilter {
             log.warn("로그인 레이트 리밋을 확인하지 못해 통과시킨다: {}", e.getClass().getSimpleName());
             return false;
         }
+    }
+
+    private static RequestMatcher post(String path) {
+        return PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.POST, path);
     }
 }
