@@ -148,7 +148,7 @@
     - 마감 첫 k6에서 본 본문 없는 500 10건(원인 미확인)
     - 쿠폰 버스트 때 promotion 힙 여유(231/256MB, major GC)
   - 운영([security.md](architecture/security.md) "받아들인 위험")
-    - 보안 이벤트의 로그 기반 알림(Loki 규칙)
+    - 보안 이벤트의 로그 기반 알림(Loki 규칙): 완료(2026-10-29). Grafana 알림이 Loki를 세는 5종(observability.md "대시보드와 알림")
     - 의존성 취약점 자동 검사: 완료(2026-10-29). `pnpm audit`과 Gradle 의존성 그래프 제출(ADR 0026). 처음 검사에서 찾은 next·zod·vite 취약 버전을 올렸다
     - 마이그레이션 계정과 앱 계정 분리
   - 기능(M6 범위 결정)
