@@ -4,6 +4,8 @@
 # - 라벨: labels.txt와 같게 만들고, 없는 라벨은 지운다.
 # - main 보호: rulesets/main.json. PR 필수(승인 0명, 1인 저장소), squash만, `ci` 체크 통과와 최신 main 반영 필수,
 #   강제 push·삭제 금지, 우회 없음. `ci`는 .github/workflows/ci.yml의 집계 잡이고 15368은 GitHub Actions 앱 ID다.
+# - Dependabot 알림: 켠다. Gradle 의존성은 .github/workflows/dependencies.yml이 그래프를 제출한다(ADR 0026).
+#   보안 업데이트 PR은 켜지 않는다. 버전은 사람이 2주 규칙으로 올린다(ADR 0009).
 # 저장소 관리자 권한으로 gh에 로그인해야 한다. 실행: .github/apply-settings.sh [owner/repo]
 set -euo pipefail
 
@@ -15,6 +17,9 @@ gh api -X PATCH "repos/$REPO" --silent \
     -f squash_merge_commit_title=PR_TITLE -f squash_merge_commit_message=COMMIT_MESSAGES \
     -F delete_branch_on_merge=true -F allow_update_branch=true
 echo "merge 설정 적용"
+
+gh api -X PUT "repos/$REPO/vulnerability-alerts" --silent
+echo "Dependabot 알림 적용"
 
 declare -A declared=()
 while read -r name color description; do
