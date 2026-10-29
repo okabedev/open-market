@@ -28,6 +28,7 @@ export const ACTION_LABELS: Record<string, string> = {
   SETTLEMENT_PAID_OUT: "정산 지급",
   DEAD_LETTER_RETRIED: "DLT 메시지 다시 보내기",
   DEAD_LETTER_DISCARDED: "DLT 메시지 버리기",
+  TOTP_ENROLLMENT_RESET: "2단계 인증 등록 해제",
 };
 
 const TARGET_LABELS: Record<string, string> = {
@@ -43,6 +44,7 @@ const TARGET_LABELS: Record<string, string> = {
   SETTLEMENT: "정산",
   SETTLEMENT_RUN: "정산 작업",
   DEAD_LETTER: "DLT 메시지",
+  ACCOUNT: "계정",
 };
 
 export function actionLabel(action: string | undefined): string {

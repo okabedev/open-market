@@ -70,7 +70,7 @@ Grafana 폴더 "Open Market"(http://localhost:3003). 알림은 7종이다.
 
 업무 숫자의 원본은 admin 운영 지표다(업무 DB, [ADR 0023](../adr/0023-admin-ops-queries.md)). 비즈니스 대시보드는 흐름과 지연을 본다.
 
-알림은 Grafana 알림으로 Mailpit(http://localhost:8025, 받는 주소 `ops@openmarket.local`)에 보낸다. 30초마다 평가하고, 같은 알림은 4시간마다 다시 보낸다. 풀리면 해결 메일이 간다.
+알림은 Grafana 알림으로 Mailpit(http://localhost:8025, 받는 주소 `ops@openmarket.local`)에 보낸다. 받은 뒤 할 일은 [런북](../runbook.md)에 있다. 30초마다 평가하고, 같은 알림은 4시간마다 다시 보낸다. 풀리면 해결 메일이 간다.
 
 | 알림 | 조건 | 지속 | 먼저 볼 곳 |
 |---|---|---|---|
@@ -79,7 +79,7 @@ Grafana 폴더 "Open Market"(http://localhost:3003). 알림은 7종이다.
 | 소비자 지연 증가 | 서비스별 소비자 lag 최대 > 1,000 | 5분 | Kafka 이벤트 처리 지연, 서비스 오류, 커넥션 풀 |
 | DLT 유입 | 10분 안에 DLT로 보낸 메시지가 있다(서비스·토픽·그룹별) | 바로 | admin "DLT 메시지" 화면 |
 | outbox 미발행 증가 | 복제 슬롯 미확인 WAL > 16MiB | 3분 | connect 상태, 커넥터 상태 |
-| 복제 슬롯 무효 | 슬롯 `openmarket_outbox`가 `lost` 또는 `unreserved`(곧 lost) | 30초 | 런북 "복제 슬롯 무효". 저절로 복구되지 않는다(R5, R16) |
+| 복제 슬롯 무효 | 슬롯 `openmarket_outbox`가 `lost` 또는 `unreserved`(곧 lost) | 30초 | [런북](../runbook.md) "복제 슬롯 무효". 저절로 복구되지 않는다(R5, R16) |
 | 복제 슬롯 없음 | 슬롯 `openmarket_outbox`가 없거나 postgres-exporter가 응답하지 않는다 | 3분 | connect 상태, 커넥터 등록, `up{job="postgres"}` |
 
 DLT 카운터는 처음 DLT로 보낼 때 1로 생겨 `increase()`가 0이 되므로, 10분 전에 없던 시계열도 유입으로 본다. 새 스택은 Debezium이 슬롯을 만들기 전 1~2분 동안 슬롯이 없어서 "복제 슬롯 없음"은 3분을 둔다. `infra/fault/run.sh slot`이 "복제 슬롯 무효" 경보 메일과 복구 뒤 해결 메일이 Mailpit에 오는지 확인한다.

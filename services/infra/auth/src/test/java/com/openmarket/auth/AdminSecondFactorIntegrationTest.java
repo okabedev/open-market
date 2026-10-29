@@ -19,6 +19,9 @@ import com.openmarket.common.test.container.PostgresContainerConfiguration;
 import com.openmarket.common.test.container.RedisContainerConfiguration;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.util.Base64;
 import java.util.List;
@@ -38,10 +41,13 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.RequestBuilder;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
+import org.testcontainers.containers.Container.ExecResult;
+import org.testcontainers.postgresql.PostgreSQLContainer;
+import org.testcontainers.utility.MountableFile;
 
 /**
  * 관리자 2단계 인증(R15, docs/architecture/auth.md "관리자 2단계 인증"). 비밀번호와 TOTP 사이에 인가 코드가 나가지 않는지, 등록 전 첫
- * 로그인, 같은 코드 재사용, 틀린 코드 잠금, 복구 코드를 본다.
+ * 로그인, 같은 코드 재사용, 틀린 코드 잠금, 복구 코드, 런북의 등록 해제 SQL을 본다.
  */
 @SpringBootTest(properties = "spring.kafka.listener.auto-startup=false")
 @ExtendWith(OutputCaptureExtension.class)
@@ -56,6 +62,8 @@ class AdminSecondFactorIntegrationTest {
     @Autowired JdbcClient jdbc;
 
     @Autowired PasswordEncoder passwordEncoder;
+
+    @Autowired PostgreSQLContainer postgres;
 
     @Test
     @DisplayName("비밀번호만 맞힌 관리자 세션은 인가 코드를 받지 못하고 2단계 화면으로 간다. 어느 클라이언트든 같다")
@@ -192,6 +200,109 @@ class AdminSecondFactorIntegrationTest {
                                 .with(ip)
                                 .param("code", code(admin.secret(), 1)))
                 .andExpect(redirectedUrl("/login/totp?limited"));
+    }
+
+    @Test
+    @DisplayName("런북의 등록 해제 SQL은 등록과 복구 코드, 인가 기록을 지우고 감사 로그를 남긴다. 다음 로그인에 다시 등록한다")
+    void runbookResetsEnrollment() throws Exception {
+        EnrolledAdmin admin = enrolledAdmin(mockMvc, jdbc, passwordEncoder);
+        assertThat(authorizeCode(admin.session(), "admin")).isNotBlank();
+        UUID operator = UUID.randomUUID();
+
+        ExecResult result = resetTotp(admin.email().toUpperCase(), operator.toString());
+
+        assertThat(result.getExitCode()).as(result.getStderr()).isZero();
+        assertThat(count("SELECT count(*) FROM totp_credential WHERE account_id = ?", admin.id()))
+                .isZero();
+        assertThat(
+                        count(
+                                "SELECT count(*) FROM totp_recovery_code WHERE account_id = ?",
+                                admin.id()))
+                .isZero();
+        assertThat(
+                        count(
+                                "SELECT count(*) FROM oauth2_authorization WHERE principal_name = ?",
+                                admin.id().toString()))
+                .isZero();
+        assertThat(
+                        jdbc.sql(
+                                        "SELECT actor_id, target_type, detail FROM audit_log"
+                                                + " WHERE action = 'TOTP_ENROLLMENT_RESET'"
+                                                + " AND target_id = ?")
+                                .param(admin.id().toString())
+                                .query(
+                                        (rs, n) ->
+                                                List.of(
+                                                        rs.getString(1),
+                                                        rs.getString(2),
+                                                        rs.getString(3)))
+                                .list())
+                .containsExactly(List.of(operator.toString(), "ACCOUNT", "기기 분실"));
+
+        MockHttpSession session = passwordLogin(mockMvc, admin.email(), "admin-pass-1234");
+        mockMvc.perform(authorizeRequest(session, "admin"))
+                .andExpect(r -> assertSecondFactorPage(r.getResponse().getRedirectedUrl()));
+        assertThat(enrollmentSecret(mockMvc, session)).isNotEqualTo(admin.secret());
+    }
+
+    @Test
+    @DisplayName("등록 해제 SQL을 다시 실행해도 감사 로그는 한 번만 남고, 없는 계정이면 아무것도 바꾸지 않고 실패한다")
+    void runbookResetIsIdempotent() throws Exception {
+        EnrolledAdmin admin = enrolledAdmin(mockMvc, jdbc, passwordEncoder);
+        String operator = UUID.randomUUID().toString();
+
+        assertThat(resetTotp(admin.email(), operator).getExitCode()).isZero();
+        assertThat(resetTotp(admin.email(), operator).getExitCode()).isZero();
+        ExecResult missing =
+                resetTotp("nobody-" + UUID.randomUUID() + "@openmarket.local", operator);
+
+        assertThat(missing.getExitCode()).isNotZero();
+        assertThat(
+                        count(
+                                "SELECT count(*) FROM audit_log WHERE action = 'TOTP_ENROLLMENT_RESET'"
+                                        + " AND actor_id = ?",
+                                operator))
+                .isEqualTo(1);
+    }
+
+    /** 런북 명령과 같게 psql로 {@code infra/runbook/totp-reset.sql}을 실행한다. 테스트 DB는 스키마 auth가 있는 test다. */
+    private ExecResult resetTotp(String email, String actor) throws Exception {
+        postgres.copyFileToContainer(
+                MountableFile.forHostPath(repositoryRoot().resolve("infra/runbook/totp-reset.sql")),
+                "/tmp/totp-reset.sql");
+        return postgres.execInContainer(
+                "psql",
+                "-U",
+                postgres.getUsername(),
+                "-d",
+                postgres.getDatabaseName(),
+                "-v",
+                "ON_ERROR_STOP=1",
+                "-v",
+                "email=" + email,
+                "-v",
+                "actor=" + actor,
+                "-v",
+                "reason=기기 분실",
+                "-f",
+                "/tmp/totp-reset.sql");
+    }
+
+    private long count(String sql, Object id) {
+        return jdbc.sql(sql).param(id).query(Long.class).single();
+    }
+
+    /** 테스트 작업 디렉터리(서비스 모듈)에서 위로 올라가 레포 루트를 찾는다(OpenApiSnapshot과 같다). */
+    private static Path repositoryRoot() {
+        Path dir = Paths.get("").toAbsolutePath();
+        while (dir != null) {
+            if (Files.isDirectory(dir.resolve("services"))
+                    && Files.isDirectory(dir.resolve("infra"))) {
+                return dir;
+            }
+            dir = dir.getParent();
+        }
+        throw new IllegalStateException("레포 루트를 찾지 못했다");
     }
 
     /** 2단계 화면 주소. 엔트리 포인트가 절대 주소와 요소 안내 조건을 붙인다. */

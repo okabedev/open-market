@@ -28,10 +28,10 @@
 
 ## 디렉터리
 ```
-docs/        PRD, 용어집, 로드맵, 개발 환경, architecture/, adr/
+docs/        PRD, 용어집, 로드맵, 개발 환경, 런북, architecture/, adr/
 services/    Gradle 멀티 모듈: build-logic/, libs/, core/<service>, infra/<service>   → services/CLAUDE.md
 clients/     pnpm 모노레포: apps/{shop,seller,admin}, packages/, e2e/                → clients/CLAUDE.md
-infra/       compose/, config-repo/, postgres/, debezium/, kafka/, elasticsearch/, observability/, grafana/, k6/, e2e/  → infra/CLAUDE.md
+infra/       compose/, config-repo/, postgres/, debezium/, kafka/, elasticsearch/, observability/, grafana/, k6/, e2e/, runbook/  → infra/CLAUDE.md
 .claude/     skills/
 ```
 
@@ -56,6 +56,7 @@ infra/       compose/, config-repo/, postgres/, debezium/, kafka/, elasticsearch
 - 서비스 추가: `add-service` skill
 - 유스케이스(커맨드·쿼리) 추가: `add-usecase` skill
 - 마일스톤 마감 전, 큰 변경 후 점검: `design-review` skill
+- 경보 대응과 운영 작업(복제 슬롯 복구, TOTP 등록 해제 등): [runbook.md](docs/runbook.md)
 - 기술 리스크는 [risks.md](docs/architecture/risks.md)에서 상태를 갱신한다. 결정이 생기면 ADR을 쓴다.
 
 ## 명령

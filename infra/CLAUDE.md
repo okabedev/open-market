@@ -16,6 +16,7 @@ infra/
 ├─ fake-pg/        E2E에서 토스 대신 쓰는 가짜 PG(ADR 0018). 의존성 없는 Node 서버, 테스트는 `node --test infra/fake-pg/*.test.mjs`
 ├─ k6/             부하 시험 실행 스크립트 run.sh(별도 Compose 프로젝트 + k6 컨테이너)와 시나리오 browse·order·coupon.js, 장애 주입용 saga·coupon-saga·coupon-issue.js, 시드 관리자 2단계 인증 등록 admin-totp.js(run.sh가 먼저 돌린다), 공통 lib/
 ├─ fault/          장애 주입 실행 스크립트 run.sh(별도 Compose 프로젝트 + Toxiproxy + 가짜 PG + k6 시나리오), 정합성 검사 check.sql, Toxiproxy 설정
+├─ runbook/        런북(docs/runbook.md)의 DB 작업 스크립트. totp-reset.sql(관리자 TOTP 등록 해제, auth 통합 테스트가 실행해 검증)
 └─ elasticsearch/  nori 플러그인 커스텀 이미지(ADR 0016). search profile이 빌드한다
 ```
 
