@@ -20,8 +20,13 @@ export type Bff = {
   callback(request: Request): Promise<Response>;
   logout(request: Request): Promise<Response>;
   getSession(sid: string | undefined): Promise<SessionView | null>;
-  /** 유효한 액세스 토큰. 만료가 가까우면 갱신한다. 세션이 없거나 갱신이 거절되면 null */
+  /** 유효한 액세스 토큰. 만료가 가까우면 갱신한다. 세션이 없거나 수명이 지났거나 갱신이 거절되면 null */
   getAccessToken(sid: string | undefined): Promise<string | null>;
+  /**
+   * 요청의 Origin이 앱 주소와 같은지. 상태를 바꾸는 Route Handler가 부른다. Server Action과 달리 Next.js가 검사하지 않는다
+   * (docs/architecture/auth.md "보안 기본값")
+   */
+  isSameOrigin(request: Request): boolean;
 };
 
 export type BffDependencies = {
@@ -67,6 +72,22 @@ export function createBff({ config, store, oidc, now = Date.now }: BffDependenci
     };
   };
   const isFresh = (session: Session) => session.accessTokenExpiresAt - REFRESH_SKEW_MS > now();
+  // 세션 수명은 로그인 시각부터 센다. 리프레시 토큰은 rotation마다 수명이 다시 시작되므로, 이 상한이 없으면 쓰는 동안 세션이 끝나지 않는다.
+  const remainingSeconds = (session: Session) =>
+    Math.ceil((session.createdAt + config.sessionTtlSeconds * 1000 - now()) / 1000);
+
+  const isSameOrigin = (request: Request) =>
+    request.headers.get("origin") === new URL(config.appUrl).origin;
+
+  /** 수명이 남은 세션. 지났으면 지운다. */
+  async function liveSession(sid: string): Promise<Session | null> {
+    const session = await store.get(sid);
+    if (session && remainingSeconds(session) <= 0) {
+      await store.delete(sid);
+      return null;
+    }
+    return session;
+  }
 
   async function refresh(sid: string): Promise<string | null> {
     const owner = randomUUID();
@@ -75,7 +96,7 @@ export function createBff({ config, store, oidc, now = Date.now }: BffDependenci
     }
     try {
       // 락을 잡기 직전에 다른 요청이 갱신을 마쳤을 수 있다.
-      const current = await store.get(sid);
+      const current = await liveSession(sid);
       if (!current) {
         return null;
       }
@@ -93,8 +114,7 @@ export function createBff({ config, store, oidc, now = Date.now }: BffDependenci
         throw error;
       }
       const next = toSession(tokens, current.createdAt);
-      // rotation으로 수명이 다시 시작되므로 세션 TTL도 다시 건다.
-      await store.save(sid, next, config.sessionTtlSeconds);
+      await store.save(sid, next, Math.max(1, remainingSeconds(next)));
       return next.accessToken;
     } finally {
       await store.unlock(sid, owner);
@@ -105,7 +125,7 @@ export function createBff({ config, store, oidc, now = Date.now }: BffDependenci
     const started = Date.now();
     while (Date.now() - started < WAIT_TIMEOUT_MS) {
       await new Promise((resolve) => setTimeout(resolve, WAIT_INTERVAL_MS));
-      const session = await store.get(sid);
+      const session = await liveSession(sid);
       if (!session) {
         return null;
       }
@@ -183,9 +203,10 @@ export function createBff({ config, store, oidc, now = Date.now }: BffDependenci
       ]);
     },
 
+    isSameOrigin,
+
     async logout(request) {
-      // Route Handler는 Next.js가 Origin을 검사하지 않으므로 직접 한다(docs/architecture/auth.md "보안 기본값").
-      if (request.headers.get("origin") !== new URL(config.appUrl).origin) {
+      if (!isSameOrigin(request)) {
         return new Response("허용하지 않는 요청입니다.", { status: 403 });
       }
       const clear = cookie(sessionCookie, "", 0);
@@ -208,7 +229,7 @@ export function createBff({ config, store, oidc, now = Date.now }: BffDependenci
       if (!sid) {
         return null;
       }
-      const session = await store.get(sid);
+      const session = await liveSession(sid);
       return session ? { sub: session.sub, roles: session.roles } : null;
     },
 
@@ -216,7 +237,7 @@ export function createBff({ config, store, oidc, now = Date.now }: BffDependenci
       if (!sid) {
         return null;
       }
-      const session = await store.get(sid);
+      const session = await liveSession(sid);
       if (!session) {
         return null;
       }

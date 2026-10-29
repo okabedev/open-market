@@ -1,3 +1,4 @@
+import { securityHeaders } from "@openmarket/config/next-headers";
 import type { NextConfig } from "next";
 
 const GATEWAY_URL = process.env.GATEWAY_URL ?? "http://localhost:8080";
@@ -6,6 +7,9 @@ const GATEWAY_URL = process.env.GATEWAY_URL ?? "http://localhost:8080";
 const nextConfig: NextConfig = {
   transpilePackages: ["@openmarket/ui", "@openmarket/bff", "@openmarket/api-client"],
   // 공개 이미지 변형(docs/architecture/file.md "썸네일과 제공")을 같은 Origin으로 받는다. 브라우저는 gateway를 직접 부르지 않는다.
+  async headers() {
+    return [{ source: "/:path*", headers: securityHeaders }];
+  },
   async rewrites() {
     return [{ source: "/files/:path*", destination: `${GATEWAY_URL}/files/:path*` }];
   },

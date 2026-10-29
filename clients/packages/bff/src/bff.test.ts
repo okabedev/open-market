@@ -213,11 +213,53 @@ describe("토큰 갱신", () => {
     expect(await bff.getSession(sid)).toBeNull();
   });
 
+  it("세션 수명은 로그인 시각부터 센다. 지나면 갱신하지 않고 세션을 끝낸다", async () => {
+    const oidc = new FakeOidc(now);
+    const bff = newBff(oidc);
+    const sid = await login(bff);
+
+    clock += config.sessionTtlSeconds * 1000;
+
+    expect(await bff.getAccessToken(sid)).toBeNull();
+    expect(oidc.refreshCalls).toBe(0);
+    expect(await bff.getSession(sid)).toBeNull();
+  });
+
+  it("갱신해도 세션 TTL은 처음 수명에서 남은 시간이다", async () => {
+    const oidc = new FakeOidc(now);
+    const bff = newBff(oidc);
+    const sid = await login(bff);
+
+    clock += 600_000;
+    await bff.getAccessToken(sid);
+
+    const ttl = await redis.client.ttl(`bff:shop:session:${sid}`);
+    expect(oidc.refreshCalls).toBe(1);
+    expect(ttl).toBeLessThanOrEqual(config.sessionTtlSeconds - 600);
+    expect(ttl).toBeGreaterThan(config.sessionTtlSeconds - 610);
+  });
+
   it("세션이 없으면 null이다", async () => {
     const bff = newBff(new FakeOidc(now));
 
     expect(await bff.getAccessToken("no-such-session")).toBeNull();
     expect(await bff.getAccessToken(undefined)).toBeNull();
+  });
+});
+
+describe("Origin 검사", () => {
+  it("앱 주소와 같은 Origin만 통과한다. Origin이 없으면 거절한다", () => {
+    const bff = newBff(new FakeOidc(now));
+    const post = (origin?: string) =>
+      new Request("http://localhost:3000/api/files", {
+        method: "POST",
+        headers: origin ? { origin } : {},
+      });
+
+    expect(bff.isSameOrigin(post("http://localhost:3000"))).toBe(true);
+    expect(bff.isSameOrigin(post("http://localhost:3001"))).toBe(false);
+    expect(bff.isSameOrigin(post("http://evil.example"))).toBe(false);
+    expect(bff.isSameOrigin(post())).toBe(false);
   });
 });
 

@@ -147,6 +147,18 @@ class GatewayTest extends GatewayTestSupport {
     }
 
     @Test
+    @DisplayName("서비스의 OpenAPI 문서는 바깥에 내주지 않는다(관리자·내부 API 모양이 드러난다)")
+    void neverRoutesApiDocs() throws Exception {
+        String buyer = TestJwt.token("buyer-1", "BUYER");
+        int before = upstream.hits();
+
+        assertThat(getWithToken("/api/member/v3/api-docs", buyer).statusCode()).isEqualTo(403);
+        assertThat(getWithToken("/api/member/v3/api-docs/swagger-config", buyer).statusCode())
+                .isEqualTo(403);
+        assertThat(upstream.hits()).isEqualTo(before);
+    }
+
+    @Test
     @DisplayName("응답의 X-Request-Id는 서비스로 넘긴 traceparent의 trace id다")
     void requestIdIsTraceId() throws Exception {
         HttpResponse<String> response =

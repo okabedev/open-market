@@ -2,8 +2,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const post = vi.fn();
 const getAccessToken = vi.fn();
+const isSameOrigin = vi.fn();
 vi.mock("@/lib/bff", () => ({
   bff: {
+    isSameOrigin: (request: Request) => isSameOrigin(request),
     getAccessToken: () => getAccessToken(),
     getSession: vi.fn(async () => ({ roles: ["BUYER", "SELLER"] })),
     serviceClient: vi.fn(async () => ({ POST: post })),
@@ -24,6 +26,16 @@ describe("POST /api/files", () => {
   beforeEach(() => {
     post.mockReset();
     getAccessToken.mockResolvedValue("token");
+    isSameOrigin.mockResolvedValue(true);
+  });
+
+  it("다른 Origin에서 온 업로드는 403이고 file을 부르지 않는다(CSRF)", async () => {
+    isSameOrigin.mockResolvedValue(false);
+
+    const response = await POST(upload(new File(["x"], "a.jpg")));
+
+    expect(response.status).toBe(403);
+    expect(post).not.toHaveBeenCalled();
   });
 
   it("로그인하지 않았으면 401이고 file을 부르지 않는다", async () => {

@@ -108,6 +108,27 @@ class UploadFileUseCaseTest {
     }
 
     @Test
+    @DisplayName("긴 변이 짧은 변의 10배를 넘으면 픽셀을 풀기 전에 FILE_IMAGE_ASPECT_RATIO다")
+    void rejectsElongatedImage() {
+        images.dimensions = new ImageDimensions(800, 8001);
+
+        assertThatThrownBy(() -> useCase.execute(command(PNG)))
+                .hasFieldOrPropertyWithValue("code", "FILE_IMAGE_ASPECT_RATIO");
+        assertThat(images.rendered).isEmpty();
+        assertThat(storage.objects).isEmpty();
+    }
+
+    @Test
+    @DisplayName("긴 변이 짧은 변의 10배인 이미지는 받는다")
+    void acceptsAspectRatioAtLimit() {
+        images.dimensions = new ImageDimensions(8000, 800);
+
+        useCase.execute(command(PNG));
+
+        assertThat(images.rendered).isNotEmpty();
+    }
+
+    @Test
     @DisplayName("형식은 맞지만 읽을 수 없는 이미지는 FILE_INVALID_IMAGE다")
     void rejectsCorruptImage() {
         images.corrupt = true;

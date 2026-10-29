@@ -7,6 +7,9 @@ import { currentSession } from "@/lib/session";
  * 서비스(`POST /v1/seller/files`)로 넘기고 `fileId`만 돌려준다. 형식·크기 검사의 원본은 file이다(docs/architecture/file.md "검사").
  */
 export async function POST(request: Request): Promise<Response> {
+  if (!(await bff.isSameOrigin(request))) {
+    return Response.json({ detail: "허용하지 않는 요청입니다." }, { status: 403 });
+  }
   if (!(await currentSession())) {
     return Response.json({ detail: "로그인이 필요합니다." }, { status: 401 });
   }

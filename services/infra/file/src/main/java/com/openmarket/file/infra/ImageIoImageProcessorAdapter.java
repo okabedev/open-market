@@ -38,7 +38,8 @@ import javax.imageio.stream.ImageOutputStream;
  *
  * <ul>
  *   <li>크기는 머리만 읽는다. 픽셀은 변형을 만들 때만 푼다
- *   <li>큰 이미지는 서브샘플링으로 가장 큰 변형 폭의 2배 이상만 남기고 푼다. 힙(컨테이너 512MB의 50%)을 원본 해상도와 상관없이 일정하게 쓴다
+ *   <li>큰 이미지는 서브샘플링으로 가장 큰 변형 폭의 2배 이상만 남기고, 푸는 픽셀을 {@link #MAX_DECODED_PIXELS} 이하로 묶는다. 힙을 원본
+ *       해상도와 상관없이 일정하게 쓴다
  *   <li>동시에 변형을 만드는 요청은 {@link #MAX_CONCURRENT_RENDERS}개로 막는다
  *   <li>JPEG의 EXIF 방향을 반영한다. WebP·PNG의 방향 정보는 읽지 않는다
  *   <li>투명한 부분은 흰색으로 채운다. 결과에는 메타데이터(EXIF, ICC)를 넣지 않는다
@@ -47,6 +48,10 @@ import javax.imageio.stream.ImageOutputStream;
 public class ImageIoImageProcessorAdapter implements ImageProcessorPort {
 
     static final int MAX_CONCURRENT_RENDERS = 2;
+
+    /** 한 번에 푸는 픽셀 수 상한. 푼 이미지와 흰 배경 사본을 합쳐 요청 하나가 약 56MB를 쓴다. */
+    static final long MAX_DECODED_PIXELS = 8_000_000L;
+
     private static final float JPEG_QUALITY = 0.85f;
     private static final int NORMAL = 1;
 
@@ -104,7 +109,7 @@ public class ImageIoImageProcessorAdapter implements ImageProcessorPort {
                                 .mapToInt(variant -> variant.targetWidth(source.width()))
                                 .max()
                                 .orElse(source.width());
-                int step = Math.max(1, source.width() / (2 * largest));
+                int step = subsampling(source, largest);
                 ImageReadParam param = reader.getDefaultReadParam();
                 param.setSourceSubsampling(step, step, 0, 0);
                 decoded = reader.read(0, param);
@@ -116,6 +121,16 @@ public class ImageIoImageProcessorAdapter implements ImageProcessorPort {
         return variants.stream()
                 .map(variant -> renderOne(flat, source, orientation, variant))
                 .toList();
+    }
+
+    /**
+     * 픽셀을 몇 개마다 하나씩 읽을지. 가장 큰 변형 폭의 2배 이상을 남기되, 푸는 픽셀이 {@link #MAX_DECODED_PIXELS}를 넘지 않게 한다. 폭만 보면
+     * 좁고 긴 이미지(예: 1599x31000)를 원본 해상도로 푼다.
+     */
+    static int subsampling(ImageDimensions source, int largestWidth) {
+        int byWidth = source.width() / (2 * largestWidth);
+        int byPixels = (int) Math.ceil(Math.sqrt((double) source.pixels() / MAX_DECODED_PIXELS));
+        return Math.max(1, Math.max(byWidth, byPixels));
     }
 
     private static Rendition renderOne(

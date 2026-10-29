@@ -4,7 +4,7 @@
 # 1. 별도 Compose 프로젝트(openmarket-e2e)로 기본·apps·e2e profile을 빈 볼륨에서 띄운다. 개발용 스택(openmarket)의 데이터와 섞이지 않는다.
 #    호스트 포트는 같으므로 개발용 스택과 앱(3000~3002)은 먼저 멈춘다.
 #    토스 대신 가짜 PG(e2e profile, infra/fake-pg)를 쓴다. payment는 TOSS_API_URL, shop은 TOSS_SDK_URL로 주소만 바꾼다(ADR 0018).
-# 2. 앱 3개를 빌드해서 `next start`로 띄운다.
+# 2. 앱 3개를 빌드해서 `pnpm start`(openmarket-serve, next start 대신 X-Forwarded-*를 연결 주소로 바꾸는 앱 서버)로 띄운다.
 # 3. clients/e2e의 Playwright 시나리오 중 `<마일스톤>-*.spec.ts`를 돌린다.
 # 4. 끝나면 앱을 멈추고 Compose 프로젝트를 볼륨째 지운다. 남겨서 들여다보려면 E2E_KEEP=1.
 #

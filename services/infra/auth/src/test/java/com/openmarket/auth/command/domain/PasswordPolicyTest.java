@@ -25,8 +25,17 @@ class PasswordPolicyTest {
                 .isInstanceOf(InvalidPasswordException.class);
     }
 
+    @Test
+    @DisplayName("64자 안이라도 UTF-8로 72바이트를 넘으면 거절한다(bcrypt가 받지 않는다)")
+    void rejectsOverBcryptBytes() {
+        String password = "가".repeat(24) + "a1";
+
+        assertThatThrownBy(() -> PasswordPolicy.check(password))
+                .isInstanceOf(InvalidPasswordException.class);
+    }
+
     @ParameterizedTest
-    @ValueSource(strings = {"abcdefghi1", "Password12!", "1a1a1a1a1a"})
+    @ValueSource(strings = {"abcdefghi1", "Password12!", "1a1a1a1a1a", "비밀번호는길게써도된다a1"})
     @DisplayName("10자 이상이고 영문과 숫자를 포함하면 통과한다")
     void acceptsStrong(String password) {
         assertThatCode(() -> PasswordPolicy.check(password)).doesNotThrowAnyException();
