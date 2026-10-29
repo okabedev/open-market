@@ -17,6 +17,12 @@ public record PlaceOrderCommand(
         List<UUID> issuedCouponIds,
         @Nullable Long expectedAmount) {
 
+    /** 배송지를 남기지 않는다(NFR-7). */
+    @Override
+    public String toString() {
+        return "PlaceOrderCommand[buyerId=" + buyerId + "]";
+    }
+
     /**
      * 주문할 SKU 하나.
      *
@@ -30,5 +36,12 @@ public record PlaceOrderCommand(
             @Nullable String recipientPhone,
             @Nullable String zipCode,
             @Nullable String baseAddress,
-            @Nullable String detailAddress) {}
+            @Nullable String detailAddress) {
+
+        /** 개인정보를 남기지 않는다(NFR-7). */
+        @Override
+        public String toString() {
+            return "Shipping[***]";
+        }
+    }
 }

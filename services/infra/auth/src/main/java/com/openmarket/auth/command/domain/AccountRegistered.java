@@ -10,4 +10,10 @@ import java.util.UUID;
 public record AccountRegistered(UUID accountId, String email, String name) {
 
     public static final String TYPE = "AccountRegistered";
+
+    /** 개인정보를 남기지 않는다(NFR-7). */
+    @Override
+    public String toString() {
+        return "AccountRegistered[accountId=" + accountId + "]";
+    }
 }

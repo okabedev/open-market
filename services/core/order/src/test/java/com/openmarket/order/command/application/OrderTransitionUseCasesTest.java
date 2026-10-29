@@ -201,7 +201,6 @@ class OrderTransitionUseCasesTest {
                                                 assertThat(l.amount()).isEqualTo(59_700);
                                             });
                         });
-        assertThat(paid.shippingAddress().recipientName()).isEqualTo("홍길동");
     }
 
     @Test

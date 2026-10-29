@@ -135,8 +135,9 @@ class PaymentEventsIntegrationTest {
                 .isEqualTo(example.get("sellerOrders").get(0).propertyNames());
         assertThat(sellerOrder.get("lines").get(0).propertyNames())
                 .isEqualTo(example.get("sellerOrders").get(0).get("lines").get(0).propertyNames());
-        assertThat(paid.get("shippingAddress").propertyNames())
-                .isEqualTo(example.get("shippingAddress").propertyNames());
+        // 배송지는 싣지 않는다. 판매자는 하위 주문 상세에서 받는다(NFR-7)
+        assertThat(paid.has("shippingAddress")).isFalse();
+        assertThat(paid.toString()).doesNotContain("010-");
         assertThat(paid.get("amount").asLong()).isEqualTo(59_700);
         assertThat(sellerOrder.get("lines").get(0).get("skuId").asString())
                 .isEqualTo(ordered.toString());
