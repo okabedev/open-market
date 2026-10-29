@@ -6,7 +6,7 @@ packages:
   - e2e
 
 catalog:
-  next: 16.3.8
+  next: 16.4.1
   react: 19.3.0
   react-dom: 19.3.0
   typescript: 6.0.3
@@ -15,11 +15,11 @@ catalog:
   "@types/react-dom": 19.3.0
   # 10은 eslint-config-next가 쓰는 eslint-plugin-react 7.37.5와 맞지 않는다(ADR 0012).
   eslint: 9.39.5
-  eslint-config-next: 16.3.8
+  eslint-config-next: 16.4.1
   eslint-config-prettier: 10.1.8
   prettier: 3.9.9
   vitest: 5.0.3
-  vite: 8.3.2
+  vite: 8.3.4
   openapi-typescript: 7.13.0
   openapi-fetch: 0.17.0
   server-only: 0.0.1
@@ -37,7 +37,7 @@ catalog:
   class-variance-authority: 0.7.1
   clsx: 2.1.1
   tailwind-merge: 3.7.0
-  zod: 4.6.5
+  zod: 4.6.7
   # 컴포넌트 테스트(ADR 0015)
   "@testing-library/react": 16.3.3
   "@testing-library/dom": 10.4.2
