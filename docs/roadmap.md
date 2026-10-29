@@ -143,10 +143,10 @@
   - 부하 측정 숫자를 한 번의 실행으로 적었다. 꼬리 지연이 실행마다 크게 흔들리므로 판정은 같은 스택에서 두 번 이상 잰다.
 - M6 이후 백로그(마일스톤 밖). 끝난 항목은 날짜와 내용을 적는다
   - 성능([risks.md](architecture/risks.md) "부하 측정")
-    - gateway 레이트 리밋의 Redis 호출 지연
-    - 드문 60초 무응답
-    - 마감 첫 k6에서 본 본문 없는 500 10건(원인 미확인)
-    - 쿠폰 버스트 때 promotion 힙 여유(231/256MB, major GC)
+    - gateway 레이트 리밋의 Redis 호출 지연: 완료(2026-10-29). Lettuce 응답 신호를 I/O 스레드 밖으로(`publishOnScheduler`), 쿠폰 버스트의 Redis 시간 초과 약 1,000건 → 0건
+    - 드문 60초 무응답: 2026-10-29 coupon 여섯 번에서 재현되지 않아 열어 둔다
+    - 마감 첫 k6에서 본 본문 없는 500 10건(원인 미확인): 같은 여섯 번에서 재현되지 않아 열어 둔다
+    - 쿠폰 버스트 때 promotion 힙 여유(231/256MB, major GC): 완료(2026-10-29). promotion `mem_limit` 768m(힙 약 307MB), 상한 도달 85~187회 → 0회
   - 운영([security.md](architecture/security.md) "받아들인 위험")
     - 보안 이벤트의 로그 기반 알림(Loki 규칙): 완료(2026-10-29). Grafana 알림이 Loki를 세는 5종(observability.md "대시보드와 알림")
     - 의존성 취약점 자동 검사: 완료(2026-10-29). `pnpm audit`과 Gradle 의존성 그래프 제출(ADR 0026). 처음 검사에서 찾은 next·zod·vite 취약 버전을 올렸다
