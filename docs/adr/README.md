@@ -29,6 +29,7 @@
 | [0023](0023-admin-ops-queries.md) | 감사 로그와 DLT 메시지는 admin BFF가 서비스마다 물어 합치고, 운영 지표는 업무 DB에서 센다 | 승인 |
 | [0024](0024-admin-totp-mfa.md) | 관리자 TOTP는 Spring Security 7 다중 요소 인증의 요소 권한으로 요구한다 | 승인 |
 | [0025](0025-ops-metrics-and-alerts.md) | 메시징·비즈니스 지표는 common-messaging이 내고, 복제 슬롯은 postgres-exporter로 보며, 알림은 Grafana가 Mailpit으로 보낸다 | 승인 |
+| [0026](0026-dependency-vulnerability-scan.md) | 의존성 취약점은 clients는 pnpm audit, services는 Gradle 의존성 그래프 제출과 Dependabot 알림으로 본다 | 승인 |
 
 
 ## 템플릿
