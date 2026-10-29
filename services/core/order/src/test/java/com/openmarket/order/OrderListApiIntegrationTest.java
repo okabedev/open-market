@@ -185,6 +185,35 @@ class OrderListApiIntegrationTest {
     }
 
     @Test
+    @DisplayName("판매자 하위 주문 목록과 상세는 쿠폰 할인과 결제 금액을 준다")
+    void sellerOrderDiscount() throws Exception {
+        UUID paid = place(buyerId, line(shirt, 2, 19_900));
+        markPaid(paid, "2026-10-21T01:00:00Z");
+        jdbc.sql(
+                        """
+                        UPDATE seller_order
+                        SET seller_issued_coupon_id = :couponId, seller_coupon_discount = 3000,
+                            platform_coupon_discount = 1490, payment_amount = 35310
+                        WHERE order_id = :id""")
+                .param("couponId", UUID.randomUUID())
+                .param("id", paid)
+                .update();
+
+        JsonNode item = sellerList(Map.of()).get("items").get(0);
+        assertThat(item.get("amount").asLong()).isEqualTo(39_800);
+        assertThat(item.get("sellerCouponDiscount").asLong()).isEqualTo(3_000);
+        assertThat(item.get("platformCouponDiscount").asLong()).isEqualTo(1_490);
+        assertThat(item.get("paymentAmount").asLong()).isEqualTo(35_310);
+
+        mockMvc.perform(get("/v1/seller/orders/{id}", sellerOrderIdOf(paid)).with(seller(sellerA)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.amount").value(39_800))
+                .andExpect(jsonPath("$.sellerCouponDiscount").value(3_000))
+                .andExpect(jsonPath("$.platformCouponDiscount").value(1_490))
+                .andExpect(jsonPath("$.paymentAmount").value(35_310));
+    }
+
+    @Test
     @DisplayName("판매자 하위 주문 목록은 최근 결제 순이다. 먼저 주문했어도 나중에 결제했으면 앞에 온다")
     void sellerListByPaidAt() throws Exception {
         UUID placedFirst = place(buyerId, line(shirt, 1, 19_900));

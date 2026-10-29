@@ -171,6 +171,9 @@ public class OrderQueryDao {
                                 order.id,
                                 order.status.stringValue(),
                                 sellerOrder.amount,
+                                sellerOrder.sellerCouponDiscount,
+                                sellerOrder.platformCouponDiscount,
+                                sellerOrder.paymentAmount,
                                 JPAExpressions.select(first.productName)
                                         .from(first)
                                         .where(
@@ -203,8 +206,14 @@ public class OrderQueryDao {
                                                 progress(t),
                                                 claim(t),
                                                 Objects.requireNonNull(t.get(sellerOrder.amount)),
-                                                Objects.requireNonNull(t.get(4, String.class)),
-                                                Objects.requireNonNull(t.get(5, Long.class))
+                                                Objects.requireNonNull(
+                                                        t.get(sellerOrder.sellerCouponDiscount)),
+                                                Objects.requireNonNull(
+                                                        t.get(sellerOrder.platformCouponDiscount)),
+                                                Objects.requireNonNull(
+                                                        t.get(sellerOrder.paymentAmount)),
+                                                Objects.requireNonNull(t.get(7, String.class)),
+                                                Objects.requireNonNull(t.get(8, Long.class))
                                                         .intValue(),
                                                 Objects.requireNonNull(t.get(order.placedAt)),
                                                 Objects.requireNonNull(t.get(order.paidAt))))
@@ -226,6 +235,9 @@ public class OrderQueryDao {
                                 order.id,
                                 order.status.stringValue(),
                                 sellerOrder.amount,
+                                sellerOrder.sellerCouponDiscount,
+                                sellerOrder.platformCouponDiscount,
+                                sellerOrder.paymentAmount,
                                 order.shippingAddress.recipientName,
                                 order.shippingAddress.recipientPhone,
                                 order.shippingAddress.zipCode,
@@ -251,6 +263,9 @@ public class OrderQueryDao {
                         progress(row),
                         claim(row),
                         Objects.requireNonNull(row.get(sellerOrder.amount)),
+                        Objects.requireNonNull(row.get(sellerOrder.sellerCouponDiscount)),
+                        Objects.requireNonNull(row.get(sellerOrder.platformCouponDiscount)),
+                        Objects.requireNonNull(row.get(sellerOrder.paymentAmount)),
                         shipping(row),
                         List.copyOf(
                                 lines(orderLine.sellerOrder.id.eq(sellerOrderId))

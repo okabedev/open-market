@@ -658,6 +658,18 @@
             "type" : "integer",
             "format" : "int64"
           },
+          "sellerCouponDiscount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "platformCouponDiscount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "paymentAmount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
           "firstProductName" : {
             "type" : "string"
           },
@@ -762,6 +774,18 @@
             "$ref" : "#/components/schemas/SellerOrderClaimView"
           },
           "amount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "sellerCouponDiscount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "platformCouponDiscount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "paymentAmount" : {
             "type" : "integer",
             "format" : "int64"
           },

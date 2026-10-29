@@ -108,6 +108,21 @@ test("M5: 쿠폰을 받아 주문서에서 판매자·플랫폼 쿠폰을 적용
     }).toPass({ timeout: 30_000, intervals: [1_000] });
   });
 
+  await test.step("판매자: 주문 목록과 상세에 상품 금액, 두 할인, 결제 금액이 보인다", async () => {
+    const row = seller.getByRole("row", { name: new RegExp(product) });
+    await expect(async () => {
+      await seller.goto(`${env.seller}/orders`);
+      await expect(row).toContainText("결제 24,300원", { timeout: 1_000 });
+    }).toPass({ timeout: 30_000, intervals: [1_000] });
+    await expect(row).toContainText("30,000원");
+    await row.getByRole("link", { name: product }).click();
+    await expect(seller.getByRole("row", { name: /판매자 쿠폰 할인/ })).toContainText("-3,000원");
+    await expect(seller.getByRole("row", { name: /오픈 마켓 쿠폰 할인/ })).toContainText(
+      "-2,700원",
+    );
+    await expect(seller.getByRole("row", { name: /^결제 금액/ })).toContainText("24,300원");
+  });
+
   await test.step("판매자·관리자: 목록에 발급 수 1장이 보이고, 판매자가 발급을 멈추면 상품 상세에서 쿠폰이 빠진다", async () => {
     await seller.goto(`${env.seller}/coupons`);
     const row = seller.getByRole("row").filter({ hasText: sellerCoupon });
