@@ -15,8 +15,11 @@ import java.util.UUID;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
@@ -27,6 +30,7 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 /** 로그인 화면, 연속 실패 잠금(ACC-1), 로그인 IP 레이트 리밋(NFR-5). 한도는 테스트 설정의 분당 8회다. */
 @SpringBootTest(properties = "spring.kafka.listener.auto-startup=false")
+@ExtendWith(OutputCaptureExtension.class)
 @AutoConfigureMockMvc
 @Import({PostgresContainerConfiguration.class, RedisContainerConfiguration.class})
 class LoginPageIntegrationTest {
@@ -65,8 +69,8 @@ class LoginPageIntegrationTest {
     }
 
     @Test
-    @DisplayName("5회 연속 실패하면 맞는 비밀번호로도 15분 동안 로그인할 수 없다")
-    void locksAfterFiveFailures() throws Exception {
+    @DisplayName("5회 연속 실패하면 맞는 비밀번호로도 15분 동안 로그인할 수 없다. 실패와 잠금을 이메일 없이 보안 이벤트로 남긴다")
+    void locksAfterFiveFailures(CapturedOutput output) throws Exception {
         String email = register();
         for (int i = 0; i < 5; i++) {
             loginAs(email, "wrong-password-1", ip()).andExpect(redirectedUrl("/login?error"));
@@ -83,6 +87,15 @@ class LoginPageIntegrationTest {
                 .isTrue();
         mockMvc.perform(get("/login").queryParam("locked", ""))
                 .andExpect(content().string(Matchers.containsString("15분")));
+        String accountId =
+                jdbc.sql("SELECT id::text FROM account WHERE email = :email")
+                        .param("email", email)
+                        .query(String.class)
+                        .single();
+        assertThat(output)
+                .contains("보안 이벤트 LOGIN_FAILED account=" + accountId)
+                .contains("보안 이벤트 ACCOUNT_LOCKED account=" + accountId)
+                .doesNotContain(email);
     }
 
     @Test
@@ -104,8 +117,8 @@ class LoginPageIntegrationTest {
     }
 
     @Test
-    @DisplayName("같은 IP에서 분당 한도를 넘으면 로그인을 처리하지 않고 안내로 보낸다. 다른 IP는 영향이 없다")
-    void limitsLoginAttemptsPerIp() throws Exception {
+    @DisplayName("같은 IP에서 분당 한도를 넘으면 로그인을 처리하지 않고 안내로 보낸다. 다른 IP는 영향이 없다. 처음 넘을 때 보안 이벤트를 남긴다")
+    void limitsLoginAttemptsPerIp(CapturedOutput output) throws Exception {
         String email = register();
         RequestPostProcessor ip = ip();
         awayFromWindowEdge();
@@ -120,6 +133,7 @@ class LoginPageIntegrationTest {
         loginAs(email, "password123", ip()).andExpect(redirectedUrl("/"));
         mockMvc.perform(get("/login").queryParam("limited", ""))
                 .andExpect(content().string(Matchers.containsString("잠시 뒤")));
+        assertThat(output).contains("보안 이벤트 LOGIN_RATE_LIMITED ip=");
     }
 
     @Test

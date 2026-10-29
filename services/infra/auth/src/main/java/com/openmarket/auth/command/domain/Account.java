@@ -109,21 +109,23 @@ public class Account {
 
     /**
      * 로그인 실패를 센다. {@value #MAX_LOGIN_FAILURES}번째 실패에서 15분 잠근다. 잠긴 동안의 실패는 세지 않아 잠금이 늘어나지 않는다. 잠금이
-     * 풀린 뒤에는 처음부터 다시 센다.
+     * 풀린 뒤에는 처음부터 다시 센다. 이번 실패로 잠갔으면 {@code true}다.
      */
-    public void recordLoginFailure(Instant now) {
+    public boolean recordLoginFailure(Instant now) {
         if (isLocked(now)) {
-            return;
+            return false;
         }
         if (lockedUntil != null) {
             lockedUntil = null;
             failedLoginCount = 0;
         }
         failedLoginCount += 1;
+        updatedAt = now;
         if (failedLoginCount >= MAX_LOGIN_FAILURES) {
             lockedUntil = now.plus(LOCK_DURATION);
+            return true;
         }
-        updatedAt = now;
+        return false;
     }
 
     /** 역할을 붙인다. 새로 붙었으면 {@code true}다. 토큰에는 다음 발급(갱신)부터 반영된다. */

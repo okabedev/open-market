@@ -63,7 +63,9 @@ class SettlementRunUseCasesTest {
                         ANCHOR,
                         Duration.ofDays(7),
                         1_000);
-        confirm = new ConfirmSettlementUseCase(items, settlements, sellerLock, outbox, clock);
+        confirm =
+                new ConfirmSettlementUseCase(
+                        items, settlements, sellerLock, outbox, auditLog, clock);
         run = new RunSettlementUseCase(items, confirm, auditLog, clock, Duration.ofHours(3));
         payOut = new PayOutSettlementUseCase(settlements, outbox, auditLog, clock);
     }
@@ -112,7 +114,8 @@ class SettlementRunUseCasesTest {
     }
 
     @Test
-    @DisplayName("관리자가 즉시 실행하면 감사 로그 SETTLEMENT_RUN_EXECUTED(확정 건수)를 남긴다. 정기 실행은 남기지 않는다(NFR-8)")
+    @DisplayName(
+            "관리자가 즉시 실행하면 확정한 정산마다 SETTLEMENT_CONFIRMED를, 끝나면 SETTLEMENT_RUN_EXECUTED(확정 건수)를 남긴다. 정기 실행은 남기지 않는다(NFR-8)")
     void adminRunIsAudited() {
         UUID adminId = UUID.randomUUID();
         purchase(sellerA, LAST_WEEK, 30_000);
@@ -123,14 +126,44 @@ class SettlementRunUseCasesTest {
 
         assertThat(confirmed).isEqualTo(2);
         assertThat(auditLog.entries)
-                .singleElement()
-                .satisfies(
+                .hasSize(3)
+                .allMatch(e -> e.actorId().equals(adminId.toString()));
+        AuditEntry summary = auditLog.entries.getLast();
+        assertThat(summary.action()).isEqualTo("SETTLEMENT_RUN_EXECUTED");
+        assertThat(summary.targetType()).isEqualTo("SETTLEMENT_RUN");
+        assertThat(summary.detail()).isEqualTo("확정 2건");
+        List<AuditEntry> perSettlement = auditLog.entries.subList(0, 2);
+        assertThat(perSettlement)
+                .allSatisfy(
                         entry -> {
-                            assertThat(entry.actorId()).isEqualTo(adminId.toString());
-                            assertThat(entry.action()).isEqualTo("SETTLEMENT_RUN_EXECUTED");
-                            assertThat(entry.targetType()).isEqualTo("SETTLEMENT_RUN");
-                            assertThat(entry.detail()).isEqualTo("확정 2건");
-                        });
+                            assertThat(entry.action()).isEqualTo("SETTLEMENT_CONFIRMED");
+                            assertThat(entry.targetType()).isEqualTo("SETTLEMENT");
+                            assertThat(entry.detail()).startsWith("실행 " + summary.targetId());
+                        })
+                .extracting(AuditEntry::targetId)
+                .containsExactlyInAnyOrderElementsOf(
+                        settlements.rows.values().stream()
+                                .map(settlement -> settlement.id().toString())
+                                .toList());
+    }
+
+    @Test
+    @DisplayName("관리자 즉시 실행이 도중에 실패해도 이미 확정한 정산과 실행 요약의 감사 로그가 남는다")
+    void failedAdminRunIsStillAudited() {
+        UUID adminId = UUID.randomUUID();
+        purchase(sellerA, TWO_WEEKS_AGO, 30_000);
+        purchase(sellerB, LAST_WEEK, 20_000);
+        sellerLock.failFor = sellerB;
+
+        assertThatThrownBy(() -> run.execute(new RunSettlementCommand(adminId)))
+                .isInstanceOf(IllegalStateException.class);
+
+        assertThat(auditLog.entries)
+                .extracting(AuditEntry::action)
+                .containsExactly("SETTLEMENT_CONFIRMED", "SETTLEMENT_RUN_EXECUTED");
+        assertThat(auditLog.entries.getFirst().targetId())
+                .isEqualTo(settlements.rows.values().iterator().next().id().toString());
+        assertThat(auditLog.entries.getLast().detail()).isEqualTo("확정 1건(오류로 중단)");
     }
 
     @Test

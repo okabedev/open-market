@@ -66,10 +66,10 @@ public class VerifySecondFactorUseCase {
         return Result.of(Status.VERIFIED);
     }
 
-    /** 틀린 2단계 코드를 비밀번호 실패와 같은 횟수로 센다. 이번 실패로 잠기면 {@code LOCKED}다. 등록 확인도 쓴다. */
+    /** 틀린 2단계 코드를 비밀번호 실패와 같은 횟수로 센다. 이번 실패로 잠기면 {@code LOCKED_BY_FAILURE}다. 등록 확인도 쓴다. */
     static Result failure(Account account, Instant now) {
-        account.recordLoginFailure(now);
-        return Result.of(account.isLocked(now) ? Status.LOCKED : Status.INVALID);
+        return Result.of(
+                account.recordLoginFailure(now) ? Status.LOCKED_BY_FAILURE : Status.INVALID);
     }
 
     /**
@@ -89,7 +89,9 @@ public class VerifySecondFactorUseCase {
         VERIFIED,
         /** 코드가 틀렸다. 로그인 실패로 셌다 */
         INVALID,
-        /** 계정이 잠겼다(이번 실패로 잠겼거나 이미 잠겨 있었다). 로그인 세션을 끝낸다 */
+        /** 코드가 틀렸고 이번 실패로 계정을 잠갔다. 로그인 세션을 끝낸다 */
+        LOCKED_BY_FAILURE,
+        /** 계정이 이미 잠겨 있어 확인하지 않았다. 로그인 세션을 끝낸다 */
         LOCKED,
         /** 등록하지 않았다(또는 이미 등록해 등록 확인을 할 수 없다). 2단계 화면으로 다시 보낸다 */
         NOT_ENROLLED

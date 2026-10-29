@@ -143,7 +143,7 @@ class SecondFactorUseCaseTest {
         assertThat(verify.execute(new VerifySecondFactorCommand(admin.id(), "000000")).status())
                 .isEqualTo(Status.INVALID);
         assertThat(verify.execute(new VerifySecondFactorCommand(admin.id(), "111111")).status())
-                .isEqualTo(Status.LOCKED);
+                .isEqualTo(Status.LOCKED_BY_FAILURE);
         assertThat(admin.isLocked(clock.instant())).isTrue();
 
         clock.advance(Duration.ofSeconds(30));

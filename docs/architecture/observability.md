@@ -84,5 +84,20 @@ Grafana 폴더 "Open Market"(http://localhost:3003). 알림은 7종이다.
 
 DLT 카운터는 처음 DLT로 보낼 때 1로 생겨 `increase()`가 0이 되므로, 10분 전에 없던 시계열도 유입으로 본다. 새 스택은 Debezium이 슬롯을 만들기 전 1~2분 동안 슬롯이 없어서 "복제 슬롯 없음"은 3분을 둔다. `infra/fault/run.sh slot`이 "복제 슬롯 무효" 경보 메일과 복구 뒤 해결 메일이 Mailpit에 오는지 확인한다.
 
+## 보안 이벤트
+로그인과 접근 거부를 WARN 로그로 남긴다(NFR-6, A09). 로거 이름은 `security`이고 메시지는 `보안 이벤트 <이벤트> ...`라서 Loki에서 `|= "보안 이벤트"`로 모아 본다. 이메일 원문, 토큰, 쿼리 문자열은 남기지 않는다.
+
+| 이벤트 | 남기는 곳 | 내용 |
+|---|---|---|
+| `LOGIN_FAILED` | auth `LoginAttemptRecorder` | 계정 ID(없는 계정이면 `unknown`), IP |
+| `ACCOUNT_LOCKED` | auth(비밀번호·2단계 실패) | 이번 실패로 15분 잠근 계정 ID, IP |
+| `SECOND_FACTOR_FAILED` | auth `SecondFactorPageController` | 2단계 코드(또는 복구 코드)가 틀린 계정 ID, IP |
+| `LOGIN_RATE_LIMITED` | auth `LoginRateLimitFilter` | 분당 한도를 넘은 IP. 창마다 처음 넘을 때 한 번 |
+| `ACCESS_DENIED` | gateway | 역할이나 막은 경로(내부 API, actuator, OpenAPI 문서)로 거절한 403. 주체(`sub`), 메서드, 경로 |
+| `TOKEN_REJECTED` | gateway | 토큰이 있는데 서명·`iss`·`aud`·만료 검증에 실패한 401. 메서드, 경로. 토큰 없이 온 401은 남기지 않는다 |
+
+- 서비스 안의 소유권 거절(남의 주문 등)은 업무 오류(404·403 ProblemDetail)라 요청 로그(메서드, 경로, 상태)로 본다.
+- 알림 규칙은 아직 두지 않는다. 로그 기반 알림은 Loki 규칙이 필요하다.
+
 ## 대시보드 관리
 Grafana 데이터 소스와 대시보드는 `infra/grafana/`에 파일로 두고 프로비저닝한다. 화면에서 고친 대시보드는 JSON으로 내보내 커밋한다.

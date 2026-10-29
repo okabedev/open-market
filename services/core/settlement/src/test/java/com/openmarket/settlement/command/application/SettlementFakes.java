@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import org.jspecify.annotations.Nullable;
 
 /** settlement 유스케이스 테스트용 가짜 구현. */
 final class SettlementFakes {
@@ -128,8 +129,14 @@ final class SettlementFakes {
     static final class RecordingSellerLock implements SellerLock {
         final List<UUID> locked = new ArrayList<>();
 
+        /** 이 판매자를 잠그려 하면 실패한다(DB 오류 흉내). */
+        @Nullable UUID failFor;
+
         @Override
         public void lock(UUID sellerId) {
+            if (sellerId.equals(failFor)) {
+                throw new IllegalStateException("잠금 실패");
+            }
             locked.add(sellerId);
         }
     }

@@ -4,6 +4,8 @@ import com.openmarket.auth.command.domain.AccountRepository;
 import com.openmarket.auth.command.domain.EmailAddress;
 import com.openmarket.auth.command.domain.InvalidEmailException;
 import java.time.Clock;
+import java.util.UUID;
+import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,14 +22,26 @@ public class RecordLoginFailureUseCase {
     }
 
     @Transactional
-    public void execute(RecordLoginFailureCommand command) {
+    public Result execute(RecordLoginFailureCommand command) {
         EmailAddress email;
         try {
             email = EmailAddress.of(command.email());
         } catch (InvalidEmailException e) {
-            return;
+            return new Result(null, false);
         }
-        accounts.findForUpdateByEmail(email)
-                .ifPresent(account -> account.recordLoginFailure(clock.instant()));
+        return accounts.findForUpdateByEmail(email)
+                .map(
+                        account ->
+                                new Result(
+                                        account.id(), account.recordLoginFailure(clock.instant())))
+                .orElse(new Result(null, false));
     }
+
+    /**
+     * 실패를 센 결과. 보안 이벤트 로그가 쓴다.
+     *
+     * @param accountId 계정. 없는 계정이나 형식이 틀린 이메일이면 null
+     * @param locked 이번 실패로 계정을 잠갔는지
+     */
+    public record Result(@Nullable UUID accountId, boolean locked) {}
 }

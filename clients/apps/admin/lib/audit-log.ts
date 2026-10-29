@@ -24,6 +24,7 @@ export const ACTION_LABELS: Record<string, string> = {
   PAYMENT_CANCEL_RETRIED: "결제 취소 재시도",
   COMMISSION_RATE_CHANGED: "수수료율 변경",
   SETTLEMENT_RUN_EXECUTED: "정산 작업 즉시 실행",
+  SETTLEMENT_CONFIRMED: "정산 확정(즉시 실행)",
   SETTLEMENT_PAID_OUT: "정산 지급",
   DEAD_LETTER_RETRIED: "DLT 메시지 다시 보내기",
   DEAD_LETTER_DISCARDED: "DLT 메시지 버리기",

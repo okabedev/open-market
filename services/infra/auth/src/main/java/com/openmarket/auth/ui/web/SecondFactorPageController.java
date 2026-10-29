@@ -11,10 +11,12 @@ import com.openmarket.auth.command.application.ConfirmTotpEnrollmentUseCase;
 import com.openmarket.auth.command.application.PrepareTotpEnrollmentCommand;
 import com.openmarket.auth.command.application.PrepareTotpEnrollmentUseCase;
 import com.openmarket.auth.command.application.SecondFactorSessionPort;
+import com.openmarket.auth.command.application.SecurityEventPort;
 import com.openmarket.auth.command.application.VerifySecondFactorCommand;
 import com.openmarket.auth.command.application.VerifySecondFactorUseCase;
 import com.openmarket.auth.command.application.VerifySecondFactorUseCase.Result;
 import com.openmarket.auth.command.application.VerifySecondFactorUseCase.Status;
+import jakarta.servlet.http.HttpServletRequest;
 import java.security.Principal;
 import java.util.Map;
 import java.util.Optional;
@@ -37,16 +39,19 @@ public class SecondFactorPageController {
     private final ConfirmTotpEnrollmentUseCase confirm;
     private final VerifySecondFactorUseCase verify;
     private final SecondFactorSessionPort session;
+    private final SecurityEventPort securityEvents;
 
     public SecondFactorPageController(
             PrepareTotpEnrollmentUseCase prepare,
             ConfirmTotpEnrollmentUseCase confirm,
             VerifySecondFactorUseCase verify,
-            SecondFactorSessionPort session) {
+            SecondFactorSessionPort session,
+            SecurityEventPort securityEvents) {
         this.prepare = prepare;
         this.confirm = confirm;
         this.verify = verify;
         this.session = session;
+        this.securityEvents = securityEvents;
     }
 
     /** 등록하지 않았으면 등록 화면(QR, 비밀 값), 등록했으면 코드 입력 화면. */
@@ -75,11 +80,15 @@ public class SecondFactorPageController {
 
     /** 등록 확인. 맞으면 복구 코드를 한 번 보여 주고 계속할 주소를 준다. */
     @PostMapping("/login/totp/enroll")
-    public String enroll(Principal principal, @RequestParam String code, Model model) {
+    public String enroll(
+            Principal principal,
+            @RequestParam String code,
+            HttpServletRequest request,
+            Model model) {
         Result result =
                 confirm.execute(new ConfirmTotpEnrollmentCommand(accountId(principal), code));
         if (result.status() != Status.VERIFIED) {
-            return failure(result.status());
+            return failure(result.status(), accountId(principal), request.getRemoteAddr());
         }
         model.addAttribute("recoveryCodes", result.recoveryCodes());
         model.addAttribute("continueUrl", session.complete());
@@ -88,17 +97,25 @@ public class SecondFactorPageController {
 
     /** 코드(또는 복구 코드) 확인. 맞으면 저장한 인가 요청으로 돌아간다. */
     @PostMapping("/login/totp")
-    public String verify(Principal principal, @RequestParam String code) {
+    public String verify(
+            Principal principal, @RequestParam String code, HttpServletRequest request) {
         Result result = verify.execute(new VerifySecondFactorCommand(accountId(principal), code));
         if (result.status() != Status.VERIFIED) {
-            return failure(result.status());
+            return failure(result.status(), accountId(principal), request.getRemoteAddr());
         }
         return "redirect:" + session.complete();
     }
 
-    private String failure(Status status) {
+    /** 틀린 코드와 이번 실패로 인한 잠금은 보안 이벤트로 남긴다. */
+    private String failure(Status status, UUID accountId, String ip) {
+        if (status == Status.INVALID || status == Status.LOCKED_BY_FAILURE) {
+            securityEvents.secondFactorFailed(accountId, ip);
+        }
+        if (status == Status.LOCKED_BY_FAILURE) {
+            securityEvents.accountLocked(accountId, ip);
+        }
         return switch (status) {
-            case LOCKED -> {
+            case LOCKED, LOCKED_BY_FAILURE -> {
                 session.end();
                 yield "redirect:/login?locked";
             }
