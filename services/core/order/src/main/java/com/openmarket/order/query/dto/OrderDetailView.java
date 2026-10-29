@@ -31,7 +31,14 @@ public record OrderDetailView(
             String recipientPhone,
             String zipCode,
             String baseAddress,
-            @Nullable String detailAddress) {}
+            @Nullable String detailAddress) {
+
+        /** 개인정보를 남기지 않는다(NFR-7). */
+        @Override
+        public String toString() {
+            return "Shipping[***]";
+        }
+    }
 
     /**
      * 하위 주문.

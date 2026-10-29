@@ -79,5 +79,12 @@ public class PrepareTotpEnrollmentUseCase {
      * @param secret Base32(패딩 없음). 인증 앱에 직접 입력할 때 쓴다
      * @param otpauthUri 인증 앱이 QR로 읽는 {@code otpauth://totp/...} 주소
      */
-    public record Result(String secret, String otpauthUri) {}
+    public record Result(String secret, String otpauthUri) {
+
+        /** 비밀 값을 남기지 않는다. */
+        @Override
+        public String toString() {
+            return "Result[***]";
+        }
+    }
 }

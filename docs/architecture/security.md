@@ -46,12 +46,16 @@ OWASP Top 10(2021)과 2025판에 새로 들어온 항목(공급망, 예외 상�
 - 시스템이 바꾸는 금액(결제 승인·실패, 보상 취소, 환불, 정기 정산)은 감사 로그 대신 결제 원장과 각 서비스의 행(`refund`, `settlement`, `settlement_item`)으로 누가(구매자·판매자·시스템), 언제, 무엇을 했는지 본다. 원장은 이제 추가만 된다.
 - 남은 작은 것: Toss 호출 전에 실패한 환불(결제 없음, 남은 금액 초과)은 `refund` 행의 상태와 `RefundFailed` 이벤트로만 남는다. 관리자 재시도는 감사 로그에 이전 실패 코드를 남긴다.
 
-### 다음 PR
-점검에서 찾았고 영역이 달라 따로 고친다.
-- **개인정보(NFR-7)**: 로그와 API 응답에서 개인정보가 나가는 곳은 찾지 못했다. 고칠 것은 아래다.
-  - `OrderPaid`에 배송지가 실린다. 받는 서비스(catalog, promotion, fulfillment, notification) 중 쓰는 곳이 없는데 outbox·Kafka·DLT에 남는다. context-map.md와 fulfillment.md도 서로 맞지 않는다.
-  - 개인정보가 든 record 일부가 기본 `toString()`을 쓴다(지금 로그에 남기는 곳은 없다). member.md의 규칙(식별자만)에 맞춘다.
-  - member.md는 "판매자의 주문 화면"을 가린다고 적었지만, 판매자 주문 상세는 발송에 필요한 배송지를 원문으로 준다(order.md, PRD와 같다). 문서를 고친다.
+### 개인정보(NFR-7)
+로그와 API 응답에서 개인정보가 나가는 곳은 찾지 못했다. 본인 응답은 원문, 관리자 심사 화면은 마스킹, 정산 계좌 번호는 저장부터 마스킹이다([member.md](member.md) "개인정보"). 요청 로그는 본문을 남기지 않는다.
+
+| 결함 | 영향 | 고친 방법 |
+|---|---|---|
+| `OrderPaid`에 배송지가 실림 | 받는 서비스(catalog, promotion, fulfillment, notification) 중 쓰는 곳이 없는데 outbox, Kafka, DLT에 이름·전화번호·주소가 남았다. 문서도 "fulfillment로 간다"와 "저장하지 않는다"로 서로 달랐다 | 이벤트에서 뺐다. 판매자는 order의 하위 주문 상세에서 받는다([context-map.md](context-map.md)) |
+| 개인정보가 든 record가 기본 `toString()`을 씀 | 지금 로그에 남기는 곳은 없지만, 디버그 로그나 예외 메시지에 넣으면 원문이 나간다 | 주문 생성 명령·주문 상세의 배송지, 연락처 조회 결과, 가입 이벤트, 렌더링한 메일, 소비한 이벤트 봉투(`EventEnvelope`)가 ID만 남긴다. TOTP 비밀 값과 코드가 든 명령·결과도 같다 |
+| member.md가 "판매자의 주문 화면"을 가린다고 적음 | 판매자 하위 주문 상세는 발송에 필요한 배송지를 원문으로 준다(PRD, [order.md](order.md)와 같다) | 문서를 고쳤다 |
+
+- 빼기 전에 쌓인 `OrderPaid`는 outbox 행과 토픽 모두 7일 뒤 지워진다. DLT에서 수집한 행(`dead_letter`)은 처리가 끝나면 30일 뒤 지워지고, `PENDING`은 관리자가 처리할 때까지 남는다([messaging.md](messaging.md)).
 
 ### 받아들인 위험
 | 위험 | 받아들이는 이유 |

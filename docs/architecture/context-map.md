@@ -106,12 +106,13 @@ flowchart LR
 |---|---|---|---|
 | `OrderPlaced` | 주문 생성(`PENDING`) | orderId, buyerId, lines(skuId, quantity), issuedCouponIds | catalog(재고 예약), promotion(쿠폰 예약) |
 | `OrderAwaitingPayment` | 예약 모두 성공 | orderId, buyerId, amount(결제 금액), orderName(주문명) | payment(결제 준비) |
-| `OrderPaid` | 결제 승인 반영 | orderId, buyerId, amount, orderName, paidAt(토스 승인 시각), sellerOrders(sellerOrderId, sellerId, amount, lines(orderLineId, skuId, productId, productName, optionValues, categoryId, unitPrice, quantity, amount)), shippingAddress(배송지 스냅샷). 하위 주문에 sellerCouponDiscount(판매자 쿠폰 할인), platformCouponDiscount(플랫폼 쿠폰 할인 몫), paymentAmount(하위 주문 결제 금액 = amount − 두 할인) | catalog(예약 확정), promotion(쿠폰 사용 확정), fulfillment(배송 생성), notification |
+| `OrderPaid` | 결제 승인 반영 | orderId, buyerId, amount, orderName, paidAt(토스 승인 시각), sellerOrders(sellerOrderId, sellerId, amount, lines(orderLineId, skuId, productId, productName, optionValues, categoryId, unitPrice, quantity, amount)). 하위 주문에 sellerCouponDiscount(판매자 쿠폰 할인), platformCouponDiscount(플랫폼 쿠폰 할인 몫), paymentAmount(하위 주문 결제 금액 = amount − 두 할인) | catalog(예약 확정), promotion(쿠폰 사용 확정), fulfillment(배송 생성), notification |
 | `OrderCancelled` | 결제 전 취소(예약 실패, 만료, 구매자 취소) | orderId, reason | catalog(예약 해제), promotion(쿠폰 복원), payment(결제 무효화·보상 취소) |
 
 - 키는 orderId다. 한 주문의 이벤트는 순서대로 온다.
 - JSON 예시는 `services/core/order/src/test/resources/events/`에 있다. catalog는 `OrderPaid`의 orderId만 읽는다.
 - `OrderPaid` 항목의 orderLineId, productName, optionValues는 M4에 더했다(2026-10-21). fulfillment가 구매확정(리뷰는 주문 항목 단위다)과 판매자·구매자 화면, 알림에 쓴다. 필드를 더하기만 해서 기존 소비자는 그대로다.
+- `OrderPaid`의 shippingAddress(배송지 스냅샷)는 M6에 뺐다(2026-10-29, NFR-7). 소비자 중 쓰는 곳이 없었다. 판매자는 발송할 배송지를 order의 하위 주문 상세에서 받는다. 소비자는 모르는 필드를 무시하므로 뺀 뒤에도, 빼기 전 메시지를 다시 처리해도 그대로다.
 - `OrderPaid`의 하위 주문 amount는 상품 금액(항목 금액의 합) 그대로이고, 주문 amount는 결제 금액(하위 주문 paymentAmount의 합)이다. 쿠폰 필드는 M5에 더했다(2026-10-22). 쿠폰이 없는 주문은 두 할인이 0이고 paymentAmount가 amount와 같다. 계산은 [promotion.md](promotion.md) "할인 계산".
 - `OrderCancelled`의 reason은 `STOCK_UNAVAILABLE`, `COUPON_UNAVAILABLE`(M5), `PAYMENT_TIMEOUT`, `BUYER_CANCELLED`다([order.md](order.md) "취소 사유").
 
@@ -184,5 +185,5 @@ flowchart LR
 
 ## 이벤트에 넣지 않는 것
 - 비밀번호, 토큰, 결제 수단의 상세 정보
-- 판매자에게 넘길 필요가 없는 구매자 개인정보. 배송지 스냅샷은 `OrderPaid` → fulfillment로만 간다. notification은 이메일 주소를 member 조회로 얻는다.
+- 구매자 개인정보. 배송지는 order에만 있고 판매자는 하위 주문 상세에서 받는다. notification은 이메일 주소를 member 조회로 얻는다.
 - 예외: `EmailVerificationRequested`의 인증 URL은 일회용이고 짧게 만료된다. 이 토픽은 notification만 구독하게 ACL을 건다.

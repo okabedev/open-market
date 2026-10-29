@@ -22,4 +22,11 @@ public record EventEnvelope<T>(
         Instant occurredAt,
         int schemaVersion,
         @Nullable String traceparent,
-        T payload) {}
+        T payload) {
+
+    /** 페이로드에 개인정보가 들어갈 수 있으므로 남기지 않는다(NFR-7). */
+    @Override
+    public String toString() {
+        return "EventEnvelope[id=" + id + ", type=" + type + ", aggregateId=" + aggregateId + "]";
+    }
+}

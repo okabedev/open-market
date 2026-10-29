@@ -8,5 +8,12 @@ public interface EmailRendererPort {
 
     RenderedEmail render(NotificationKind kind, Map<String, String> params);
 
-    record RenderedEmail(String subject, String html, String text) {}
+    record RenderedEmail(String subject, String html, String text) {
+
+        /** 본문에 이름과 일회용 링크가 들어가므로 남기지 않는다(NFR-7). */
+        @Override
+        public String toString() {
+            return "RenderedEmail[subject=" + subject + "]";
+        }
+    }
 }
