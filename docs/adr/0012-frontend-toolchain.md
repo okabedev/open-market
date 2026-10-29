@@ -12,15 +12,15 @@
 |---|---|---|
 | Node.js | 24 LTS(`.nvmrc`) | 개발 환경 기준([dev-setup.md](../dev-setup.md)) |
 | pnpm | 12.9.1 | `clients/package.json`의 `packageManager`. corepack이 이 버전을 받는다 |
-| Next.js | 16.3.8 | Turbopack 빌드가 기본. 16.4.x는 2주가 지나지 않았다 |
+| Next.js | 16.4.1 | Turbopack 빌드가 기본. 2026-10-29 16.3.8에서 올렸다(16.4.0 이하의 원격 코드 실행 GHSA-p3m5-59mp-jv5r 등, `pnpm audit`). 16.4.2부터는 2주가 지나지 않았다 |
 | React, React DOM | 19.3.0 | 19.3.1은 2주가 지나지 않았다 |
 | TypeScript | 6.0.3 | 7.0.2가 있지만 typescript-eslint 8.71이 `typescript <6.1.0`만 지원한다 |
 | `@types/node` | 24.19.1 | 런타임(Node 24)과 같은 메이저 |
 | ESLint | 9.39.5 | 아래 "ESLint 9" |
-| eslint-config-next | 16.3.8 | Next.js와 같은 버전. Core Web Vitals와 TypeScript 규칙 |
+| eslint-config-next | 16.4.1 | Next.js와 같은 버전. Core Web Vitals와 TypeScript 규칙 |
 | eslint-config-prettier | 10.1.8 | 포맷과 겹치는 lint 규칙을 끈다 |
 | Prettier | 3.9.9 | 포매터 |
-| Vitest | 5.0.3 (+ vite 8.3.2) | 단위 테스트. vite는 Vitest 5의 피어 의존성이다 |
+| Vitest | 5.0.3 (+ vite 8.3.4) | 단위 테스트. vite는 Vitest 5의 피어 의존성이다. vite는 2026-10-29 8.3.2에서 올렸다(8.3.2 이하 취약점, `pnpm audit`) |
 | openapi-typescript | 7.13.0 | OpenAPI 문서 → TypeScript 타입(`packages/api-client`). 피어는 `typescript ^5.x`지만 6.0.3에서 생성 결과를 확인했다 |
 | openapi-fetch | 0.17.0 | 생성한 경로 타입으로 부르는 fetch 클라이언트 |
 | server-only | 0.0.1 | 서버 전용 모듈을 클라이언트 컴포넌트에서 불러오면 빌드를 실패시킨다 |
@@ -33,7 +33,7 @@
 - Next.js 16은 `next build`에서 lint를 돌리지 않는다. lint는 `eslint` CLI로 따로 돌린다.
 
 ESLint 9
-- ESLint 9는 지원이 끝났다(npm에서 deprecated). 하지만 10은 쓸 수 없다. eslint-config-next(16.3.8, 16.4.2 모두)가 쓰는 eslint-plugin-react 7.37.5가 ESLint 10에서 없어진 `context.getFilename()`을 불러 규칙을 불러오지 못한다(`Error while loading rule 'react/display-name'`). eslint-plugin-import 2.32.0, eslint-plugin-jsx-a11y 6.10.2도 피어 범위가 9까지다.
+- ESLint 9는 지원이 끝났다(npm에서 deprecated). 하지만 10은 쓸 수 없다. eslint-config-next(16.3.8, 16.4.1, 16.4.2 모두)가 쓰는 eslint-plugin-react 7.37.5가 ESLint 10에서 없어진 `context.getFilename()`을 불러 규칙을 불러오지 못한다(`Error while loading rule 'react/display-name'`). eslint-plugin-import 2.32.0, eslint-plugin-jsx-a11y 6.10.2도 피어 범위가 9까지다.
 - lint는 개발·CI 도구라서 런타임에는 영향이 없다. eslint-config-next가 ESLint 10에서 동작하는 플러그인으로 바뀌면 함께 올린다.
 
 ## 결과

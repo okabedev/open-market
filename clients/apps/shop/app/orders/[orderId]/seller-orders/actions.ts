@@ -56,10 +56,17 @@ export async function confirmPurchase(_: FormState, form: FormData): Promise<For
   redirect(sellerOrderPath(ids.orderId, ids.sellerOrderId, "confirmed"));
 }
 
-const claimSchema = z
-  .object({
-    type: z.enum(CLAIM_TYPES, { error: "반품인지 교환인지 골라 주세요." }),
-    reason: z.enum(CLAIM_REASONS, { error: "사유를 골라 주세요." }),
+const claimType = z.enum(CLAIM_TYPES, { error: "반품인지 교환인지 골라 주세요." });
+const claimReason = z.enum(CLAIM_REASONS, { error: "사유를 골라 주세요." });
+
+/**
+ * 유형과 사유의 조합 검사는 따로 둔 스키마와 교집합으로 묶는다. 한 객체의 `.refine`이면 사진 수 초과(zod 4.6.6부터 파싱을 멈추는
+ * 오류)가 있을 때 건너뛰어, 고친 뒤 다시 보내야 사유 오류를 알게 된다.
+ */
+const claimSchema = z.intersection(
+  z.object({
+    type: claimType,
+    reason: claimReason,
     description: z
       .string()
       .trim()
@@ -68,11 +75,14 @@ const claimSchema = z
     fileIds: z
       .array(z.uuid())
       .max(CLAIM_LIMITS.photos, `사진은 ${CLAIM_LIMITS.photos}장까지 올릴 수 있습니다.`),
-  })
-  .refine((claim) => reasonsFor(claim.type).includes(claim.reason), {
-    path: ["reason"],
-    message: "교환은 상품 불량, 오배송, 상품 정보와 다름일 때만 신청할 수 있습니다.",
-  });
+  }),
+  z
+    .object({ type: claimType, reason: claimReason })
+    .refine((claim) => reasonsFor(claim.type).includes(claim.reason), {
+      path: ["reason"],
+      message: "교환은 상품 불량, 오배송, 상품 정보와 다름일 때만 신청할 수 있습니다.",
+    }),
+);
 
 function fileIds(value: string): unknown {
   try {
