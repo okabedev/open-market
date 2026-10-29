@@ -83,12 +83,15 @@ wait_for "gateway → catalog" "http://localhost:8080/api/catalog/v1/categories"
 
 # 시드 관리자의 2단계 인증을 한 번 등록하고 비밀 값을 시나리오에 넘긴다(관리자 로그인은 비밀번호 다음에 TOTP를 확인한다, ADR 0024).
 enroll_admin() {
-  rm -f "$ROOT/infra/k6/.out/admin-totp.json"
-  docker compose -p "$PROJECT" --profile load run --rm --no-deps k6 run --quiet admin-totp.js >/dev/null
+  # 다시 쓰는 스택(LOAD_REUSE=1)의 관리자는 앞 실행에서 이미 등록했다. 그때 남긴 비밀 값을 쓴다.
+  if [[ "${LOAD_REUSE:-}" != "1" || ! -s "$ROOT/infra/k6/.out/admin-totp.json" ]]; then
+    rm -f "$ROOT/infra/k6/.out/admin-totp.json"
+    docker compose -p "$PROJECT" --profile load run --rm --no-deps k6 run --quiet admin-totp.js >/dev/null
+  fi
   ADMIN_TOTP_SECRET=$(grep -o '"secret":"[A-Z2-7]*"' "$ROOT/infra/k6/.out/admin-totp.json" | cut -d'"' -f4)
   [[ -n "$ADMIN_TOTP_SECRET" ]] || fail "관리자 2단계 인증을 등록하지 못했다"
   export ADMIN_TOTP_SECRET
-  log "관리자 2단계 인증을 등록했다"
+  log "관리자 2단계 인증 비밀 값을 준비했다"
 }
 enroll_admin
 
