@@ -38,6 +38,7 @@ services:
     environment:
       <<: *spring-env
       MEMBER_DB_PASSWORD: ${MEMBER_DB_PASSWORD:?}
+      MEMBER_DB_OWNER_PASSWORD: ${MEMBER_DB_OWNER_PASSWORD:?}
       MEMBER_ACCOUNT_NUMBER_KEY: ${MEMBER_ACCOUNT_NUMBER_KEY:?}
       MEMBER_CLIENT_SECRET: ${MEMBER_CLIENT_SECRET:?}
     # 호스트에 포트를 열지 않는다. 바깥 요청은 gateway(8080)로 들어온다.
@@ -64,6 +65,7 @@ services:
     environment:
       <<: *spring-env
       CATALOG_DB_PASSWORD: ${CATALOG_DB_PASSWORD:?}
+      CATALOG_DB_OWNER_PASSWORD: ${CATALOG_DB_OWNER_PASSWORD:?}
       # 상품 상세가 몰리는 서비스라 gateway처럼 ParallelGC를 쓴다(compose.yaml gateway 참고).
       JDK_JAVA_OPTIONS: "-XX:MaxRAMPercentage=40 -XX:+UseParallelGC"
     healthcheck:
@@ -89,6 +91,7 @@ services:
     environment:
       <<: *spring-env
       ORDER_DB_PASSWORD: ${ORDER_DB_PASSWORD:?}
+      ORDER_DB_OWNER_PASSWORD: ${ORDER_DB_OWNER_PASSWORD:?}
       ORDER_CLIENT_SECRET: ${ORDER_CLIENT_SECRET:?}
       # E2E(infra/e2e/run.sh)만 준다. 값이 없으면 컨테이너에 넘기지 않고 config-repo 기본값을 쓴다.
       ORDER_PAYMENT_TIMEOUT:
@@ -116,6 +119,7 @@ services:
     environment:
       <<: *spring-env
       PAYMENT_DB_PASSWORD: ${PAYMENT_DB_PASSWORD:?}
+      PAYMENT_DB_OWNER_PASSWORD: ${PAYMENT_DB_OWNER_PASSWORD:?}
       TOSS_SECRET_KEY: ${TOSS_SECRET_KEY:?}
       # E2E(infra/e2e/run.sh)만 준다(가짜 PG 주소, 짧은 보상 취소 주기). 값이 없으면 넘기지 않고 config-repo 기본값을 쓴다.
       TOSS_API_URL:
@@ -144,6 +148,7 @@ services:
     environment:
       <<: *spring-env
       FULFILLMENT_DB_PASSWORD: ${FULFILLMENT_DB_PASSWORD:?}
+      FULFILLMENT_DB_OWNER_PASSWORD: ${FULFILLMENT_DB_OWNER_PASSWORD:?}
       # E2E(infra/e2e/run.sh)만 준다(배송 시뮬레이터 지연, 자동 구매확정 기한). 값이 없으면 넘기지 않고 config-repo 기본값을 쓴다.
       FULFILLMENT_SIMULATOR_INTERVAL:
       FULFILLMENT_IN_TRANSIT_AFTER:
@@ -175,6 +180,7 @@ services:
     environment:
       <<: *spring-env
       PROMOTION_DB_PASSWORD: ${PROMOTION_DB_PASSWORD:?}
+      PROMOTION_DB_OWNER_PASSWORD: ${PROMOTION_DB_OWNER_PASSWORD:?}
       REDIS_HOST: redis
     healthcheck:
       test: ["CMD", "curl", "-fs", "http://localhost:8106/actuator/health"]
@@ -199,6 +205,7 @@ services:
     environment:
       <<: *spring-env
       REVIEW_DB_PASSWORD: ${REVIEW_DB_PASSWORD:?}
+      REVIEW_DB_OWNER_PASSWORD: ${REVIEW_DB_OWNER_PASSWORD:?}
     healthcheck:
       test: ["CMD", "curl", "-fs", "http://localhost:8107/actuator/health"]
       interval: 5s
@@ -222,6 +229,7 @@ services:
     environment:
       <<: *spring-env
       SETTLEMENT_DB_PASSWORD: ${SETTLEMENT_DB_PASSWORD:?}
+      SETTLEMENT_DB_OWNER_PASSWORD: ${SETTLEMENT_DB_OWNER_PASSWORD:?}
       # 정산 기간 길이와 마감 지연. E2E가 줄일 때만 넘긴다(config-repo settlement.yml 기본 7d, 3h).
       SETTLEMENT_PERIOD_LENGTH:
       SETTLEMENT_CLOSE_DELAY:
@@ -250,6 +258,7 @@ services:
     environment:
       <<: *spring-env
       SEARCH_DB_PASSWORD: ${SEARCH_DB_PASSWORD:?}
+      SEARCH_DB_OWNER_PASSWORD: ${SEARCH_DB_OWNER_PASSWORD:?}
       ELASTICSEARCH_URL: http://elasticsearch:9200
     healthcheck:
       test: ["CMD", "curl", "-fs", "http://localhost:8109/actuator/health"]
@@ -276,6 +285,7 @@ services:
     environment:
       <<: *spring-env
       NOTIFICATION_DB_PASSWORD: ${NOTIFICATION_DB_PASSWORD:?}
+      NOTIFICATION_DB_OWNER_PASSWORD: ${NOTIFICATION_DB_OWNER_PASSWORD:?}
       NOTIFICATION_CLIENT_SECRET: ${NOTIFICATION_CLIENT_SECRET:?}
       MAIL_HOST: mailpit
     healthcheck:
@@ -304,6 +314,7 @@ services:
     environment:
       <<: *spring-env
       FILE_DB_PASSWORD: ${FILE_DB_PASSWORD:?}
+      FILE_DB_OWNER_PASSWORD: ${FILE_DB_OWNER_PASSWORD:?}
       FILE_STORAGE_ROOT: /data
       # 힙은 상한의 40%(약 307MB). 큰 쓰기의 임시 직접 버퍼(NIO)는 스레드마다 캐시하지 않는다.
       JDK_JAVA_OPTIONS: "-XX:MaxRAMPercentage=40 -Djdk.nio.maxCachedBufferSize=262144"

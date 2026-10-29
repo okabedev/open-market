@@ -15,6 +15,9 @@ spring:
       # 연결 수 예산(docs/architecture/data.md "연결 수"). Postgres max_connections 100을 서비스 12개가 나눠 쓴다.
       maximum-pool-size: 5
   flyway:
+    # 마이그레이션은 스키마 소유자(<service>_owner)로 한다. 앱 계정(<service>_app)은 데이터만 읽고 쓴다(ADR 0027).
+    # 비밀번호는 <service>.yml의 spring.flyway.password다.
+    user: ${spring.application.name}_owner
     schemas: ${spring.application.name}
     default-schema: ${spring.application.name}
     # 공통 테이블 마이그레이션(V0_<n>)을 이미 V1 이상이 적용된 서비스에도 넣는다.

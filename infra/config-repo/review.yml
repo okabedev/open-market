@@ -4,6 +4,8 @@ server:
 spring:
   datasource:
     password: ${REVIEW_DB_PASSWORD}
+  flyway:
+    password: ${REVIEW_DB_OWNER_PASSWORD}
   kafka:
     consumer:
       group-id: review

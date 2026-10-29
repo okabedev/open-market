@@ -4,6 +4,8 @@ server:
 spring:
   datasource:
     password: ${FULFILLMENT_DB_PASSWORD}
+  flyway:
+    password: ${FULFILLMENT_DB_OWNER_PASSWORD}
   kafka:
     consumer:
       group-id: fulfillment

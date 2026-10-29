@@ -150,7 +150,7 @@
   - 운영([security.md](architecture/security.md) "받아들인 위험")
     - 보안 이벤트의 로그 기반 알림(Loki 규칙): 완료(2026-10-29). Grafana 알림이 Loki를 세는 5종(observability.md "대시보드와 알림")
     - 의존성 취약점 자동 검사: 완료(2026-10-29). `pnpm audit`과 Gradle 의존성 그래프 제출(ADR 0026). 처음 검사에서 찾은 next·zod·vite 취약 버전을 올렸다
-    - 마이그레이션 계정과 앱 계정 분리
+    - 마이그레이션 계정과 앱 계정 분리: 완료(2026-10-29). `<service>_owner`(Flyway)와 `<service>_app`(데이터만), ADR 0027. 로컬 DB는 `docker compose down -v`로 다시 만든다
   - 기능(M6 범위 결정)
     - 판매자 주문의 쿠폰 할인 필드: 완료(2026-10-29). 판매자 하위 주문 목록·상세에 두 할인과 결제 금액
     - 관리자 쿠폰·정산 목록의 상호 표시: 완료(2026-10-29). member `GET /v1/admin/sellers/store-names`로 쪽마다 한 번 묻는다

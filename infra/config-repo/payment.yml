@@ -4,6 +4,8 @@ server:
 spring:
   datasource:
     password: ${PAYMENT_DB_PASSWORD}
+  flyway:
+    password: ${PAYMENT_DB_OWNER_PASSWORD}
   kafka:
     consumer:
       group-id: payment

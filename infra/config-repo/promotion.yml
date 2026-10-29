@@ -4,6 +4,8 @@ server:
 spring:
   datasource:
     password: ${PROMOTION_DB_PASSWORD}
+  flyway:
+    password: ${PROMOTION_DB_OWNER_PASSWORD}
   kafka:
     consumer:
       group-id: promotion

@@ -4,6 +4,8 @@ server:
 spring:
   datasource:
     password: ${CATALOG_DB_PASSWORD}
+  flyway:
+    password: ${CATALOG_DB_OWNER_PASSWORD}
   kafka:
     consumer:
       group-id: catalog
