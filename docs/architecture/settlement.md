@@ -98,7 +98,7 @@ M5 시작(2026-10-22)에 정한 규칙이다. API와 화면은 각 PR에서 이 
 ## 화면(admin)
 - 수수료율 `/commission-rates`: catalog 카테고리 트리의 소분류마다 지금 요율(정한 요율과 바꾼 시각, 없으면 "기본 n%")을 보이고 %로 바꾼다. 소수 둘째 자리까지 받아 bp로 보낸다(`lib/commission.ts`, 문자열로 계산해 부동소수 오차가 없다). 정한 요율은 확인한 뒤 "기본으로" 지운다.
 - settlement는 요율을 정한 카테고리만 주므로 이름은 트리로 붙인다. 트리에 없는 카테고리에 정한 요율은 "카테고리 트리에 없는 요율"로 따로 보이고 지울 수 있다.
-- 정산 `/settlements`: 확정된 정산을 최근 확정 순, 쪽 번호로 보인다. 상태 탭(전체·지급 대기·지급 완료), 판매자 필터(`?sellerId=`, 판매자 ID 앞 8자리를 누른다). 행마다 상호를 member에 묻지 않도록 목록은 판매자 ID로 보인다.
+- 정산 `/settlements`: 확정된 정산을 최근 확정 순, 쪽 번호로 보인다. 상태 탭(전체·지급 대기·지급 완료), 판매자 필터(`?sellerId=`, 상호를 누른다). settlement는 상호를 갖지 않아 쪽마다 member 관리자 API(`/v1/admin/sellers/store-names`)로 한 번 묻는다. member에 닿지 못하면 판매자 ID 앞 8자리를 보인다.
 - "정산 작업 지금 실행"은 확인한 뒤 `POST /v1/admin/settlement-runs`를 부르고 새로 확정한 건수를 보인다(`?notice=settlement-run&confirmed=n`).
 - 정산 상세 `/settlements/{settlementId}`: 금액 계산, 상태·지급 시각, 내역(커서), 판매자 상호와 정산 계좌. 계좌는 member `GET /v1/admin/sellers/{sellerId}`(대표자·예금주·계좌 번호를 가린 값)로 함께 보인다(위 "범위 결정"). 지급 대기면 확인한 뒤 지급 완료로 기록한다(`?notice=paid-out`).
 - 금액 요약·내역·기간 문구(`SettlementAmounts`, `SettlementItems`, `periodLabel`)는 seller와 함께 `packages/ui`에 있다. 내역의 하위 주문 링크는 seller만 단다(`orderHref`).

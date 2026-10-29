@@ -78,6 +78,7 @@ gateway 경로는 `/api/member` + 아래 경로다. 모두 사용자 토큰이 �
 | POST | `/v1/admin/seller-applications/{id}/approve` | 승인 |
 | POST | `/v1/admin/seller-applications/{id}/reject` | 반려. 본문 `{"reason"}` |
 | GET | `/v1/admin/sellers?status=&page=&size=` | 판매자 목록(최근 승인 순) |
+| GET | `/v1/admin/sellers/store-names?ids=` | 여러 판매자의 상호 `[{sellerId, storeName}]`. 관리자 쿠폰·정산 목록이 쪽마다 한 번 부른다. 없는 ID는 빠진다. `ids`는 100개까지(넘으면 400) |
 | GET | `/v1/admin/sellers/{id}` | 판매자 한 명과 정산 계좌(은행, 가린 계좌 번호, 예금주). 관리자 정산 지급 화면이 쓴다(M5). 없으면 404 `MEMBER_SELLER_NOT_FOUND` |
 | POST | `/v1/admin/sellers/{id}/suspend` | 정지. 본문 `{"reason"}` |
 | POST | `/v1/admin/sellers/{id}/reinstate` | 정지 해제 |

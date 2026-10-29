@@ -26,6 +26,7 @@ import { z } from "zod";
 import { bff } from "@/lib/bff";
 import { noticeMessage } from "@/lib/review";
 import { requireSession } from "@/lib/session";
+import { storeNames } from "@/lib/store-names";
 import { stopCoupon } from "./actions";
 
 const STATUSES = ["ISSUING", "STOPPED"] as const;
@@ -36,7 +37,8 @@ const ISSUER_LABELS: Record<Issuer, string> = { PLATFORM: "플랫폼", SELLER: "
 
 /**
  * 쿠폰 관리(PRM-1, ADM). 플랫폼·판매자 쿠폰 모두를 최근 생성 순, 쪽 번호로 보인다. 상태, 발행 주체, 판매자로 거른다. 플랫폼 쿠폰을 만들고,
- * 어느 쿠폰이든 발급을 멈출 수 있다. promotion은 상호를 갖지 않아 판매자 쿠폰은 판매자 ID와 그 판매자 쿠폰만 보기 링크로 보인다.
+ * 어느 쿠폰이든 발급을 멈출 수 있다. promotion은 상호를 갖지 않아 쪽마다 member에 상호를 한 번 묻는다. 닿지 못하면 판매자 ID를
+ * 보인다. 판매자 쿠폰은 그 판매자 쿠폰만 보기 링크다.
  */
 export default async function CouponsPage({ searchParams }: PageProps<"/coupons">) {
   await requireSession("/coupons");
@@ -59,6 +61,7 @@ export default async function CouponsPage({ searchParams }: PageProps<"/coupons"
     })
     .catch(() => ({ data: undefined, response: undefined }));
   const items = data?.items ?? [];
+  const names = await storeNames([sellerId, ...items.map((coupon) => coupon.sellerId)]);
   const now = new Date();
   const issuerHref = (value: Issuer | undefined) => {
     const query = new URLSearchParams({
@@ -105,7 +108,7 @@ export default async function CouponsPage({ searchParams }: PageProps<"/coupons"
       </nav>
       {sellerId ? (
         <p className="mb-2 text-sm text-muted-foreground">
-          판매자 {sellerId}의 쿠폰만 봅니다.{" "}
+          판매자 {names.get(sellerId) ?? sellerId}의 쿠폰만 봅니다.{" "}
           <Link href={issuerHref(undefined)} className="underline">
             판매자 필터 해제
           </Link>
@@ -161,7 +164,7 @@ export default async function CouponsPage({ searchParams }: PageProps<"/coupons"
                           className="grid gap-0.5 hover:underline"
                           title={coupon.sellerId}
                         >
-                          <span>판매자</span>
+                          <span>{names.get(coupon.sellerId) ?? "판매자"}</span>
                           <span className="font-mono text-xs text-muted-foreground">
                             {coupon.sellerId.slice(0, 8)}
                           </span>

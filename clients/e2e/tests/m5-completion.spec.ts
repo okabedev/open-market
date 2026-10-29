@@ -132,6 +132,9 @@ test("M5: 선착순 쿠폰 주문 → 구매확정 → 리뷰가 검색 별점�
     await admin.getByRole("button", { name: "정산 작업 지금 실행" }).click();
     await admin.getByRole("alertdialog").getByRole("button", { name: "지금 실행" }).click();
     await expect(admin.getByText(/정산 작업을 돌렸습니다/)).toBeVisible();
+    // settlement는 상호가 없다. 관리자 목록은 member에 물어 상호를 보인다.
+    await expect(admin.getByRole("row").filter({ hasText: store })).toHaveCount(1);
+    await expect(admin.getByRole("row").filter({ hasText: store })).toContainText("32,000원");
 
     await seller.goto(`${env.seller}/settlements`);
     const rows = seller.getByRole("region", { name: "확정된 정산" }).getByRole("row");
