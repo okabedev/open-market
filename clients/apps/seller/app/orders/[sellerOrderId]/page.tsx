@@ -127,12 +127,42 @@ export default async function SellerOrderPage({
               ))}
               <TableRow>
                 <TableCell colSpan={4} className="text-right font-semibold">
-                  하위 주문 금액
+                  상품 금액
                 </TableCell>
                 <TableCell className="text-right font-semibold whitespace-nowrap">
                   {formatPrice(data.amount)}
                 </TableCell>
               </TableRow>
+              {(data.sellerCouponDiscount ?? 0) > 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-right">
+                    판매자 쿠폰 할인(정산에서 부담)
+                  </TableCell>
+                  <TableCell className="text-right whitespace-nowrap">
+                    -{formatPrice(data.sellerCouponDiscount)}
+                  </TableCell>
+                </TableRow>
+              ) : null}
+              {(data.platformCouponDiscount ?? 0) > 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-right">
+                    오픈 마켓 쿠폰 할인(플랫폼 부담)
+                  </TableCell>
+                  <TableCell className="text-right whitespace-nowrap">
+                    -{formatPrice(data.platformCouponDiscount)}
+                  </TableCell>
+                </TableRow>
+              ) : null}
+              {(data.sellerCouponDiscount ?? 0) > 0 || (data.platformCouponDiscount ?? 0) > 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-right font-semibold">
+                    결제 금액
+                  </TableCell>
+                  <TableCell className="text-right font-semibold whitespace-nowrap">
+                    {formatPrice(data.paymentAmount)}
+                  </TableCell>
+                </TableRow>
+              ) : null}
             </TableBody>
           </Table>
         </Card>

@@ -75,6 +75,12 @@ export default async function OrdersPage({ searchParams }: PageProps<"/orders">)
                   </TableCell>
                   <TableCell className="text-right whitespace-nowrap">
                     {formatPrice(item.amount)}
+                    {(item.sellerCouponDiscount ?? 0) > 0 ||
+                    (item.platformCouponDiscount ?? 0) > 0 ? (
+                      <div className="text-xs text-muted-foreground">
+                        결제 {formatPrice(item.paymentAmount)}
+                      </div>
+                    ) : null}
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">

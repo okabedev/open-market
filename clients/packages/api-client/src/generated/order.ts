@@ -280,6 +280,12 @@ export interface components {
             claim?: components["schemas"]["SellerOrderClaimView"];
             /** Format: int64 */
             amount?: number;
+            /** Format: int64 */
+            sellerCouponDiscount?: number;
+            /** Format: int64 */
+            platformCouponDiscount?: number;
+            /** Format: int64 */
+            paymentAmount?: number;
             firstProductName?: string;
             /** Format: int32 */
             lineCount?: number;
@@ -324,6 +330,12 @@ export interface components {
             claim?: components["schemas"]["SellerOrderClaimView"];
             /** Format: int64 */
             amount?: number;
+            /** Format: int64 */
+            sellerCouponDiscount?: number;
+            /** Format: int64 */
+            platformCouponDiscount?: number;
+            /** Format: int64 */
+            paymentAmount?: number;
             shipping?: components["schemas"]["OrderShippingView"];
             lines?: components["schemas"]["OrderLineView"][];
             /** Format: date-time */
