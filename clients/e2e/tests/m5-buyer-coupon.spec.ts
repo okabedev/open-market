@@ -139,6 +139,9 @@ test("M5: 쿠폰을 받아 주문서에서 판매자·플랫폼 쿠폰을 적용
     await expect(admin.getByRole("row").filter({ hasText: platformCoupon })).toContainText(
       "1 / 100",
     );
+    // promotion은 상호가 없다. 관리자 목록은 member에 물어 판매자 쿠폰에 상호를 붙인다.
+    await admin.goto(`${env.admin}/coupons?issuer=SELLER`);
+    await expect(admin.getByRole("row").filter({ hasText: sellerCoupon })).toContainText(store);
 
     await buyer.goto(`${env.shop}/products/${productId}`);
     await expect(buyer.getByRole("heading", { name: product })).toBeVisible();

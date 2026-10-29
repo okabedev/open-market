@@ -6,9 +6,13 @@ import com.openmarket.member.query.dto.SellerApplicationReviewView;
 import com.openmarket.member.query.dto.SellerApplicationStatus;
 import com.openmarket.member.query.dto.SellerReviewView;
 import com.openmarket.member.query.dto.SellerStatus;
+import com.openmarket.member.query.dto.SellerStoreNameView;
 import com.openmarket.member.query.dto.SellerView;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Size;
+import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import org.jspecify.annotations.Nullable;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -44,6 +48,12 @@ public class SellerReviewQueryController {
             @RequestParam(defaultValue = "0") @Min(0) int page,
             @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
         return sellers.sellers(status, page, size);
+    }
+
+    /** 여러 판매자의 상호(ADM-3). 관리자 쿠폰·정산 목록이 쓴다. 없는 ID는 빠진다. 한 번에 100개까지. */
+    @GetMapping("/sellers/store-names")
+    public List<SellerStoreNameView> storeNames(@RequestParam @Size(max = 100) List<UUID> ids) {
+        return sellers.storeNames(Set.copyOf(ids));
     }
 
     /** 판매자 한 명과 정산 계좌(마스킹). 정산 지급 화면이 쓴다(STL-3). 없으면 404 {@code MEMBER_SELLER_NOT_FOUND}. */

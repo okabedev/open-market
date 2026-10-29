@@ -242,6 +242,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/sellers/store-names": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["storeNames"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/seller-applications": {
         parameters: {
             query?: never;
@@ -428,6 +444,11 @@ export interface components {
             suspendReason?: string;
             /** Format: date-time */
             approvedAt?: string;
+        };
+        SellerStoreNameView: {
+            /** Format: uuid */
+            sellerId?: string;
+            storeName?: string;
         };
         PageViewSellerApplicationReviewView: {
             items?: components["schemas"]["SellerApplicationReviewView"][];
@@ -919,6 +940,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SellerView"];
+                };
+            };
+        };
+    };
+    storeNames: {
+        parameters: {
+            query: {
+                ids: string[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SellerStoreNameView"][];
                 };
             };
         };

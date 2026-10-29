@@ -9,7 +9,9 @@ import com.openmarket.member.query.dto.SellerApplicationReviewView;
 import com.openmarket.member.query.dto.SellerApplicationStatus;
 import com.openmarket.member.query.dto.SellerReviewView;
 import com.openmarket.member.query.dto.SellerStatus;
+import com.openmarket.member.query.dto.SellerStoreNameView;
 import com.openmarket.member.query.dto.SellerView;
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 import org.jspecify.annotations.Nullable;
@@ -98,5 +100,10 @@ public class SellerQueryService {
                 view.status(),
                 view.suspendReason(),
                 view.approvedAt());
+    }
+
+    /** 관리자 쿠폰·정산 목록의 상호. 없는 ID는 빠진다. */
+    public List<SellerStoreNameView> storeNames(Collection<UUID> sellerIds) {
+        return sellerIds.isEmpty() ? List.of() : dao.storeNames(sellerIds);
     }
 }

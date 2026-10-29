@@ -24,14 +24,15 @@ import Link from "next/link";
 import { z } from "zod";
 import { bff } from "@/lib/bff";
 import { requireSession } from "@/lib/session";
+import { storeNames } from "@/lib/store-names";
 import { runSettlement } from "./actions";
 
 const STATUSES = ["CONFIRMED", "PAID_OUT"] as const;
 
 /**
  * 정산 관리(STL-2, STL-3, ADM-3). 확정된 정산을 최근 확정 순, 쪽 번호로 보인다. 상태(지급 대기, 지급 완료)와 판매자로 거른다. 지급은
- * 정산 상세에서 판매자 정산 계좌를 보고 한다. 정산 작업을 바로 돌릴 수 있다(다시 돌려도 결과가 같다). 행마다 상호를 member에 묻지 않도록
- * 목록은 판매자 ID로 보이고, 상호와 계좌는 상세가 보인다.
+ * 정산 상세에서 판매자 정산 계좌를 보고 한다. 정산 작업을 바로 돌릴 수 있다(다시 돌려도 결과가 같다). settlement는 상호를 갖지 않아
+ * 쪽마다 member에 상호를 한 번 묻는다. 닿지 못하면 판매자 ID를 보인다. 계좌는 상세가 보인다.
  */
 export default async function SettlementsPage({ searchParams }: PageProps<"/settlements">) {
   await requireSession("/settlements");
@@ -48,6 +49,7 @@ export default async function SettlementsPage({ searchParams }: PageProps<"/sett
     })
     .catch(() => ({ data: undefined, response: undefined }));
   const items = data?.items ?? [];
+  const names = await storeNames([sellerId, ...items.map((item) => item.sellerId)]);
   return (
     <>
       <PageHeader
@@ -73,7 +75,7 @@ export default async function SettlementsPage({ searchParams }: PageProps<"/sett
       ) : null}
       {sellerId ? (
         <p className="mb-2 text-sm text-muted-foreground">
-          판매자 {sellerId}의 정산만 봅니다.{" "}
+          판매자 {names.get(sellerId) ?? sellerId}의 정산만 봅니다.{" "}
           <Link
             href={status ? `/settlements?status=${status}` : "/settlements"}
             className="underline"
@@ -126,10 +128,12 @@ export default async function SettlementsPage({ searchParams }: PageProps<"/sett
                     {item.sellerId ? (
                       <Link
                         href={`/settlements?sellerId=${item.sellerId}`}
-                        className="font-mono text-xs hover:underline"
+                        className="hover:underline"
                         title={item.sellerId}
                       >
-                        {item.sellerId.slice(0, 8)}
+                        {names.get(item.sellerId) ?? (
+                          <span className="font-mono text-xs">{item.sellerId.slice(0, 8)}</span>
+                        )}
                       </Link>
                     ) : null}
                   </TableCell>

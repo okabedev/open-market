@@ -10,10 +10,12 @@ import com.openmarket.member.query.dto.SellerApplicationReviewView;
 import com.openmarket.member.query.dto.SellerApplicationStatus;
 import com.openmarket.member.query.dto.SellerReviewView;
 import com.openmarket.member.query.dto.SellerStatus;
+import com.openmarket.member.query.dto.SellerStoreNameView;
 import com.openmarket.member.query.dto.SellerView;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
+import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -113,6 +115,16 @@ public class SellerQueryDao {
                         .fetch();
         Long total = query.select(seller.count()).from(seller).where(condition).fetchOne();
         return new PageView<>(items, Objects.requireNonNullElse(total, 0L), page, size);
+    }
+
+    /** 판매자들의 상호. 없는 ID는 빠진다. 순서는 정하지 않는다. */
+    public List<SellerStoreNameView> storeNames(Collection<UUID> sellerIds) {
+        return query.select(
+                        Projections.constructor(
+                                SellerStoreNameView.class, seller.id, seller.storeName))
+                .from(seller)
+                .where(seller.id.in(sellerIds))
+                .fetch();
     }
 
     public Optional<SellerView> seller(UUID sellerId) {

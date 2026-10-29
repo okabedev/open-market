@@ -20,6 +20,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -208,6 +209,37 @@ class SellerApiIntegrationTest {
         mockMvc.perform(get("/v1/admin/sellers/" + UUID.randomUUID()).with(admin(adminId)))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("MEMBER_SELLER_NOT_FOUND"));
+    }
+
+    @Test
+    @DisplayName("관리자는 여러 판매자의 상호를 한 번에 본다. 없는 ID는 빠지고, 관리자가 아니면 403, 100개를 넘으면 400이다")
+    void listsStoreNames() throws Exception {
+        UUID applicationId = submitted("key-1");
+        review(applicationId, "approve", null).andExpect(status().isNoContent());
+        String unknown = UUID.randomUUID().toString();
+
+        mockMvc.perform(
+                        get("/v1/admin/sellers/store-names")
+                                .param("ids", memberId.toString())
+                                .with(buyer(memberId)))
+                .andExpect(status().isForbidden());
+        JsonNode found =
+                json(
+                        get("/v1/admin/sellers/store-names")
+                                .param("ids", memberId.toString(), unknown)
+                                .with(admin(adminId)));
+        assertThat(found.size()).isEqualTo(1);
+        assertThat(found.get(0).get("sellerId").asString()).isEqualTo(memberId.toString());
+        assertThat(found.get(0).get("storeName").asString()).isEqualTo("길동상회");
+        mockMvc.perform(
+                        get("/v1/admin/sellers/store-names")
+                                .param(
+                                        "ids",
+                                        Stream.generate(() -> UUID.randomUUID().toString())
+                                                .limit(101)
+                                                .toArray(String[]::new))
+                                .with(admin(adminId)))
+                .andExpect(status().isBadRequest());
     }
 
     private UUID submitted(String key) throws Exception {
