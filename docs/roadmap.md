@@ -326,7 +326,7 @@
   - [x] 복제 슬롯 무효(R5, 운영자가 슬롯을 지워야 복구), 쿠폰 예약 실패 조합, Redis 장애 중 쿠폰 발급. 위반 0, DLT 0
   - [x] Redis 장애 중 gateway OOM, Redis 복귀 순간 promotion 지연 수정(Lettuce `REJECT_COMMANDS`, 응답 대기 명령 상한)
   - [x] 복제 슬롯 무효 경보(대시보드·알림). `infra/fault/run.sh slot`이 경보 메일을 받은 뒤 복구하고 해결 메일까지 확인한다
-  - [ ] 복제 슬롯 복구 절차(런북)
+  - [x] 복제 슬롯 복구 절차([런북](runbook.md))
 - [x] 관리자 백오피스: 운영 지표, 감사 로그 조회, DLT 재처리(ADM-4, ADM-5)
   - [x] `common-messaging` DLT 수집·다시 보내기·버리기(R14)
     - [x] `dead_letter` 테이블, DLT 수집기, 다시 보낸 메시지의 대상 그룹 거르기(`dlt-target-group`)
@@ -343,7 +343,7 @@
   - [x] OWASP Top 10 점검과 접근·입력 방어: 이미지 압축 폭탄(좁고 긴 이미지), BFF 클라이언트 주소 위조, 로그인 레이트 리밋 인코딩 경로 우회, 업로드 Origin 검사, 앱 보안 헤더, BFF 세션 절대 수명, bcrypt 72바이트, gateway의 OpenAPI 문서
   - [x] 감사·보안 로그: `audit_log`·결제 원장 추가 전용(트리거), 보안 이벤트 로그(auth, gateway), 정산 즉시 실행 감사(확정마다 `SETTLEMENT_CONFIRMED`), `audit_log` 보존 기간(지우지 않는다)
   - [x] 개인정보: `OrderPaid`에서 배송지를 뺐다, 개인정보·TOTP 값이 든 record의 `toString`, member.md 판매자 주문 화면
-- [ ] 운영 런북(장애 유형별 대응 절차, 관리자 TOTP 등록 해제 포함)
+- [x] 운영 런북([runbook.md](runbook.md)): 경보 7종별 대응, 복제 슬롯 복구, DLT·결제 실패·Redis 장애, 관리자 TOTP 등록 해제(`infra/runbook/totp-reset.sql`, auth 통합 테스트로 검증)
 - [ ] 마일스톤 E2E `infra/e2e/run.sh m6`
 - 관련 요구사항: ADM-4, ADM-5, NFR-1~NFR-10
 - 범위 결정(2026-10-26)
