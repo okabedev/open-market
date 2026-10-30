@@ -278,7 +278,9 @@ services:
       args:
         MODULE: infra/auth
     image: openmarket/auth:local
-    mem_limit: 640m # 힙 비율은 services/Dockerfile(R6)
+    # 로그인 1,000건 버스트 뒤 640m에서 익명 메모리가 상한 16MB 앞까지 찼다(메타스페이스 161MB, 스레드 63개).
+    # 힙이 상한의 40%라 768m이면 약 307MB다. 실측은 docs/architecture/risks.md R6.
+    mem_limit: 768m
     depends_on:
       config:
         condition: service_healthy
