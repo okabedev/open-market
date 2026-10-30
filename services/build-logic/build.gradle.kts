@@ -6,6 +6,8 @@ dependencies {
     implementation(libs.gradle.plugin.spring.boot)
     implementation(libs.gradle.plugin.spotless)
     implementation(libs.gradle.plugin.errorprone)
+    // 보안 패치(ADR 0009): Boot Gradle 플러그인의 commons-compress가 끄는 commons-lang3 3.16.0
+    constraints { implementation(libs.security.commons.lang3) }
 
     testImplementation(gradleTestKit())
     testImplementation(platform("org.junit:junit-bom:6.0.3"))
