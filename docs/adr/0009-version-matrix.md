@@ -34,14 +34,14 @@ Spring Authorization Server는 Spring Security 7.x에 포함되어 Boot BOM이 �
 | opentelemetry-logback-appender-1.0 | 2.32.0-alpha | Logback 로그를 OTLP로 보낸다(`common-observability`). Boot에 포함되지 않는다. OpenTelemetry 1.66.0으로 빌드됐고, 아래 보안 패치로 올린 1.67.0에서 돈다(API는 하위 호환). 1.67.0으로 빌드된 2.33.0은 2026-10-23 릴리스라 2주가 지나지 않았다. OpenTelemetry를 올릴 때 함께 올린다. 2026-10-18 추가, 2026-10-30 2.28.1에서 올림 |
 
 ### 보안 패치 (BOM 버전 덮어쓰기)
-BOM이 고른 버전에 알려진 취약점이 있으면([ADR 0026](0026-dependency-vulnerability-scan.md)의 Dependabot 알림), BOM을 올리지 않고 고친 버전만 카탈로그의 `security-*`로 덮어쓴다. `openmarket.java-conventions`가 모든 모듈의 `implementation`·`annotationProcessor`·`testImplementation`·`testAnnotationProcessor`에 제약(BOM이 있으면 platform)으로 건다. 제약은 그 라이브러리를 쓰는 모듈에서만 효과가 있고, 높은 버전이 충돌 해결에서 이긴다(`ConventionPluginsTest`가 확인). **BOM을 올려 BOM 버전이 같거나 높아지면 그 줄을 지운다.**
+BOM이 고른 버전에 알려진 취약점이 있으면([ADR 0026](0026-dependency-vulnerability-scan.md)의 Dependabot 알림), BOM을 올리지 않고 고친 버전만 카탈로그의 `security-*`로 덮어쓴다. `openmarket.java-conventions`가 모든 모듈의 `implementation`·`annotationProcessor`·`testImplementation`·`testAnnotationProcessor`에 제약(BOM이 있으면 platform)으로 건다. `build-logic`의 Gradle 플러그인 클래스패스는 `build-logic/build.gradle.kts`가 따로 건다(의존성 그래프 제출에 들어간다). 제약은 그 라이브러리를 쓰는 모듈에서만 효과가 있고, 높은 버전이 충돌 해결에서 이긴다(`ConventionPluginsTest`가 확인). **BOM을 올려 BOM 버전이 같거나 높아지면 그 줄을 지운다.**
 
 2026-10-30 Gradle 쪽 알림 47건을 정리했다. Boot 4.1.2·Spring Cloud 2025.1.4(2026-10-22)는 2주가 지나지 않아 쓰지 않았다. Tomcat, Jackson 3, FreeMarker는 Boot 4.1.2 BOM과 같은 버전을 골라 4.1.2로 올릴 때 지울 수 있다. 나머지는 4.1.2 BOM도 취약한 버전이라 남는다.
 
 | 항목 | BOM 버전 → 패치 버전 | 들어오는 곳, 취약점 | 릴리스 |
 |---|---|---|---|
 | Tomcat (`tomcat-embed-core`·`el`·`websocket`) | 11.0.24 → 11.0.27 | MVC 서비스 런타임. 인증 우회 등 critical 4건. Boot 4.1.2와 같다 | 2026-10-06 |
-| Jackson 3 (`tools.jackson:jackson-bom`) | 3.1.5 → 3.1.7 | 모든 서비스. 파싱 DoS(ReDoS, 무제한 메모리) high. Boot 4.1.2와 같다 | 2026-09-21 |
+| Jackson 3 (`tools.jackson:jackson-bom`) | 3.1.5 → 3.1.7 | 모든 서비스, `build-logic`(Boot Gradle 플러그인의 `spring-boot-buildpack-platform`, `bootBuildImage`용이라 쓰지 않지만 그래프에 들어간다). 파싱 DoS(ReDoS, 무제한 메모리) high. Boot 4.1.2와 같다 | 2026-09-21 |
 | Jackson 3 auth (`security-jackson-auth`) | 3.2.1 → 3.2.3 | Spring Authorization Server 7.1.1이 3.2.1을 요구해 auth만 3.2 라인. `infra/auth/build.gradle.kts`가 건다 | 2026-09-22 |
 | Jackson 2 (`com.fasterxml.jackson:jackson-bom`) | 2.21.5·2.22.1 → 2.22.3 | Eureka·Resilience4j 등. 같은 DoS high. 다른 의존성이 2.22.1을 끌어와 2.21 라인으로는 이기지 못한다 | 2026-09-21 |
 | OpenTelemetry (`opentelemetry-bom`, `opentelemetry-bom-alpha`) | 1.62.0 → 1.67.0(알파 1.67.0-alpha) | 모든 서비스. W3C `tracestate` 파싱의 CPU 소모(medium), 공개 요청 헤더로 들어온다. incubator 모듈(알파 BOM)도 같은 릴리스로 맞춰야 SDK가 뜬다 | 2026-10-09 |
