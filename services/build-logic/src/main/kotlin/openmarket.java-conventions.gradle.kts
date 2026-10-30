@@ -25,6 +25,19 @@ dependencies {
     annotationProcessor(bom)
     testImplementation(bom)
 
+    // 보안 패치(ADR 0009). BOM보다 높은 버전이라 충돌 해결에서 이긴다. 쓰지 않는 모듈에는 아무것도 더하지 않는다.
+    val securityBoms = listOf(
+        "security-jackson-bom", "security-jackson2-bom", "security-opentelemetry-bom", "security-opentelemetry-bom-alpha",
+    )
+    val securityPins = listOf(
+        "security-tomcat-embed-core", "security-tomcat-embed-el", "security-tomcat-embed-websocket",
+        "security-freemarker", "security-lz4", "security-snappy", "security-guava", "security-httpclient",
+    )
+    for (conf in listOf("implementation", "annotationProcessor", "testImplementation", "testAnnotationProcessor")) {
+        securityBoms.forEach { add(conf, platform(lib(it))) }
+        constraints { securityPins.forEach { add(conf, lib(it)) } }
+    }
+
     implementation("org.jspecify:jspecify")
 
     errorprone(lib("errorprone-core"))

@@ -76,6 +76,27 @@ class ConventionPluginsTest {
     }
 
     @Test
+    fun `BOM이 고른 취약한 버전보다 카탈로그의 보안 패치 버전이 이긴다`() {
+        val root = fixture()
+        root.resolve("build.gradle.kts").appendText(
+            """
+            dependencies {
+                implementation("org.apache.tomcat.embed:tomcat-embed-core")
+                implementation("tools.jackson.core:jackson-databind")
+            }
+            """.trimIndent() + "\n",
+        )
+        val catalog = File(System.getProperty("catalogPath")).readText()
+        fun pinned(alias: String) = requireNotNull(Regex("""(?m)^$alias = "([^"]+)"""").find(catalog)).groupValues[1]
+
+        val result = gradle(root, "dependencies", "--configuration", "runtimeClasspath").build()
+
+        assertThat(result.output)
+            .contains("org.apache.tomcat.embed:tomcat-embed-core -> ${pinned("security-tomcat")}")
+            .contains("tools.jackson.core:jackson-databind -> ${pinned("security-jackson")}")
+    }
+
+    @Test
     fun `포맷이 맞지 않으면 spotlessCheck가 실패한다`() {
         val root = fixture()
         writeSource(root, "Ugly.java", "package com.openmarket.fixture; public class Ugly{int  x ;}\n")

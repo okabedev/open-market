@@ -31,7 +31,28 @@ Spring Authorization Server는 Spring Security 7.x에 포함되어 Boot BOM이 �
 | TwelveMonkeys ImageIO (`imageio-jpeg`, `imageio-webp`) | 3.15.2 | file의 이미지 읽기(JPEG CMYK·EXIF, WebP). 2026-10-06 릴리스된 3.15.3은 2주 지난 뒤 검토한다. [ADR 0017](0017-image-processing.md). 2026-10-19 추가 |
 | uuid-creator | 6.1.1 | UUID v7 생성(`common-core`). JDK 표준에는 v7 생성기가 없다 |
 | ZXing core (`com.google.zxing:core`) | 3.5.4 | auth 관리자 TOTP 등록 화면의 QR 코드(SVG로 직접 그린다, `javase` 모듈은 쓰지 않는다). 2025-11-11 릴리스. [ADR 0024](0024-admin-totp-mfa.md). 2026-10-28 추가 |
-| opentelemetry-logback-appender-1.0 | 2.28.1-alpha | Logback 로그를 OTLP로 보낸다(`common-observability`). Boot에 포함되지 않는다. Boot BOM의 OpenTelemetry 1.62.0으로 빌드된 마지막 버전이다(2.29.0부터 1.63.0 이상). Boot의 OpenTelemetry를 올릴 때 함께 올린다. 2026-10-18 추가 |
+| opentelemetry-logback-appender-1.0 | 2.32.0-alpha | Logback 로그를 OTLP로 보낸다(`common-observability`). Boot에 포함되지 않는다. OpenTelemetry 1.66.0으로 빌드됐고, 아래 보안 패치로 올린 1.67.0에서 돈다(API는 하위 호환). 1.67.0으로 빌드된 2.33.0은 2026-10-23 릴리스라 2주가 지나지 않았다. OpenTelemetry를 올릴 때 함께 올린다. 2026-10-18 추가, 2026-10-30 2.28.1에서 올림 |
+
+### 보안 패치 (BOM 버전 덮어쓰기)
+BOM이 고른 버전에 알려진 취약점이 있으면([ADR 0026](0026-dependency-vulnerability-scan.md)의 Dependabot 알림), BOM을 올리지 않고 고친 버전만 카탈로그의 `security-*`로 덮어쓴다. `openmarket.java-conventions`가 모든 모듈의 `implementation`·`annotationProcessor`·`testImplementation`·`testAnnotationProcessor`에 제약(BOM이 있으면 platform)으로 건다. 제약은 그 라이브러리를 쓰는 모듈에서만 효과가 있고, 높은 버전이 충돌 해결에서 이긴다(`ConventionPluginsTest`가 확인). **BOM을 올려 BOM 버전이 같거나 높아지면 그 줄을 지운다.**
+
+2026-10-30 Gradle 쪽 알림 47건을 정리했다. Boot 4.1.2·Spring Cloud 2025.1.4(2026-10-22)는 2주가 지나지 않아 쓰지 않았다. Tomcat, Jackson 3, FreeMarker는 Boot 4.1.2 BOM과 같은 버전을 골라 4.1.2로 올릴 때 지울 수 있다. 나머지는 4.1.2 BOM도 취약한 버전이라 남는다.
+
+| 항목 | BOM 버전 → 패치 버전 | 들어오는 곳, 취약점 | 릴리스 |
+|---|---|---|---|
+| Tomcat (`tomcat-embed-core`·`el`·`websocket`) | 11.0.24 → 11.0.27 | MVC 서비스 런타임. 인증 우회 등 critical 4건. Boot 4.1.2와 같다 | 2026-10-06 |
+| Jackson 3 (`tools.jackson:jackson-bom`) | 3.1.5 → 3.1.7 | 모든 서비스. 파싱 DoS(ReDoS, 무제한 메모리) high. Boot 4.1.2와 같다 | 2026-09-21 |
+| Jackson 3 auth (`security-jackson-auth`) | 3.2.1 → 3.2.3 | Spring Authorization Server 7.1.1이 3.2.1을 요구해 auth만 3.2 라인. `infra/auth/build.gradle.kts`가 건다 | 2026-09-22 |
+| Jackson 2 (`com.fasterxml.jackson:jackson-bom`) | 2.21.5·2.22.1 → 2.22.3 | Eureka·Resilience4j 등. 같은 DoS high. 다른 의존성이 2.22.1을 끌어와 2.21 라인으로는 이기지 못한다 | 2026-09-21 |
+| OpenTelemetry (`opentelemetry-bom`, `opentelemetry-bom-alpha`) | 1.62.0 → 1.67.0(알파 1.67.0-alpha) | 모든 서비스. W3C `tracestate` 파싱의 CPU 소모(medium), 공개 요청 헤더로 들어온다. incubator 모듈(알파 BOM)도 같은 릴리스로 맞춰야 SDK가 뜬다 | 2026-10-09 |
+| FreeMarker | 2.3.34 → 2.3.35 | discovery(Eureka 서버). 템플릿 경로 탐색 critical. Boot 4.1.2와 같다 | 2026-08-23 |
+| lz4-java (`at.yawk.lz4`) | 1.10.1 → 1.11.4 | Kafka 클라이언트. 압축 해제 길이 검증, 네이티브 라이브러리 임시 파일 교체 high | 2026-09-25 |
+| snappy-java | 1.1.10.7 → 1.1.10.12 | Kafka 클라이언트. 압축 해제 버퍼 넘침 high. 1.1.10.9~.12가 열흘 안에 나와 마지막 것을 골랐다 | 2026-10-10 |
+| Guava | 33.0.0·33.5.0 → 33.7.2-jre | discovery 런타임, Error Prone·QueryDSL 처리기. 역직렬화 메모리 high | 2026-09-29 |
+| Apache HttpClient 4 | 4.5.3·4.5.13 → 4.5.14 | Eureka 클라이언트. URI 처리 medium | 2022-11-30 |
+| commons-lang3 (`build-logic`만) | 3.16.0 → 3.20.0 | Boot Gradle 플러그인의 commons-compress. 빌드 때만 돈다. 런타임은 Boot BOM이 이미 3.20.0 | 2025-11-12 |
+
+고치지 않은 것: `kotlin-gradle-plugin` 2.4.10(빌드 캐시 역직렬화, medium)은 Gradle 9.8.1에 내장된 `kotlin-dsl`이 고르고, 고친 버전은 2.4.20-Beta1뿐이다. `build-logic` 컴파일에만 쓰고 원격 빌드 캐시를 쓰지 않는다. Gradle을 올릴 때 다시 본다([security.md](../architecture/security.md) "받아들인 위험").
 
 ### 코드 스타일 도구 후보 (선택과 빌드 확인 결과는 [ADR 0010](0010-code-style-tools.md))
 | 항목 | 버전 | Java 25 근거 |

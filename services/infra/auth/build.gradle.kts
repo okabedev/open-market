@@ -9,6 +9,8 @@ dependencies {
     implementation(project(":libs:common-observability"))
 
     implementation("org.springframework.boot:spring-boot-starter-security-oauth2-authorization-server")
+    // Authorization Server가 Jackson 3.2.1을 요구해 공통 보안 패치(3.1.7)보다 높다. 3.2 라인의 고친 버전(ADR 0009 "보안 패치")
+    implementation(platform(libs.security.jackson.auth.bom))
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-thymeleaf")
